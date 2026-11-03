@@ -8,3 +8,4 @@ play-upload-key/
 **/build/
 .gradle/
 local.properties
+deliver/

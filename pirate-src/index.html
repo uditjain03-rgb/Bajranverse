@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Buccaneer Bash</title>
+<title>Rocky's Pirate Army</title>
 <style>
 @font-face { font-family: 'Fredoka'; src: url('fonts/fredoka-600.woff2') format('woff2'); font-weight: 600; }
 @font-face { font-family: 'Fredoka'; src: url('fonts/fredoka-700.woff2') format('woff2'); font-weight: 700; }
@@ -55,7 +55,7 @@ button { font-family: inherit; font-weight: 700; color: inherit; cursor: pointer
 #home { justify-content: space-between; background: linear-gradient(rgba(20,50,20,0), rgba(20,50,20,0) 55%, rgba(20,40,10,.55)); }
 #homeTop { width: 100%; display: flex; justify-content: space-between; }
 #logo { text-align: center; margin-top: 3vh; animation: wobble 3s ease-in-out infinite; }
-#logo .a { font-size: 58px; line-height: .9; color: #fff; -webkit-text-stroke: 6px var(--dark); paint-order: stroke fill; text-shadow: 0 7px 0 var(--dark); letter-spacing: 2px; }
+#logo .a { font-size: min(56px, 12.5vw); line-height: .9; color: #fff; -webkit-text-stroke: 6px var(--dark); paint-order: stroke fill; text-shadow: 0 7px 0 var(--dark); letter-spacing: 2px; }
 #logo .b { display: inline-block; margin-top: 8px; font-size: 30px; padding: 4px 18px 6px; border-radius: 14px; border: 4px solid var(--dark); background: linear-gradient(#ffd23f, #ff9a1a); color: #fff; -webkit-text-stroke: 3px var(--dark); paint-order: stroke fill; transform: rotate(-3deg); box-shadow: 0 5px 0 var(--dark); }
 #homeBottom { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
 #homeLevel { font-size: 26px; text-align: center; -webkit-text-stroke: 4px var(--dark); paint-order: stroke fill; }
@@ -90,6 +90,14 @@ button { font-family: inherit; font-weight: 700; color: inherit; cursor: pointer
 .toggle.on { background: var(--grass); }
 .toggle.on::after { left: 31px; }
 #loading { position: fixed; inset: 0; display: grid; place-items: center; background: #0f3a5a; font-size: 30px; z-index: 9; }
+#logo .s { font-size: 26px; color: #ffe066; -webkit-text-stroke: 4px var(--dark); paint-order: stroke fill; letter-spacing: 6px; }
+#credit { font-size: 15px; color: #fff6e0; -webkit-text-stroke: 3px var(--dark); paint-order: stroke fill; letter-spacing: 1px; opacity: .95; }
+#credit::before { content: 'made by '; font-size: 12px; }
+#studio { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: radial-gradient(circle at 50% 42%, #ff9a2a, #c2410c 55%, #5a1a06); transition: opacity .5s; }
+#studio .mark { font-size: 84px; animation: wobble 2s ease-in-out infinite; }
+#studio .nm { font-size: 40px; line-height: 1; text-align: center; color: #fff; -webkit-text-stroke: 5px #3a1004; paint-order: stroke fill; text-shadow: 0 5px 0 #3a1004; letter-spacing: 2px; }
+#studio .pr { font-size: 20px; color: #ffe8b0; -webkit-text-stroke: 3px #3a1004; paint-order: stroke fill; letter-spacing: 4px; }
+#studio.gone { opacity: 0; pointer-events: none; }
 </style>
 </head>
 <body>
@@ -98,23 +106,25 @@ button { font-family: inherit; font-weight: 700; color: inherit; cursor: pointer
   <div id="top"><button class="btn" id="pauseB">❚❚</button><div class="pill out" id="lvl">LEVEL 1</div><div class="pill out">🪙 <span id="appleN">0</span></div></div>
   <div id="prog"><div id="progFill"></div></div>
   <div id="herdN" class="out">🏴‍☠️ 5</div>
-  <div id="castleHP" class="hidden"><div class="lab out">⚓ ADMIRAL SNOOTINGTON'S FORT</div><div id="hpBar"><div id="hpFill"></div><div id="hpN" class="out">0</div></div></div>
+  <div id="castleHP" class="hidden"><div class="lab out">🏰 LORD LALCHI'S GOLD FORT</div><div id="hpBar"><div id="hpFill"></div><div id="hpN" class="out">0</div></div></div>
   <div id="pops"></div>
   <div id="banner"></div>
   <div id="hint" class="hidden"><span class="hand">👆</span><br>DRAG TO STEER THE CREW<br>PICK THE BLUE GATES!</div>
 </div>
 <div id="home" class="screen hidden">
   <div id="homeTop"><div class="pill out">🪙 <span id="homeApples">0</span></div><button class="btn small" id="setB">⚙️</button></div>
-  <div id="logo"><div class="a">BUCCANEER<br>BASH</div><div class="b">STORM THE FORT!</div></div>
+  <div id="logo"><div class="s">CAPTAIN</div><div class="a">ROCKY'S<br>PIRATE ARMY</div><div class="b">WIN BACK THE GOLD!</div></div>
   <div id="homeBottom">
     <div id="homeLevel">LEVEL 1</div>
     <button class="btn big green" id="playB">PLAY</button>
-    <div id="homeRow"><button class="btn" id="shopB">🎩 SHOP</button><button class="btn" id="giftB">🎁 GIFT</button></div>
+    <div id="homeRow"><button class="btn" id="shopB">🧥 SHOP</button><button class="btn" id="giftB">🎁 GIFT</button></div>
+    <div id="credit">BajrangVerse Studios</div>
   </div>
 </div>
 <div id="modal" class="screen modal hidden"><div class="panel" id="modalBody"></div></div>
 <div id="flash"></div>
 <div id="loading">🏴‍☠️ Loading…</div>
+<div id="studio"><div class="mark">🐒</div><div class="nm">BAJRANGVERSE<br>STUDIOS</div><div class="pr">presents</div></div>
 <script src="game.js"></script>
 </body>
 </html>

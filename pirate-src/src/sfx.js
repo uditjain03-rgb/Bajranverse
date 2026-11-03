@@ -1,7 +1,6 @@
-// BUCCANEER BASH sounds: its own sea-shanty band, talking pirates, and cartoon sound effects.
-// Everything here is synthesised with the small sound engine in ../game-src/src/audio.js (oscillators and noise),
-// but the instruments, tunes and voices are this game's own.
-import { Audio } from '../../game-src/src/audio.js';
+// Sounds of ROCKY'S PIRATE ARMY: talking pirates (a tiny formant voice), pistols, muskets, cannons and cartoon
+// effects, all synthesised with the sound engine in audio.js. (The music is in music.js.)
+import { Audio } from './audio.js';
 
 const R = (a, b) => a + Math.random() * (b - a);
 const H = Audio.H;
@@ -78,46 +77,13 @@ Audio.extend({
   sad(t) { [392, 370, 349, 294].forEach((f, i) => { const o = H.osc('triangle', f, t + i * 0.35, 0.32 + (i === 3 ? 0.7 : 0), 0.2); if (i === 3) o.frequency.linearRampToValueAtTime(f * 0.94, t + 1.6); }); },
   firework(t) { H.noise(t, 0.5, 0.12, 'bandpass', 600, 3000, 2); const o = H.osc('sine', 80, t + 0.5, 0.5, 0.5); o.frequency.exponentialRampToValueAtTime(30, t + 0.95); H.noise(t + 0.5, 0.6, 0.45, 'lowpass', 3000, 300, 0.6); },
   gull(t) { const f = R(1500, 1900); H.voice(t, 0.3, [f, f * 1.25, f * 0.9], [2200, 3200], 0.08, 18); },
+  // guns: a pirate pistol crack, a guard's musket, a whole volley, a bullet hitting stone
+  pistol(t) { H.noise(t, 0.12, 0.5, 'bandpass', 2400, 700, 1.2); const o = H.osc('square', 180, t, 0.07, 0.18); o.frequency.exponentialRampToValueAtTime(60, t + 0.06); H.noise(t + 0.01, 0.25, 0.12, 'lowpass', 900, 200, 1); },
+  musket(t) { H.noise(t, 0.3, 0.6, 'lowpass', 2600, 300, 0.9); const o = H.osc('sine', 120, t, 0.25, 0.5); o.frequency.exponentialRampToValueAtTime(40, t + 0.2); H.noise(t + 0.02, 0.5, 0.15, 'bandpass', 600, 200, 1); },
+  volley(t, n = 6) { for (let i = 0; i < Math.min(10, n); i++) { const tt = t + Math.random() * 0.18; H.noise(tt, 0.1, 0.32, 'bandpass', R(1800, 3000), R(500, 900), 1.2); } H.noise(t, 0.6, 0.25, 'lowpass', 700, 120, 1); },
+  ricochet(t) { const o = H.osc('sine', R(2400, 3400), t, 0.25, 0.06); o.frequency.exponentialRampToValueAtTime(R(900, 1400), t + 0.22); H.noise(t, 0.04, 0.2, 'highpass', 3000); },
+  ouch(t) { say(t, 'oof', { f0: R(220, 300), contour: [1.4, 1.1, 0.8], vol: 0.3 }); },
   pop(t) { const o = H.osc('sine', 600, t, 0.08, 0.3); o.frequency.exponentialRampToValueAtTime(1400, t + 0.06); },
 });
 function pickW(a) { return a[Math.floor(Math.random() * a.length)]; }
 
-// ---------------- the shanty band: squeezebox chords, a fiddle tune, a tuba bass and foot stomps (6/8 time) ----------------
-const N = m => 440 * Math.pow(2, (m - 69) / 12);
-const CH = { C: [60, 64, 67], G: [59, 62, 67], Am: [57, 60, 64], F: [57, 60, 65], Dm: [57, 62, 65], E: [56, 59, 64], D: [57, 62, 66], Em: [55, 59, 64] };
-// each tune: 6/8 bars of 6 eighth notes; mel = one note (MIDI) or null per eighth
-const TUNES = {
-  beach: { bpm: 168, chords: ['Am', 'Am', 'G', 'G', 'F', 'F', 'E', 'E'], mel: [69, null, 72, 76, null, 74, 72, null, 69, 71, null, 67, 67, null, 71, 74, null, 72, 71, null, 67, 69, 71, 72, 72, null, 69, 77, null, 76, 74, null, 72, 72, 74, null, 71, null, 68, 64, null, 68, 71, null, 74, 76, null, null] },
-  jungle: { bpm: 176, chords: ['C', 'C', 'F', 'G', 'C', 'Am', 'F', 'G'], mel: [72, null, 76, 79, null, 76, 72, null, 76, 79, 81, 79, 77, null, 81, 84, null, 81, 79, null, 76, 74, null, 71, 72, null, 76, 79, null, 76, 69, null, 72, 76, 74, 72, 77, null, 76, 74, null, 72, 74, null, 79, 79, null, null] },
-  snow: { bpm: 150, chords: ['Dm', 'Dm', 'C', 'C', 'Dm', 'Am', 'E', 'Am'], mel: [74, null, 77, 81, null, 77, 72, null, 76, 79, null, 76, 74, 76, 77, 81, null, 84, 83, null, 81, 79, null, 76, 74, null, 77, 81, 79, 77, 76, null, 72, 69, null, 72, 71, null, 68, 64, null, 68, 69, null, null, 69, null, null] },
-  volcano: { bpm: 184, chords: ['Em', 'Em', 'D', 'D', 'C', 'C', 'D', 'Em'], mel: [76, 76, 79, 83, null, 79, 74, 74, 78, 81, null, 78, 72, 72, 76, 79, null, 76, 74, null, 78, 81, 83, 81, 79, null, 76, 83, null, 79, 78, null, 74, 81, null, 78, 76, 79, 83, 84, 83, 81, 78, null, 74, 76, null, null] },
-  coral: { bpm: 160, chords: ['F', 'F', 'C', 'C', 'Dm', 'Dm', 'G', 'C'], mel: [77, null, 81, 84, null, 81, 79, null, 76, 72, null, 76, 74, null, 77, 81, null, 77, 79, null, 83, 86, 84, 83, 84, null, 81, 77, null, 81, 79, null, 76, 72, 74, 76, 74, null, 77, 81, null, 79, 72, null, 76, 72, null, null] },
-  night: { bpm: 138, chords: ['Am', 'Em', 'F', 'C', 'Dm', 'Am', 'E', 'Am'], mel: [69, null, null, 72, null, 76, 71, null, null, 67, null, 71, 72, null, null, 69, null, 72, 72, null, 76, 79, null, 76, 74, null, null, 77, null, 74, 72, null, 69, 72, null, 76, 71, null, 68, 64, null, 68, 69, null, null, null, null, null] },
-  title: { bpm: 132, chords: ['C', 'F', 'C', 'G', 'C', 'F', 'G', 'C'], mel: [72, null, 74, 76, null, 79, 77, null, 76, 74, null, 72, 76, null, 77, 79, null, 81, 79, null, 77, 76, null, 74, 72, null, 74, 76, null, 79, 77, null, 81, 84, null, 81, 79, null, 77, 76, null, 74, 72, null, null, null, null, null] },
-  fight: { bpm: 196, chords: ['Am', 'Am', 'Dm', 'Dm', 'E', 'E', 'Am', 'E'], mel: [69, 72, 76, 72, 76, 81, 80, 76, 72, 76, 72, 69, 74, 77, 81, 77, 81, 86, 84, 81, 77, 74, 77, 74, 76, 80, 83, 80, 83, 88, 86, 83, 80, 76, 80, 83, 81, 76, 72, 69, 72, 76, 80, 76, 71, 68, 71, 76] },
-  win: { bpm: 150, chords: ['C', 'C', 'F', 'G', 'C', 'C', 'G', 'C'], mel: [72, 76, 79, 84, null, 79, 77, null, 81, 84, null, 81, 79, null, 76, 79, null, 83, 84, null, null, 79, 81, 83, 84, null, 88, 86, null, 84, 83, null, 81, 79, null, 76, 77, null, 79, 83, null, 86, 84, null, null, 84, null, null] },
-};
-let cur = null, timer = null, step = 0, nextT = 0, volume = 1;
-function eighthSec(tn) { return 60 / tn.bpm; }   // bpm counts eighth notes
-function playNote(t, tn, k) {
-  const bar = Math.floor(k / 6) % tn.chords.length, beat = k % 6, ch = CH[tn.chords[bar]], e = eighthSec(tn), v = volume;
-  // squeezebox: a detuned reedy chord on beats 1 and 4, with a wobble
-  if (beat === 0 || beat === 3) for (const m of ch) { const f = N(m); for (const d of [0.996, 1.004]) H.osc('sawtooth', f * d, t, e * 2.6, 0.022 * v, H.bus, 0.03); }
-  // tuba bass: root on 1, fifth on 4
-  if (beat === 0 || beat === 3) { const f = N(ch[0] - 24 + (beat === 3 ? 7 : 0)); H.osc('square', f, t, e * 1.6, 0.09 * v, H.bus, 0.01); H.osc('sine', f, t, e * 1.6, 0.14 * v); }
-  // foot stomps and a tambourine jingle
-  if (beat === 0 || beat === 3) H.noise(t, 0.12, 0.22 * v, 'lowpass', 160, 90, 1);
-  if (beat === 2 || beat === 5) H.noise(t, 0.06, 0.07 * v, 'highpass', 6000);
-  // the fiddle: a saw lead with vibrato
-  const m = tn.mel[k % tn.mel.length];
-  if (m != null) { const o = H.osc('sawtooth', N(m), t, e * 0.95, 0.045 * v, H.bus, 0.02); const ctx = H.ctx; const l = ctx.createOscillator(), lg = ctx.createGain(); l.frequency.value = 6; lg.gain.value = N(m) * 0.012; l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(t + e); H.osc('triangle', N(m) * 2, t, e * 0.8, 0.012 * v); }
-}
-export const Music = {
-  play(name) {
-    if (cur === TUNES[name] && timer) return; this.stop(); cur = TUNES[name]; if (!cur || !H.ctx) return;
-    step = 0; nextT = H.ctx.currentTime + 0.1;
-    timer = setInterval(() => { if (!H.ctx || H.ctx.state !== 'running') return; if (nextT < H.ctx.currentTime - 0.3) nextT = H.ctx.currentTime + 0.05; while (nextT < H.ctx.currentTime + 0.25) { playNote(nextT, cur, step); nextT += eighthSec(cur); step++; } }, 60);
-  },
-  stop() { if (timer) clearInterval(timer); timer = null; cur = null; },
-  setVolume(v) { volume = v; },
-};
