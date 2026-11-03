@@ -1,0 +1,14 @@
+{
+  "name": "pirate-src",
+  "private": true,
+  "type": "module",
+  "scripts": { "build": "node build.mjs" },
+  "dependencies": {
+    "three": "0.170.0",
+    "@fontsource/fredoka": "5.1.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.0",
+    "javascript-obfuscator": "4.1.1"
+  }
+}

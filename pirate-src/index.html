@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Buccaneer Bash</title>
+<style>
+@font-face { font-family: 'Fredoka'; src: url('fonts/fredoka-600.woff2') format('woff2'); font-weight: 600; }
+@font-face { font-family: 'Fredoka'; src: url('fonts/fredoka-700.woff2') format('woff2'); font-weight: 700; }
+:root { --wood: #a8642a; --wood2: #7a4418; --dark: #3a2410; --grass: #5fbf3a; --cream: #fff6e0; --sat: env(safe-area-inset-top, 0px); --sab: env(safe-area-inset-bottom, 0px); }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #0f3a5a; touch-action: none; font-family: 'Fredoka', system-ui, sans-serif; font-weight: 700; color: #fff; }
+canvas#gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+button { font-family: inherit; font-weight: 700; color: inherit; cursor: pointer; }
+.hidden { display: none !important; }
+.out { -webkit-text-stroke: 3px var(--dark); paint-order: stroke fill; }
+/* wooden sign buttons */
+.btn { border: 4px solid var(--dark); border-radius: 16px; padding: 12px 22px; font-size: 22px; color: #fff; background: linear-gradient(#c8803a, var(--wood) 50%, var(--wood2)); box-shadow: 0 6px 0 var(--dark), inset 0 2px 0 rgba(255,255,255,.3); -webkit-text-stroke: 2px var(--dark); paint-order: stroke fill; position: relative; }
+.btn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--dark); }
+.btn.green { background: linear-gradient(#8ae04a, #4fb82a 55%, #2f8a1a); }
+.btn.blue { background: linear-gradient(#7ac8ff, #2f8cf0 55%, #1a5ab0); }
+.btn.big { font-size: 34px; padding: 14px 40px; border-radius: 22px; }
+.btn.small { font-size: 16px; padding: 8px 14px; border-radius: 12px; box-shadow: 0 4px 0 var(--dark); }
+.btn[disabled] { filter: grayscale(.9) brightness(.85); }
+.btn.dot::after { content: '!'; position: absolute; top: -10px; right: -10px; width: 24px; height: 24px; border-radius: 50%; background: #e8303f; border: 3px solid var(--dark); font-size: 14px; line-height: 18px; -webkit-text-stroke: 0; }
+.pill { display: inline-flex; align-items: center; gap: 6px; background: rgba(58,36,16,.78); border: 3px solid var(--dark); border-radius: 30px; padding: 6px 14px; font-size: 20px; }
+@keyframes pop { from { transform: scale(.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes bump { 0% { transform: translate(var(--x), var(--y)) scale(1); } }
+@keyframes wobble { 0%,100% { transform: rotate(-3deg) scale(1); } 50% { transform: rotate(3deg) scale(1.05); } }
+/* HUD */
+#hud { position: fixed; inset: 0; pointer-events: none; }
+#top { position: absolute; left: 0; right: 0; top: calc(10px + var(--sat)); display: flex; justify-content: space-between; align-items: center; padding: 0 12px; }
+#top .pill, #pauseB { pointer-events: auto; }
+#pauseB { width: 46px; height: 46px; border-radius: 14px; padding: 0; font-size: 18px; -webkit-text-stroke: 0; }
+#prog { position: absolute; left: 50%; transform: translateX(-50%); top: calc(66px + var(--sat)); width: min(70vw, 320px); height: 14px; border-radius: 8px; border: 3px solid var(--dark); background: rgba(58,36,16,.6); overflow: hidden; }
+#progFill { height: 100%; width: 0; background: linear-gradient(90deg, #ffe066, #8ae04a); }
+#herdN { position: absolute; left: 0; top: 0; font-size: 26px; padding: 4px 14px; border-radius: 22px; background: #fff6e0; color: var(--dark); border: 4px solid var(--dark); box-shadow: 0 4px 0 var(--dark); white-space: nowrap; }
+#herdN.bump { animation: hb .25s; }
+@keyframes hb { 40% { scale: 1.25; } }
+#castleHP { position: absolute; left: 50%; transform: translateX(-50%); top: calc(96px + var(--sat)); width: min(80vw, 340px); text-align: center; }
+#castleHP .lab { font-size: 22px; }
+#hpBar { height: 22px; border-radius: 12px; border: 4px solid var(--dark); background: rgba(58,36,16,.7); overflow: hidden; margin-top: 4px; position: relative; }
+#hpFill { height: 100%; width: 100%; background: linear-gradient(#ff8a5a, #e8303f); transition: width .1s; }
+#hpN { position: absolute; inset: 0; line-height: 15px; font-size: 15px; }
+#banner { position: absolute; left: 0; right: 0; top: 30%; text-align: center; font-size: 46px; color: #fff; -webkit-text-stroke: 5px var(--dark); paint-order: stroke fill; opacity: 0; transition: opacity .2s; padding: 0 10px; text-shadow: 0 5px 0 var(--dark); }
+#banner small { display: block; font-size: 20px; color: #ffe066; -webkit-text-stroke: 3px var(--dark); margin-top: 4px; text-shadow: none; }
+#banner.show { opacity: 1; animation: pop .25s; }
+.pop { position: absolute; left: 0; top: 0; font-size: 28px; -webkit-text-stroke: 3px var(--dark); paint-order: stroke fill; white-space: nowrap; pointer-events: none; }
+#hint { position: absolute; left: 0; right: 0; bottom: calc(100px + var(--sab)); text-align: center; font-size: 24px; -webkit-text-stroke: 3px var(--dark); paint-order: stroke fill; }
+#hint .hand { font-size: 50px; display: inline-block; animation: swipe 1.3s ease-in-out infinite; -webkit-text-stroke: 0; }
+@keyframes swipe { 0%,100% { transform: translateX(-60px); } 50% { transform: translateX(60px); } }
+#flash { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity .1s; }
+/* screens */
+.screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: calc(14px + var(--sat)) 14px calc(14px + var(--sab)); }
+#home { justify-content: space-between; background: linear-gradient(rgba(20,50,20,0), rgba(20,50,20,0) 55%, rgba(20,40,10,.55)); }
+#homeTop { width: 100%; display: flex; justify-content: space-between; }
+#logo { text-align: center; margin-top: 3vh; animation: wobble 3s ease-in-out infinite; }
+#logo .a { font-size: 58px; line-height: .9; color: #fff; -webkit-text-stroke: 6px var(--dark); paint-order: stroke fill; text-shadow: 0 7px 0 var(--dark); letter-spacing: 2px; }
+#logo .b { display: inline-block; margin-top: 8px; font-size: 30px; padding: 4px 18px 6px; border-radius: 14px; border: 4px solid var(--dark); background: linear-gradient(#ffd23f, #ff9a1a); color: #fff; -webkit-text-stroke: 3px var(--dark); paint-order: stroke fill; transform: rotate(-3deg); box-shadow: 0 5px 0 var(--dark); }
+#homeBottom { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
+#homeLevel { font-size: 26px; text-align: center; -webkit-text-stroke: 4px var(--dark); paint-order: stroke fill; }
+#homeLevel small { display: block; font-size: 17px; color: #ffe066; -webkit-text-stroke: 3px var(--dark); }
+#homeRow { display: flex; gap: 10px; }
+.modal { background: rgba(20,30,10,.55); }
+.panel { width: min(92vw, 420px); max-height: calc(100vh - 40px); overflow: auto; background: var(--cream); color: var(--dark); border: 5px solid var(--dark); border-radius: 26px; box-shadow: 0 8px 0 var(--dark); padding: 16px 14px; text-align: center; animation: pop .25s; }
+.panel h2 { margin: 0 0 6px; font-size: 34px; color: #fff; -webkit-text-stroke: 5px var(--dark); paint-order: stroke fill; text-shadow: 0 4px 0 var(--dark); }
+.panel h3 { margin: 12px 0 4px; font-size: 18px; text-align: left; }
+.panel p { margin: 6px 0; font-size: 16px; }
+.panel .tip { font-size: 14px; opacity: .75; }
+.row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
+.stars { font-size: 52px; letter-spacing: 4px; }
+.stars i { font-style: normal; display: inline-block; filter: grayscale(1) brightness(.7); transform: scale(.65); transition: .3s; }
+.stars i.on { filter: none; transform: scale(1); }
+.stat { display: flex; justify-content: space-between; font-size: 17px; padding: 5px 8px; border-bottom: 2px dashed rgba(58,36,16,.2); }
+.big { font-size: 40px; margin-top: 8px; color: #ffc21a; -webkit-text-stroke: 4px var(--dark); paint-order: stroke fill; }
+.list { display: flex; flex-direction: column; gap: 8px; text-align: left; }
+.item { display: flex; align-items: center; gap: 10px; background: #fff; border: 3px solid var(--dark); border-radius: 16px; padding: 8px 10px; }
+.item .ico { font-size: 30px; width: 40px; text-align: center; }
+.item .txt { flex: 1; }
+.item .txt b { display: block; font-size: 17px; }
+.item .txt b small { opacity: .6; font-size: 13px; }
+.item .txt span { font-size: 13px; opacity: .75; font-weight: 600; }
+.days { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.day { border: 3px solid var(--dark); border-radius: 12px; background: #fff; padding: 6px 2px; font-size: 12px; }
+.day b { display: block; font-size: 22px; }
+.day.done { background: #b8f08a; }
+.day.today { background: #ffe066; animation: wobble 1s infinite; }
+.toggle { width: 62px; height: 34px; border-radius: 17px; border: 3px solid var(--dark); background: #b8b0a0; position: relative; }
+.toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: left .15s; }
+.toggle.on { background: var(--grass); }
+.toggle.on::after { left: 31px; }
+#loading { position: fixed; inset: 0; display: grid; place-items: center; background: #0f3a5a; font-size: 30px; z-index: 9; }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="hud" class="hidden">
+  <div id="top"><button class="btn" id="pauseB">❚❚</button><div class="pill out" id="lvl">LEVEL 1</div><div class="pill out">🪙 <span id="appleN">0</span></div></div>
+  <div id="prog"><div id="progFill"></div></div>
+  <div id="herdN" class="out">🏴‍☠️ 5</div>
+  <div id="castleHP" class="hidden"><div class="lab out">⚓ ADMIRAL SNOOTINGTON'S FORT</div><div id="hpBar"><div id="hpFill"></div><div id="hpN" class="out">0</div></div></div>
+  <div id="pops"></div>
+  <div id="banner"></div>
+  <div id="hint" class="hidden"><span class="hand">👆</span><br>DRAG TO STEER THE CREW<br>PICK THE BLUE GATES!</div>
+</div>
+<div id="home" class="screen hidden">
+  <div id="homeTop"><div class="pill out">🪙 <span id="homeApples">0</span></div><button class="btn small" id="setB">⚙️</button></div>
+  <div id="logo"><div class="a">BUCCANEER<br>BASH</div><div class="b">STORM THE FORT!</div></div>
+  <div id="homeBottom">
+    <div id="homeLevel">LEVEL 1</div>
+    <button class="btn big green" id="playB">PLAY</button>
+    <div id="homeRow"><button class="btn" id="shopB">🎩 SHOP</button><button class="btn" id="giftB">🎁 GIFT</button></div>
+  </div>
+</div>
+<div id="modal" class="screen modal hidden"><div class="panel" id="modalBody"></div></div>
+<div id="flash"></div>
+<div id="loading">🏴‍☠️ Loading…</div>
+<script src="game.js"></script>
+</body>
+</html>

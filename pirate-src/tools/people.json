@@ -1,0 +1,364 @@
+[
+ {
+  "id": "pirate",
+  "file": "uacp/Pirate_Male.fbx",
+  "scale": 0.0047,
+  "palette": {
+   "Skin": [
+    16777215,
+    2
+   ],
+   "Beige": 15919832,
+   "Clothes": [
+    16777215,
+    1
+   ],
+   "Gold": 15909198,
+   "Brown": 7029795,
+   "Face": 1840144,
+   "Black": [
+    16777215,
+    3
+   ],
+   "Red": 13186090
+  },
+  "pants": [
+   3880789,
+   130
+  ],
+  "weapon": {
+   "file": "pp/Pistol.fbx",
+   "palette": {
+    "Wood": 8014374,
+    "Bright Color": 14266444,
+    "DarkWood": 4860950,
+    "DarkColor": 3815999,
+    "Material": 3815999
+   },
+   "len": 0.42,
+   "grip": [
+    0.5,
+    0.15,
+    0.25
+   ]
+  },
+  "clips": [
+   {
+    "name": "run",
+    "src": "Walk",
+    "frames": 12,
+    "loop": true,
+    "amp": 1.6,
+    "speed": 1.6
+   },
+   {
+    "name": "shoot",
+    "src": "Shoot_OneHanded",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "victory",
+    "src": "Victory",
+    "frames": 10,
+    "loop": true
+   },
+   {
+    "name": "idle",
+    "src": "Idle",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "hit",
+    "src": "RecieveHit",
+    "frames": 5
+   }
+  ]
+ },
+ {
+  "id": "pirateF",
+  "file": "uacp/Pirate_Female.fbx",
+  "scale": 0.0047,
+  "palette": {
+   "Skin": [
+    16777215,
+    2
+   ],
+   "Beige": 15919832,
+   "Clothes": [
+    16777215,
+    1
+   ],
+   "Gold": 15909198,
+   "Brown": 7029795,
+   "Face": 1840144,
+   "Black": 2763298,
+   "Red": 13186090,
+   "Hair": [
+    16777215,
+    3
+   ]
+  },
+  "pants": [
+   3880789,
+   130
+  ],
+  "weapon": {
+   "file": "pp/Pistol.fbx",
+   "palette": {
+    "Wood": 8014374,
+    "Bright Color": 14266444,
+    "DarkWood": 4860950,
+    "DarkColor": 3815999,
+    "Material": 3815999
+   },
+   "len": 0.42,
+   "grip": [
+    0.5,
+    0.15,
+    0.25
+   ]
+  },
+  "clips": [
+   {
+    "name": "run",
+    "src": "Walk",
+    "frames": 12,
+    "loop": true,
+    "amp": 1.6,
+    "speed": 1.6
+   },
+   {
+    "name": "shoot",
+    "src": "Shoot_OneHanded",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "victory",
+    "src": "Victory",
+    "frames": 10,
+    "loop": true
+   },
+   {
+    "name": "idle",
+    "src": "Idle",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "hit",
+    "src": "RecieveHit",
+    "frames": 5
+   }
+  ]
+ },
+ {
+  "id": "guard",
+  "file": "uacp/BlueSoldier_Male.fbx",
+  "scale": 0.0049,
+  "palette": {
+   "Skin": [
+    16777215,
+    2
+   ],
+   "Main": [
+    16777215,
+    1
+   ],
+   "Black": 2368554,
+   "Grey": 15263962,
+   "Face": 1840144,
+   "Helmet": 2763322
+  },
+  "weapon": {
+   "file": "pp/Gun.fbx",
+   "palette": {
+    "Material": 8014374,
+    "Material.001": 3815999,
+    "Material.002": 14266444,
+    "Material.003": 4860950,
+    "Material.004": 3815999
+   },
+   "len": 0.95,
+   "grip": [
+    0.5,
+    0.3,
+    0.3
+   ]
+  },
+  "clips": [
+   {
+    "name": "run",
+    "src": "Walk",
+    "frames": 12,
+    "loop": true,
+    "amp": 1.5,
+    "speed": 1.6
+   },
+   {
+    "name": "shoot",
+    "src": "Shoot_OneHanded",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "idle",
+    "src": "Idle",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "hit",
+    "src": "RecieveHit",
+    "frames": 5
+   },
+   {
+    "name": "defeat",
+    "src": "Defeat",
+    "frames": 10,
+    "from": 0,
+    "to": 1.2
+   }
+  ]
+ },
+ {
+  "id": "hero",
+  "file": "uacp/Pirate_Male.fbx",
+  "scale": 0.0049,
+  "palette": {
+   "Skin": [
+    16777215,
+    2
+   ],
+   "Beige": 16250871,
+   "Clothes": [
+    16777215,
+    1
+   ],
+   "Gold": 16107854,
+   "Brown": 7029795,
+   "Face": 1840144,
+   "Black": 1710618,
+   "Red": 15909198
+  },
+  "pants": [
+   2502735,
+   130
+  ],
+  "weapon": {
+   "file": "pp/PirateSword.fbx",
+   "palette": {
+    "Blade": 14212579,
+    "Handle": 5913114,
+    "Middle": 14266444
+   },
+   "len": 0.85,
+   "grip": [
+    0.5,
+    0.5,
+    0.08
+   ],
+   "rot": [
+    1.5708,
+    0,
+    0
+   ]
+  },
+  "clips": [
+   {
+    "name": "run",
+    "src": "Walk",
+    "frames": 16,
+    "loop": true,
+    "amp": 1.6,
+    "speed": 1.6
+   },
+   {
+    "name": "shoot",
+    "src": "Shoot_OneHanded",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "victory",
+    "src": "Victory",
+    "frames": 14,
+    "loop": true
+   },
+   {
+    "name": "idle",
+    "src": "Idle",
+    "frames": 12,
+    "loop": true
+   },
+   {
+    "name": "punch",
+    "src": "Punch",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "hit",
+    "src": "RecieveHit",
+    "frames": 6
+   }
+  ]
+ },
+ {
+  "id": "villain",
+  "file": "uacp/OldClassy_Male.fbx",
+  "scale": 0.0052,
+  "palette": {
+   "Skin": [
+    16777215,
+    2
+   ],
+   "Pants": 2762816,
+   "Shirt": 8073128,
+   "Detail": 15909198,
+   "Belt": 3809808,
+   "Face": 1840144,
+   "Hat": 1842208,
+   "Hair": 2759184
+  },
+  "clips": [
+   {
+    "name": "idle",
+    "src": "Idle",
+    "frames": 12,
+    "loop": true
+   },
+   {
+    "name": "run",
+    "src": "Walk",
+    "frames": 12,
+    "loop": true,
+    "speed": 1.2
+   },
+   {
+    "name": "punch",
+    "src": "Punch",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "victory",
+    "src": "Victory",
+    "frames": 12,
+    "loop": true
+   },
+   {
+    "name": "defeat",
+    "src": "Defeat",
+    "frames": 12
+   },
+   {
+    "name": "hit",
+    "src": "RecieveHit",
+    "frames": 6
+   }
+  ]
+ }
+]

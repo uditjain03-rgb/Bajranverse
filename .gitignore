@@ -1,0 +1,10 @@
+node_modules/
+pirate-src/www/
+pirate-src/tools/*.bundle.js
+pirate-src/tools/*.html
+*.jks
+*.keystore
+play-upload-key/
+**/build/
+.gradle/
+local.properties
