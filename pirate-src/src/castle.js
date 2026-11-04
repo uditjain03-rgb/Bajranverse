@@ -62,9 +62,8 @@ export function buildCastle(scene, T, z, hp) {
   // torches by the gate
   const fire = [];
   for (const s of [-1, 1]) { mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.7, 6), flat(0x4a3020), s * 1.9, 2.8, BD * 1.6, g); const f = mesh(new THREE.ConeGeometry(0.16, 0.45, 8), new THREE.MeshBasicMaterial({ color: 0xffa020 }), s * 1.9, 3.35, BD * 1.6, g); fire.push(f); }
-  const light = new THREE.PointLight(0xffa040, 6, 9, 1.6); light.position.set(0, 3.4, 2.4); g.add(light);
   const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = new THREE.Vector3(), _s = new THREE.Vector3(1, 1, 1);
-  let dirty = true;
+  let dirty = 'all'; const settled = [];
   const C = {
     group: g, z, hp, max: hp, down: false, front: BD * 1.45, width: 14,
     // blocks above a hole lose their support and fall
@@ -85,17 +84,21 @@ export function buildCastle(scene, T, z, hp) {
       C.down = true; dirty = true;
       for (const b of bricks) if (!b.st) { b.st = 1; b.delay = Math.max(0, 0.7 - b.y * 0.04) + Math.random() * 0.6; b.vx = b.x * rnd(0.15, 0.5) + rnd(-1, 1); b.vy = rnd(0, 4); b.vz = rnd(-2, 4); b.ax = rnd(-5, 5); b.az = rnd(-5, 5); }
       roofs.forEach(r => { r.userData.v.set(Math.sign(r.position.x || rnd(-1, 1)) * rnd(2, 4), rnd(4, 7), -rnd(3, 6)); r.userData.sink = 0; });
-      banner.userData.fall = true; door.userData.fall = true; light.intensity = 0;
+      banner.userData.fall = true; door.userData.fall = true;
     },
     update(dt) {
-      let moving = false;
-      for (const b of bricks) {
-        if (b.st !== 1) continue; moving = true;
+      const mv = [];
+      for (let n = 0; n < bricks.length; n++) {
+        const b = bricks[n];
+        if (b.st !== 1) continue; mv.push(n);
         if (b.delay > 0) { b.delay -= dt; continue; }
         b.vy -= 22 * dt; b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; b.rx += b.ax * dt; b.rz += b.az * dt;
-        if (b.y < BH / 2) { b.y = BH / 2; b.vy *= -0.3; b.vx *= 0.55; b.vz *= 0.55; b.ax *= 0.5; b.az *= 0.5; if (Math.abs(b.vy) < 0.8 && Math.hypot(b.vx, b.vz) < 0.6) { b.st = 2; b.rx = Math.round(b.rx / (PI / 2)) * PI / 2; b.rz = Math.round(b.rz / (PI / 2)) * PI / 2; } }
+        if (b.y < BH / 2) { b.y = BH / 2; b.vy *= -0.3; b.vx *= 0.55; b.vz *= 0.55; b.ax *= 0.5; b.az *= 0.5; if (Math.abs(b.vy) < 0.8 && Math.hypot(b.vx, b.vz) < 0.6) { settled.push(n); b.st = 2; b.rx = Math.round(b.rx / (PI / 2)) * PI / 2; b.rz = Math.round(b.rz / (PI / 2)) * PI / 2; } }
       }
-      if (moving || dirty) { bricks.forEach((b, n) => { _e.set(b.rx, b.ry, b.rz); _q.setFromEuler(_e); _m.compose(_p.set(b.x, b.y, b.z), _q, _s); inst.setMatrixAt(n, _m); }); inst.instanceMatrix.needsUpdate = true; dirty = false; }
+      const set = n => { const b = bricks[n]; _e.set(b.rx, b.ry, b.rz); _q.setFromEuler(_e); _m.compose(_p.set(b.x, b.y, b.z), _q, _s); inst.setMatrixAt(n, _m); };
+      if (dirty === 'all') { for (let n = 0; n < bricks.length; n++) set(n); inst.instanceMatrix.needsUpdate = true; }
+      else if (mv.length || settled.length) { mv.forEach(set); settled.forEach(set); inst.instanceMatrix.needsUpdate = true; }
+      dirty = false; settled.length = 0;
       for (const r of roofs) if (r.userData.v.lengthSq() > 0) { r.userData.v.y -= 20 * dt; r.position.addScaledVector(r.userData.v, dt); r.rotation.z += dt * 2; if (r.position.y < 1.2) { r.position.y = 1.2; r.userData.v.set(0, 0, 0); r.userData.sink = 1; } }
       for (const r of roofs) if (r.userData.sink) r.position.y = Math.max(-4, r.position.y - dt * 1.2);
       if (door.userData.fall) { door.rotation.x = Math.min(PI / 2, door.rotation.x + dt * 3); door.position.y = Math.max(0.15, door.position.y - dt * 3); }

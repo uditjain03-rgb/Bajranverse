@@ -2,6 +2,7 @@
 // rolls over hills; the game itself is played on a straight line along -z and every vertex is bent onto the
 // winding path in the shaders (and on the CPU with bendPoint, for the camera and labels).
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 const PI = Math.PI;
 export const PATH_W = 10;
@@ -101,8 +102,8 @@ export function buildWorld(lv, scene) {
   const wavesT = canvasTex(256, 256, (c, w, h) => { c.fillStyle = '#ffffff'; c.fillRect(0, 0, w, h); c.strokeStyle = 'rgba(0,40,80,.18)'; c.lineWidth = 6; for (let y = 0; y < h; y += 32) { c.beginPath(); for (let x = 0; x <= w; x += 8) c.lineTo(x, y + Math.sin(x / w * PI * 4) * 6); c.stroke(); } });
   wavesT.wrapS = wavesT.wrapT = THREE.RepeatWrapping; wavesT.repeat.set(30, (len + 400) / 24); sea.material.map = wavesT; sea.material.needsUpdate = true;
   anims.push(t => { wavesT.offset.set(t * 0.05, t * 0.08); });
-  for (let i = 0; i < 5; i++) { const sh = ship(i % 2 === 1), sx = (i % 2 ? 1 : -1) * rnd(80, 130), sz = z0 - rnd(40, len); sh.position.set(sx, -1.2, sz); sh.rotation.y = rnd(0, PI * 2); g.add(sh); anims.push(t => { sh.position.y = -1.2 + Math.sin(t * 0.8 + i) * 0.3; sh.rotation.z = Math.sin(t * 0.6 + i) * 0.04; }); }
-  for (let i = 0; i < 9; i++) { const gl = gull(), cx = rnd(-30, 30), cz = z0 - rnd(20, len), r = rnd(8, 18), y = rnd(10, 18), sp = rnd(0.3, 0.6), ph = rnd(0, 6); g.add(gl); anims.push(t => { const a = t * sp + ph; gl.position.set(cx + Math.cos(a) * r, y + Math.sin(t * 1.3 + i) * 0.6, cz + Math.sin(a) * r); gl.rotation.y = -a; gl.userData.wings.forEach((w, k) => { w.rotation.z = (k ? -1 : 1) * Math.sin(t * 9 + i) * 0.5; }); }); }
+  for (let i = 0; i < 5; i++) { const sh = ship(i % 2 === 1), sx = (i % 2 ? 1 : -1) * rnd(80, 130), sz = z0 - rnd(40, len); sh.position.set(sx, -1.2, sz); sh.rotation.y = rnd(0, PI * 2); sh.userData.dynamic = true; g.add(sh); anims.push(t => { sh.position.y = -1.2 + Math.sin(t * 0.8 + i) * 0.3; sh.rotation.z = Math.sin(t * 0.6 + i) * 0.04; }); }
+  for (let i = 0; i < 9; i++) { const gl = gull(), cx = rnd(-30, 30), cz = z0 - rnd(20, len), r = rnd(8, 18), y = rnd(10, 18), sp = rnd(0.3, 0.6), ph = rnd(0, 6); gl.userData.dynamic = true; g.add(gl); anims.push(t => { const a = t * sp + ph; gl.position.set(cx + Math.cos(a) * r, y + Math.sin(t * 1.3 + i) * 0.6, cz + Math.sin(a) * r); gl.rotation.y = -a; gl.userData.wings.forEach((w, k) => { w.rotation.z = (k ? -1 : 1) * Math.sin(t * 9 + i) * 0.5; }); }); }
   // scenery down both sides
   const P = PROPS[T.props];
   for (let z = 10; z > zEnd + 20; z -= rnd(6, 11)) for (const s of [-1, 1]) {
@@ -116,7 +117,7 @@ export function buildWorld(lv, scene) {
   // the sky (not bent) and fog
   const skyT = canvasTex(4, 256, (c, w, h) => { const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, T.sky[0]); gr.addColorStop(0.6, T.sky[1]); gr.addColorStop(1, T.sky[1]); c.fillStyle = gr; c.fillRect(0, 0, w, h); });
   const skyM = new THREE.MeshBasicMaterial({ map: skyT, side: THREE.BackSide, fog: false, depthWrite: false }); skyM.userData.flat = true;
-  const sky = new THREE.Mesh(new THREE.SphereGeometry(300, 24, 12), skyM); g.add(sky);
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(300, 24, 12), skyM); sky.userData.dynamic = true; g.add(sky);
   for (let i = 0; i < 14; i++) { const c = cloud(T); c.position.set(rnd(-200, 200), rnd(50, 110), rnd(-250, 50)); c.userData.flatSky = true; sky.add(c); }
   if (T.night) {   // fireflies
     const n = 160, pos = new Float32Array(n * 3); for (let i = 0; i < n; i++) { pos[i * 3] = rnd(-25, 25); pos[i * 3 + 1] = rnd(0.5, 5); pos[i * 3 + 2] = rnd(zEnd, 20); }
@@ -126,7 +127,13 @@ export function buildWorld(lv, scene) {
   }
   scene.fog = new THREE.Fog(T.fog, 60, 210);
   g.traverse(o => { o.frustumCulled = false; });
-  return { group: g, sky, update(dt, t) { anims.forEach(a => a(t)); }, dispose() { scene.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); } };
+  const chunks = mergeStatic(g);
+  return {
+    group: g, sky, update(dt, t) { anims.forEach(a => a(t)); },
+    // only the scenery near the camera is drawn
+    cull(z, all) { for (const c of chunks) c.visible = all || (c.userData.z0 > z - 230 && c.userData.z1 < z + 40); },
+    dispose() { scene.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); },
+  };
 }
 
 // ---------------- props ----------------
@@ -188,3 +195,34 @@ const PROPS = {
   coral: { near: () => Math.random() < 0.6 ? coral() : crab(), far: () => Math.random() < 0.6 ? coral() : palm() },
   night: { near: () => Math.random() < 0.5 ? mushroom() : chest(), far: () => Math.random() < 0.6 ? palm() : shipwreck() },
 };
+
+// Phones slow down with many separate objects, so every still object of the world is merged into a few big meshes:
+// one per material for each 60 m stretch of the path. Moving things (ships, gulls, the sky) are left alone.
+const CHUNK = 60;
+export function mergeStatic(root) {
+  root.updateMatrixWorld(true);
+  const groups = new Map(), drop = [];
+  root.traverse(o => {
+    if (!o.isMesh || o.isInstancedMesh || o.isSkinnedMesh) return;
+    for (let q = o; q && q !== root; q = q.parent) if (q.userData.dynamic) return;
+    if (o.geometry.attributes.position.count > 20000) return;   // big ground pieces stay as they are
+    const g = o.geometry, sig = ['normal', 'uv', 'color'].filter(k => g.attributes[k]).join('');
+    const z = new THREE.Vector3().setFromMatrixPosition(o.matrixWorld).z, ck = Math.floor(-z / CHUNK);
+    const key = o.material.uuid + '|' + sig + '|' + ck + '|' + o.castShadow + o.receiveShadow;
+    if (!groups.has(key)) groups.set(key, { mat: o.material, list: [], ck, cast: o.castShadow, recv: o.receiveShadow });
+    groups.get(key).list.push(o); drop.push(o);
+  });
+  const chunks = new Map();
+  for (const G of groups.values()) {
+    const geos = G.list.map(o => { let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); g.applyMatrix4(o.matrixWorld); for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv', 'color'].includes(k)) g.deleteAttribute(k); return g; });
+    const m = mergeGeometries(geos, false); geos.forEach(g => g.dispose());
+    if (!m) continue;
+    const mesh = new THREE.Mesh(m, G.mat); mesh.castShadow = G.cast; mesh.receiveShadow = G.recv; mesh.frustumCulled = false;
+    if (!chunks.has(G.ck)) { const c = new THREE.Group(); c.userData.z0 = -G.ck * CHUNK; c.userData.z1 = -(G.ck + 1) * CHUNK; chunks.set(G.ck, c); root.add(c); }
+    chunks.get(G.ck).add(mesh);
+  }
+  for (const o of drop) { o.parent.remove(o); }
+  // empty groups left behind are removed too
+  const empty = []; root.traverse(o => { if (o.isGroup && o !== root && !o.children.length && !o.userData.dynamic) empty.push(o); }); empty.forEach(o => o.parent && o.parent.remove(o));
+  return [...chunks.values()];
+}

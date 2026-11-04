@@ -29,8 +29,8 @@ renders the app icon.
 ## Credits
 Characters: "Universal Base Characters", "Modular Character Outfits - Fantasy", "Universal Animation Library", hats from
 "Ultimate Animated Character Pack" and weapons from "Pirate Pack", all by Quaternius (CC0).
-Music: "Blackmoor Tides" by Matthew Pablo (CC-BY 3.0); "Pirates!" by Eric Matyas, soundimage.org (CC-BY 4.0); CC0
-tracks "Pirate Indenture" (Eldritch Grim), "Treasure Hunter" (TAD), "Pirate's Orchestra" (Dizzy Crow), "Epic Boss
-Battle" (Juhani Junkala / SubspaceAudio), "Determined Pursuit" (Emma_MA) — all from OpenGameArt.org.
+Music (cheerful, major-key tracks from OpenGameArt.org): "Pirates!" by Eric Matyas, soundimage.org (CC-BY 4.0); CC0 tracks
+"Banana Track" (Skrjablin), "Happy Vibes" (Ruskerdax), "Loop Town" (Fupi), "Shine Blitz" (Chris Murphy), "Happy Beat"
+(Burabotti), "Treasure Hunter" (TAD).
 Studio logo: from Monster Mayhem Run.
 Ads: Google AdMob — the IDs in the app are Google's TEST IDs; replace them with your own before publishing.

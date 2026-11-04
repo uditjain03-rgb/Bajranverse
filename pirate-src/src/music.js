@@ -1,10 +1,12 @@
-// The music: recorded orchestral pirate and battle tracks (public-domain / CC-BY, see the credits in Settings),
+// The music: cheerful, upbeat recorded tracks in major keys (public-domain / CC-BY, see the credits in Settings),
 // streamed from the app's files and looped, with a soft cross-fade when the track changes.
 const FILES = {
-  title: 'treasure', beach: 'battle_theme', jungle: 'pirates', snow: 'orchestra', volcano: 'battle_theme', coral: 'pirates', night: 'orchestra',
-  fight: 'boss', bossfight: 'pursuit', win: 'victory',
+  title: 'treasure', beach: 'happy_vibes', jungle: 'loop_town', snow: 'shine_blitz', volcano: 'pirates', coral: 'happy_vibes', night: 'loop_town',
+  fight: 'banana', bossfight: 'banana', win: 'happy_beat',
 };
-let cur = null, el = null, volume = 0.75, fades = [];
+// loudness matching (measured): every track plays at about the same level
+const GAIN = { treasure: 0.5, happy_vibes: 0.38, loop_town: 0.5, shine_blitz: 0.35, pirates: 0.82, banana: 0.53, happy_beat: 1 };
+let cur = null, el = null, volume = 0.95, fades = [];
 const els = {};
 function audio(name) {
   const f = FILES[name] || name; if (els[f]) return els[f];
@@ -23,10 +25,10 @@ export const Music = {
     const next = audio(name);
     if (el && el !== next) { const old = el; fade(old, 0, 500, () => old.pause()); }
     cur = name; el = next;
-    if (next.paused) { if (FILES[name] !== 'boss' && FILES[name] !== 'pursuit' && FILES[name] !== 'victory') { /* keep position */ } else next.currentTime = 0; const p = next.play(); if (p && p.catch) p.catch(() => { cur = null; }); }
-    fade(next, volume, 700);
+    if (next.paused) { if (name === 'win' || name === 'fight' || name === 'bossfight') next.currentTime = 0; const p = next.play(); if (p && p.catch) p.catch(() => { cur = null; }); }
+    fade(next, volume * (GAIN[FILES[name] || name] ?? 0.6), 700);
   },
   stop() { if (el) { const old = el; fade(old, 0, 350, () => old.pause()); } el = null; cur = null; },
   pauseAll() { Object.values(els).forEach(a => a.pause()); el = null; cur = null; },
-  setVolume(v) { volume = v; if (el) el.volume = v; },
+  setVolume(v) { volume = v; },
 };

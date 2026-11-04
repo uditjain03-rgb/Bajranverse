@@ -47,30 +47,61 @@ const GUARD_COATS = [0xc8302a, 0xd03a2a, 0xb82822];
 const coatCol = () => pick((COATS[PF.coat] || COATS.mixed).cols);
 
 // ---------------- renderer, lights ----------------
-const renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: true, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: (devicePixelRatio || 1) < 2, powerPreference: 'high-performance' });   // sharp phone screens don't need anti-aliasing (it costs a lot)
 renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(55, 1, 0.3, 320);
 const hemi = new THREE.HemisphereLight(0xdcecff, 0x8a7a5a, 1.5); scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xffeccc, 2.6); sun.castShadow = true; sun.shadow.mapSize.set(1536, 1536); sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.03;
+const sun = new THREE.DirectionalLight(0xffeccc, 2.6); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.03;
 Object.assign(sun.shadow.camera, { left: -18, right: 18, top: 20, bottom: -14, near: 1, far: 80 }); scene.add(sun, sun.target);
 const rim = new THREE.DirectionalLight(0x9ac8ff, 0.7); rim.position.set(6, 6, -10); scene.add(rim);
-function resize() { const w = innerWidth, h = innerHeight; renderer.setPixelRatio(Math.min(devicePixelRatio || 1, PF.set.hi ? 1.75 : 1.15)); renderer.setSize(w, h, false); cam.aspect = w / h; cam.fov = w / h < 0.6 ? 60 : 52; cam.updateProjectionMatrix(); }
+// quality steps: 3 sharp, 2 normal, 1 lower resolution, 0 lowest without real-time shadows (picked automatically from the frame rate)
+let QUAL = PF.set.hi ? 3 : 2; const DPR = [0.75, 1, 1.3, 1.6];
+function resize() { const w = innerWidth, h = innerHeight; renderer.setPixelRatio(Math.min(devicePixelRatio || 1, DPR[QUAL])); renderer.setSize(w, h, false); cam.aspect = w / h; cam.fov = w / h < 0.6 ? 60 : 52; cam.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
 
 // ---------------- little effects: puffs, sparks, smoke (sprites); bullets ----------------
 const dotTex = canvasTex(64, 64, (c, w) => { const g = c.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.6, 'rgba(255,255,255,.8)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, w, w); });
 const starTex = canvasTex(64, 64, (c, w) => { c.fillStyle = '#fff'; c.beginPath(); for (let i = 0; i < 10; i++) { const a = i / 10 * PI * 2 - PI / 2, r = i % 2 ? 12 : 30; c.lineTo(w / 2 + Math.cos(a) * r, w / 2 + Math.sin(a) * r); } c.fill(); });
+// particles (puffs, fire, smoke, stars): four batched systems (soft dot / star, normal / glowing), each one draw call
 const fx = [];
-function puff(p, n = 8, col = 0xffffff, o = {}) {
-  for (let i = 0; i < n; i++) {
-    if (fx.length > 420) break;
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: o.star ? starTex : dotTex, color: o.cols ? pick(o.cols) : col, transparent: true, depthWrite: false, blending: o.add ? THREE.AdditiveBlending : THREE.NormalBlending }));
-    s.position.copy(p); const sz = o.size || rnd(0.5, 1.1); s.scale.setScalar(sz); scene.add(s);
-    fx.push({ s, v: new THREE.Vector3(rnd(-1, 1), rnd(0.3, 1.2), rnd(-1, 1)).multiplyScalar(o.speed ?? 3), life: o.life || rnd(0.4, 0.8), t: 0, sz, g: o.grav ?? 2, grow: o.grow ?? 0.6 });
+class Particles {
+  constructor(map, add, cap = 360) {
+    const mat = new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, blending: add ? THREE.AdditiveBlending : THREE.NormalBlending, toneMapped: !add });
+    mat.onBeforeCompile = sh => { THREE.Material.prototype.onBeforeCompile.call(mat, sh); sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float iA; varying float vA;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvA = iA;'); sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vA;').replace('#include <alphamap_fragment>', '#include <alphamap_fragment>\ndiffuseColor.a *= vA;'); };
+    mat.customProgramCacheKey = () => 'parts' + THREE.Material.prototype.customProgramCacheKey.call(mat);
+    const g = new THREE.PlaneGeometry(1, 1); this.a = new THREE.InstancedBufferAttribute(new Float32Array(cap), 1); g.setAttribute('iA', this.a);
+    this.mesh = new THREE.InstancedMesh(g, mat, cap); this.mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3);
+    this.mesh.frustumCulled = false; this.mesh.count = 0; this.mesh.renderOrder = add ? 3 : 2; this.cap = cap; this.n = 0; scene.add(this.mesh);
   }
 }
-function updateFx(dt) { for (let i = fx.length - 1; i >= 0; i--) { const f = fx[i]; f.t += dt; f.v.y -= f.g * dt; f.s.position.addScaledVector(f.v, dt); const k = f.t / f.life; if (f.coin) f.s.rotation.x += dt * 8; else { f.s.material.opacity = 1 - k; f.s.scale.setScalar(f.sz * (1 + k * f.grow)); } if (k >= 1) { scene.remove(f.s); if (!f.coin) f.s.material.dispose(); fx.splice(i, 1); } } }
+const PSYS = {};
+function psys(star, add) { const k = (star ? 's' : 'd') + (add ? 'a' : 'n'); return PSYS[k] || (PSYS[k] = new Particles(star ? starTex : dotTex, add)); }
+const _pc = new THREE.Color();
+function puff(p, n = 8, col = 0xffffff, o = {}) {
+  const sys = psys(o.star, o.add);
+  for (let i = 0; i < n; i++) {
+    if (fx.length > 600) break;
+    const sz = o.size || rnd(0.5, 1.1);
+    fx.push({ sys, p: p.clone(), v: new THREE.Vector3(rnd(-1, 1), rnd(0.3, 1.2), rnd(-1, 1)).multiplyScalar(o.speed ?? 3), life: o.life || rnd(0.4, 0.8), t: 0, sz, g: o.grav ?? 2, grow: o.grow ?? 0.6, col: o.cols ? pick(o.cols) : col });
+  }
+}
+const _fm = new THREE.Matrix4(), _fs = new THREE.Vector3();
+function updateFx(dt) {
+  for (const k in PSYS) PSYS[k].n = 0;
+  for (let i = fx.length - 1; i >= 0; i--) {
+    const f = fx[i]; f.t += dt;
+    if (f.coin) { f.v.y -= f.g * dt; f.s.position.addScaledVector(f.v, dt); f.s.rotation.x += dt * 8; if (f.t >= f.life) { scene.remove(f.s); fx.splice(i, 1); } continue; }
+    const k = f.t / f.life; if (k >= 1) { fx.splice(i, 1); continue; }
+    f.v.y -= f.g * dt; f.p.addScaledVector(f.v, dt);
+    const S = f.sys; if (S.n >= S.cap) continue; const j = S.n++;
+    S.mesh.setMatrixAt(j, _fm.compose(f.p, cam.quaternion, _fs.setScalar(f.sz * (1 + k * f.grow))));
+    S.mesh.instanceColor.setXYZ(j, ...rgbOf(f.col)); S.a.setX(j, 1 - k);
+  }
+  for (const k in PSYS) { const S = PSYS[k]; S.mesh.count = S.n; S.mesh.instanceMatrix.needsUpdate = true; S.mesh.instanceColor.needsUpdate = true; S.a.needsUpdate = true; }
+}
+const rgbCache = new Map();
+function rgbOf(h) { let v = rgbCache.get(h); if (!v) { _pc.set(h); v = [_pc.r, _pc.g, _pc.b]; rgbCache.set(h, v); } return v; }
 const flashAt = (p, s = 0.7) => puff(p, 1, 0xffc85a, { size: s, speed: 0, life: 0.09, grav: 0, add: true, grow: 0.5 });
 // bullets: short glowing streaks (one instanced mesh)
 const bulletGeo = new THREE.BoxGeometry(0.05, 0.05, 0.7); bulletGeo.translate(0, 0, -0.35);
@@ -105,7 +136,6 @@ function updateBombs(dt) {
   }
   bombMesh.count = n; bombMesh.instanceMatrix.needsUpdate = true; sparkGeo.setDrawRange(0, n); sparkGeo.attributes.position.needsUpdate = true; _bs.set(1, 1, 1);
 }
-const boomLight = new THREE.PointLight(0xffa040, 0, 14, 1.5); scene.add(boomLight);
 const rings = [];
 const ringMat = new THREE.MeshBasicMaterial({ color: 0xffe0a0, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
 function boom(p, s = 1, o = {}) {
@@ -113,12 +143,11 @@ function boom(p, s = 1, o = {}) {
   puff(p, Math.round(3 + 2 * s), 0x5a5550, { size: 1.4 * s, speed: 1.6 * s, life: 1.1, grav: -1.6, grow: 1.2 });
   puff(p, Math.round(4 * s), 0xffd060, { star: true, add: true, size: 0.3, speed: 7 * s, life: 0.5, grav: 8 });
   if (rings.length < 12) { const r = new THREE.Mesh(new THREE.RingGeometry(0.6, 0.9, 24), ringMat.clone()); r.position.copy(p); r.position.y = Math.max(0.1, p.y * (o.wall ? 1 : 0) + 0.1); if (o.wall) r.rotation.set(0, 0, 0); else r.rotation.x = -PI / 2; r.frustumCulled = false; scene.add(r); rings.push({ r, t: 0, s }); }
-  boomLight.position.copy(p).add(_p2.set(0, 1, 1)); boomLight.intensity = Math.max(boomLight.intensity, 30 * s);
+  puff(p, 1, 0xffe8b0, { add: true, size: 3.2 * s, speed: 0, life: 0.14, grav: 0, grow: 0.3 });
   sfxT(s > 1.5 ? 'bigBoom' : 'boom', 0.05); G.shake = Math.max(G.shake, 0.12 * s);
 }
 const _p2 = new THREE.Vector3();
 function updateBooms(dt) {
-  boomLight.intensity = Math.max(0, boomLight.intensity - dt * 120);
   for (let i = rings.length - 1; i >= 0; i--) { const R = rings[i]; R.t += dt; const k = R.t / 0.4; R.r.scale.setScalar(1 + k * 4 * R.s); R.r.material.opacity = 0.8 * (1 - k); if (k >= 1) { scene.remove(R.r); R.r.material.dispose(); rings.splice(i, 1); } }
 }
 // floating words (DOM)
@@ -217,6 +246,8 @@ function startLevel(n, playNow) {
   rocky.position.set(0, 0, G.z - 1.2); rocky.rotation.set(0, 0, 0); rocky.visible = true;
   $('lvl').textContent = 'LEVEL ' + n; $('appleN').textContent = '0';
   G.state = playNow ? 'play' : 'home';
+  // send everything to the graphics chip now (while the level starts) rather than in the middle of the run
+  try { W.cull(-1e6, true); objs.forEach(o => { o.obj.visible = true; }); renderer.compile(scene, cam); renderer.render(scene, cam); W.cull(G.z); } catch (e) { /* not needed */ }
   if (playNow) {
     music(lv.world.music); banner(lv.boss ? '💰 LALCHI\'S BIG FORT!' : 'LEVEL ' + n, lv.world.name, 1.5); sfx('capCharge'); sfx('crewCheer', 0.3);
     popText('CHALO, ARMY! LET\'S GO!', _p.set(0, 3.4, G.z - 1), '#ffe066', 26, 1.3);
@@ -317,7 +348,7 @@ const lists = { pirate: [], pirate2: [], pirate3: [], pirateF: [], pirateF2: [],
 function person(q, extra) { const o = { x: q.x, y: q.y || 0, z: q.z, ry: q.ry || 0, rx: q.rx || 0, rz: q.rz || 0, s: q.s ?? 1, clip: q.clip || 'run', t: q.t || 0, tint: q.tint, skin: q.skin, hair: q.hair, ...extra }; return o; }
 function pushCrew(q, extra) { (lists[q.kind] || lists.pirate).push(person(q, extra)); }
 function update(dt) {
-  G.t += dt; W.update(dt, G.t); if ((G.state === 'play' || G.state === 'home') && Math.random() < dt * 0.06) sfxT('gull', 6); if (bannerT > 0) { bannerT -= dt; if (bannerT <= 0) $('banner').classList.remove('show'); }
+  G.t += dt; W.update(dt, G.t); W.cull(G.finale ? castle.z + 20 : G.z); if ((G.state === 'play' || G.state === 'home') && Math.random() < dt * 0.06) sfxT('gull', 6); if (bannerT > 0) { bannerT -= dt; if (bannerT <= 0) $('banner').classList.remove('show'); }
   for (const k in lists) lists[k].length = 0;
   let airborne = false;
   const play = G.state === 'play';
@@ -371,6 +402,7 @@ function update(dt) {
 function near(q, x, z, rx, rz) { return Math.abs(q.x - x) < rx && Math.abs(q.z - z) < rz; }
 function updateObj(o, dt) {
   const dz = o.z - G.z;
+  o.obj.visible = G.finale ? false : dz > -150 && dz < 45;   // far-away things are not drawn
   if (o.t === 'gate') {
     if (!o.done && G.state === 'play' && dz > 0) {   // the army's front is through the gate
       o.done = true; const side = G.x >= 0 ? 1 : 0, op = o.ops[side], pl = o['p' + side]; const before = G.crew.length + 1; let after = before;
@@ -732,8 +764,8 @@ function gift() {
 function settings() {
   const t = k => `<button class="toggle ${PF.set[k] ? 'on' : ''}" data-s="${k}"></button>`;
   openModal(`<h2>SETTINGS</h2><div class="list"><div class="item"><div class="ico">🔊</div><div class="txt"><b>Sound</b></div>${t('sound')}</div><div class="item"><div class="ico">🎵</div><div class="txt"><b>Music</b></div>${t('music')}</div><div class="item"><div class="ico">📳</div><div class="txt"><b>Vibration</b></div>${t('vib')}</div><div class="item"><div class="ico">✨</div><div class="txt"><b>Sharp graphics</b><span>Turn off on slower phones</span></div>${t('hi')}</div></div>
-    <p class="tip"><b>Rocky's Pirate Army</b><br>made by <b>BajrangVerse Studios</b><br>Characters: Quaternius (CC0)<br>Music: "Blackmoor Tides" by Matthew Pablo (CC-BY 3.0) · "Pirates!" by Eric Matyas, soundimage.org (CC-BY 4.0) · public-domain tracks by Eldritch Grim, TAD, Dizzy Crow, Juhani Junkala and Emma_MA<br>Free to play with optional ads (Google AdMob) · no accounts · your progress stays on your phone</p><div class="row"><button class="btn" id="closeB">BACK</button></div>`);
-  document.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { const k = b.dataset.s; PF.set[k] = !PF.set[k]; save(); b.classList.toggle('on', PF.set[k]); click(); if (k === 'music') { if (PF.set.music) music(G.state === 'home' ? 'title' : lv.world.music); else Music.stop(); } if (k === 'hi') resize(); });
+    <p class="tip"><b>Rocky's Pirate Army</b><br>made by <b>BajrangVerse Studios</b><br>Characters: Quaternius (CC0)<br>Music: "Pirates!" by Eric Matyas, soundimage.org (CC-BY 4.0) · public-domain (CC0) tracks "Banana Track" by Skrjablin, "Happy Vibes" by Ruskerdax, "Loop Town" by Fupi, "Shine Blitz" by Chris Murphy, "Happy Beat" by Burabotti and "Treasure Hunter" by TAD (OpenGameArt.org)<br>Free to play with optional ads (Google AdMob) · no accounts · your progress stays on your phone</p><div class="row"><button class="btn" id="closeB">BACK</button></div>`);
+  document.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { const k = b.dataset.s; PF.set[k] = !PF.set[k]; save(); b.classList.toggle('on', PF.set[k]); click(); if (k === 'music') { if (PF.set.music) music(G.state === 'home' ? 'title' : lv.world.music); else Music.stop(); } if (k === 'hi') { QUAL = PF.set.hi ? 3 : 2; resize(); } });
   $('closeB').onclick = () => { click(); closeModal(); if (G.state === 'pause') resume(); };
 }
 function pause() { if (G.state !== 'play' && G.state !== 'finale') return; G.paused = G.state; G.state = 'pause'; Music.stop(); openModal(`<h2>PAUSED</h2><div class="row"><button class="btn big green" id="resB">RESUME</button></div><div class="row"><button class="btn small" id="setB2">SETTINGS</button><button class="btn small" id="homeB">HOME</button></div>`); $('resB').onclick = () => { click(); closeModal(); resume(); }; $('setB2').onclick = settings; $('homeB').onclick = () => { click(); goHome(); }; }
@@ -771,16 +803,26 @@ function updateCamera(dt) {
 }
 let lastT = performance.now();
 const WARP = +(new URLSearchParams(location.search).get('warp') || 1);
+const FPS = { t: 0, n: 0, slow: 0 };
 function frame(now) {
   requestAnimationFrame(frame);
-  let dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
+  const raw = now - lastT; let dt = Math.min(0.05, raw / 1000); lastT = now;
+  // too slow for this phone? step the quality down (resolution first, then shadows)
+  if ((G.state === 'play' || G.state === 'finale' || G.state === 'home') && raw < 500) {
+    FPS.t += raw; FPS.n++;
+    if (FPS.t > 1500) { const avg = FPS.t / FPS.n; FPS.slow = avg > 24 ? FPS.slow + 1 : 0; FPS.t = FPS.n = 0; if (FPS.slow >= 1 && QUAL > 0) { QUAL--; FPS.slow = 0; if (QUAL === 0) { sun.castShadow = false; scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { m.needsUpdate = true; }); }); } resize(); } }
+  }
   if (G.state === 'load' || G.state === 'pause' || G.state === 'icon') { renderer.render(scene, cam); return; }
   if (G.state === 'play') { if (keys.ArrowLeft) G.tx -= 10 * dt; if (keys.ArrowRight) G.tx += 10 * dt; }
   dt *= G.slow * (G.air ? 0.55 : 1);
+  const t0 = performance.now();
   for (let i = 0; i < WARP; i++) update(WARP > 1 ? 0.05 * G.slow : dt);
   updatePops(dt); updateCamera(WARP > 1 ? 0.05 : dt);
+  const t1 = performance.now();
   renderer.render(scene, cam);
+  PERF.upd += t1 - t0; PERF.ren += performance.now() - t1; PERF.n++; PERF.calls = renderer.info.render.calls; PERF.fx = fx.length; PERF.tris = renderer.info.render.triangles;
 }
+const PERF = window.__perf = { upd: 0, ren: 0, n: 0, reset() { this.upd = this.ren = this.n = 0; } };
 
 // ---------------- boot: the studio card, then load the people ----------------
 function loadBin(url) { return new Promise((ok, no) => { const x = new XMLHttpRequest(); x.open('GET', url); x.responseType = 'arraybuffer'; x.onload = () => (x.status === 200 || x.status === 0) && x.response ? ok(x.response) : no(new Error('load ' + x.status)); x.onerror = () => no(new Error('load')); x.send(); }); }
@@ -788,6 +830,7 @@ const t0 = performance.now(), Q = new URLSearchParams(location.search);
 loadBin('people.bin').then(buf => {
   P = loadPeople(buf);
   for (const k of ['pirate', 'pirate2', 'pirate3', 'pirateF', 'pirateF2']) crowds[k] = new Crowd(scene, P[k]); crowdG = new Crowd(scene, P.guard); blobs = new Blobs(scene, dotTex, 600);
+  for (const k in crowds) crowds[k].prewarm(24); crowdG.prewarm(16); psys(false, false); psys(false, true); psys(true, false); psys(true, true);
   rocky = new Actor(P.hero, { tint: 0xb3202a, skin: 0xb97a52, hair: 0x1a1210 }); rocky.scale.setScalar(1.08); scene.add(rocky);
   lalchi = new Actor(P.villain, { tint: 0x7a1a8a, skin: 0xd8a070, hair: 0x2a2a2a }); scene.add(lalchi);
   if (Q.get('level')) PF.level = +Q.get('level');
@@ -824,5 +867,6 @@ function iconShot() {
 }
 window.__goto = t => { const o = objs.find(o => o.t === t && o.z < G.z); if (!o) return false; G.z = o.z + 26; reslot(); G.crew.forEach(q => { q.z = G.z + q.oz; }); return true; };
 window.__lv = n => makeLevel(n).ev.map(e => e.t).join(" ");
+window.__calls = () => { const r = {}; const tag = o => { let q = o; while (q.parent && q.parent !== scene) q = q.parent; return q === W.group ? 'world' : castle && q === castle.group ? 'castle' : objs.some(x => x.obj === q) ? 'events' : q.isSprite ? 'sprites' : q.type + ':' + (q.name || ''); }; scene.traverseVisible(o => { if ((o.isMesh || o.isSprite || o.isPoints) && !(o.isInstancedMesh && o.count === 0)) { const k = tag(o); r[k] = (r[k] || 0) + 1; } }); return r; };
 window.__G = G; window.__play = play; window.__castle = () => castle; window.__end = () => { G.z = -lv.L + 3; return lv.L; }; window.__tap = () => tapFire();
 window.__tris = () => { let t = 0; scene.traverse(o => { if (o.isInstancedMesh && o.count && o.visible) t += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3 * o.count; }); return Math.round(t); };
