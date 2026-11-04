@@ -83,6 +83,10 @@ Audio.extend({
   volley(t, n = 6) { for (let i = 0; i < Math.min(10, n); i++) { const tt = t + Math.random() * 0.18; H.noise(tt, 0.1, 0.32, 'bandpass', R(1800, 3000), R(500, 900), 1.2); } H.noise(t, 0.6, 0.25, 'lowpass', 700, 120, 1); },
   ricochet(t) { const o = H.osc('sine', R(2400, 3400), t, 0.25, 0.06); o.frequency.exponentialRampToValueAtTime(R(900, 1400), t + 0.22); H.noise(t, 0.04, 0.2, 'highpass', 3000); },
   ouch(t) { say(t, 'oof', { f0: R(220, 300), contour: [1.4, 1.1, 0.8], vol: 0.3 }); },
+  // bombs
+  whoosh(t) { H.noise(t, 0.28, 0.16, 'bandpass', 500, 2400, 1.5); },
+  boom(t) { const o = H.osc('sine', 95, t, 0.55, 0.85); o.frequency.exponentialRampToValueAtTime(32, t + 0.5); H.noise(t, 0.7, 0.75, 'lowpass', 2400, 120, 0.8); H.noise(t, 0.12, 0.35, 'highpass', 2500); for (let i = 0; i < 5; i++) H.noise(t + 0.08 + Math.random() * 0.3, 0.06, 0.12, 'bandpass', R(800, 2400), R(400, 900), 3); },
+  bigBoom(t) { const o = H.osc('sine', 70, t, 1.2, 1); o.frequency.exponentialRampToValueAtTime(24, t + 1.1); H.noise(t, 1.5, 0.9, 'lowpass', 1600, 80, 0.7); H.noise(t, 0.2, 0.45, 'highpass', 2000); for (let i = 0; i < 12; i++) H.noise(t + 0.1 + Math.random() * 0.8, 0.07, 0.15, 'bandpass', R(600, 2600), R(300, 900), 3); },
   pop(t) { const o = H.osc('sine', 600, t, 0.08, 0.3); o.frequency.exponentialRampToValueAtTime(1400, t + 0.06); },
 });
 function pickW(a) { return a[Math.floor(Math.random() * a.length)]; }

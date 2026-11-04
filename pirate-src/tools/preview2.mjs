@@ -1,0 +1,13 @@
+import path from 'path'; import { createRequire } from 'module'; import fs from 'fs';
+const here = path.dirname(new URL(import.meta.url).pathname), req = createRequire(path.join(here, '../package.json'));
+await req('esbuild').build({ entryPoints: [path.join(here, 'preview2.js')], bundle: true, format: 'iife', outfile: path.join(here, 'preview2.bundle.js'), logLevel: 'error' });
+const { chromium } = createRequire(import.meta.url)('playwright');
+const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const p = await b.newPage({ viewport: { width: 1400, height: 700 } }); p.on('pageerror', e => console.log('ERR', e.message)); p.on('console', m => console.log('log', m.text()));
+await p.route('http://localhost:8765/preview.html', r => r.fulfill({ contentType: 'text/html', body: '<!doctype html><body style="margin:0"><script>window.BASE="http://localhost:8765/"</script><script src="/__b.js"></script></body>' }));
+await p.route('http://localhost:8765/__b.js', r => r.fulfill({ contentType: 'text/javascript', body: fs.readFileSync(path.join(here, 'preview2.bundle.js'), 'utf8') }));
+await p.goto('http://localhost:8765/preview.html'); await p.waitForFunction(() => window.ready);
+const spec = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
+for (const s of spec.items) console.log(JSON.stringify(await p.evaluate(s => window.add(s.parts, s.x, s.clip, s.t, s), s)));
+const u = await p.evaluate(c => window.shot(c.p, c.l), spec.cam); fs.writeFileSync(process.argv[2], Buffer.from(u.split(',')[1], 'base64'));
+await b.close();

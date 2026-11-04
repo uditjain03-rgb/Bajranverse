@@ -1,44 +1,32 @@
-// The music: little island-band tunes rendered once into looping audio buffers (no timers, so they never stutter).
-// Instruments are made in plain JavaScript: a steel drum, marimba and bells for the tunes, a plucked ukulele
-// (Karplus-Strong string) strumming the off-beats, a round bass, soft accordion chords, shaker, kick and rim clicks,
-// all through a small stereo reverb. Each loop is 8 bars; the reverb tail wraps around so the loop is seamless.
-import { Audio } from './audio.js';
-import { render, SR } from './musiccore.js';
-import WORKER_SRC from 'music-worker-src';
-
-const cache = {}, waiting = {};
-let worker = null;
-try {
-  worker = new Worker(URL.createObjectURL(new Blob([WORKER_SRC], { type: 'text/javascript' })));
-  worker.onmessage = e => { const { name, L, R } = e.data; cache[name] = [L, R]; const w = waiting[name]; delete waiting[name]; if (w) w.forEach(f => f()); };
-  worker.onerror = () => { worker = null; };
-} catch (e) { worker = null; }
-function get(name, cb) {   // the track's audio, made in the background (or right here if workers are not available)
-  if (cache[name]) { cb(); return; }
-  if (worker) { if (!waiting[name]) { waiting[name] = []; worker.postMessage(name); } waiting[name].push(cb); return; }
-  cache[name] = render(name); cb();
+// The music: recorded orchestral pirate and battle tracks (public-domain / CC-BY, see the credits in Settings),
+// streamed from the app's files and looped, with a soft cross-fade when the track changes.
+const FILES = {
+  title: 'treasure', beach: 'battle_theme', jungle: 'pirates', snow: 'orchestra', volcano: 'battle_theme', coral: 'pirates', night: 'orchestra',
+  fight: 'boss', bossfight: 'pursuit', win: 'victory',
+};
+let cur = null, el = null, volume = 0.75, fades = [];
+const els = {};
+function audio(name) {
+  const f = FILES[name] || name; if (els[f]) return els[f];
+  const a = new window.Audio('music/' + f + '.ogg'); a.loop = true; a.preload = 'auto'; a.volume = 0; return (els[f] = a);
 }
-
-let src = null, gain = null, cur = null, volume = 1;
+function fade(a, to, ms, done) {
+  const from = a.volume, t0 = performance.now(); fades = fades.filter(f => f.a !== a);
+  const f = { a, step() { const k = Math.min(1, (performance.now() - t0) / ms); a.volume = Math.max(0, Math.min(1, from + (to - from) * k)); if (k >= 1) { fades = fades.filter(x => x !== f); if (done) done(); } } };
+  fades.push(f);
+}
+setInterval(() => fades.slice().forEach(f => f.step()), 40);
 export const Music = {
-  // make the tracks ahead of time, one at a time, while the game is idle
-  warm(list) { for (const k of list) get(k, () => {}); },
+  warm(list) { for (const n of list) audio(n); },
   play(name) {
-    if (cur === name) return;
-    const ctx = Audio.init(); if (!ctx) return;
-    this.stop(); cur = name;
-    get(name, () => { if (cur === name && !src) this.start(name); });
+    if (cur === name && el && !el.paused) return;
+    const next = audio(name);
+    if (el && el !== next) { const old = el; fade(old, 0, 500, () => old.pause()); }
+    cur = name; el = next;
+    if (next.paused) { if (FILES[name] !== 'boss' && FILES[name] !== 'pursuit' && FILES[name] !== 'victory') { /* keep position */ } else next.currentTime = 0; const p = next.play(); if (p && p.catch) p.catch(() => { cur = null; }); }
+    fade(next, volume, 700);
   },
-  start(name) {
-    const ctx = Audio.H.ctx, [L, R] = cache[name], b = ctx.createBuffer(2, L.length, SR); b.copyToChannel(L, 0); b.copyToChannel(R, 1);
-    src = ctx.createBufferSource(); src.buffer = b; src.loop = true; gain = ctx.createGain();
-    const t = ctx.currentTime; gain.gain.setValueAtTime(0.0001, t); gain.gain.exponentialRampToValueAtTime(0.7 * volume, t + 0.6);
-    src.connect(gain); gain.connect(Audio.H.mbus); src.start(t + 0.02);
-  },
-  stop() {
-    if (src) { const ctx = Audio.H.ctx, s = src, g = gain, t = ctx.currentTime; try { g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35); s.stop(t + 0.4); } catch (e) { /* stopped */ } }
-    src = null; gain = null; cur = null;
-  },
-  setVolume(v) { volume = v; },
-  _render: render,
+  stop() { if (el) { const old = el; fade(old, 0, 350, () => old.pause()); } el = null; cur = null; },
+  pauseAll() { Object.values(els).forEach(a => a.pause()); el = null; cur = null; },
+  setVolume(v) { volume = v; if (el) el.volume = v; },
 };

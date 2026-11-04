@@ -9,7 +9,7 @@ const cam = new THREE.PerspectiveCamera(30, 1400 / 600, 0.1, 100);
 window.view = (b64, items, camp) => {
   const bin = Uint8Array.from(atob(b64), c => c.charCodeAt(0)); const P = loadPeople(bin.buffer);
   for (const o of scene.children.filter(o => o.isMesh)) scene.remove(o);
-  for (const it of items) { const a = new Actor(P[it.id], it.cols || {}); a.pose(it.clip, it.t); a.position.set(it.x, 0, it.z || 0); a.rotation.y = it.ry ?? Math.PI; a.scale.setScalar(it.s || 1); scene.add(a); }
+  for (const it of items) { if (!P[it.id]) continue; const a = new Actor(P[it.id], it.cols || {}); a.pose(it.clip, it.t); a.position.set(it.x, 0, it.z || 0); a.rotation.y = it.ry ?? Math.PI; a.scale.setScalar(it.s || 1); scene.add(a); }
   cam.position.set(...camp.p); cam.lookAt(...camp.l);
   r.render(scene, cam); return r.domElement.toDataURL('image/png');
 };

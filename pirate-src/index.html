@@ -93,10 +93,11 @@ button { font-family: inherit; font-weight: 700; color: inherit; cursor: pointer
 #logo .s { font-size: 26px; color: #ffe066; -webkit-text-stroke: 4px var(--dark); paint-order: stroke fill; letter-spacing: 6px; }
 #credit { font-size: 15px; color: #fff6e0; -webkit-text-stroke: 3px var(--dark); paint-order: stroke fill; letter-spacing: 1px; opacity: .95; }
 #credit::before { content: 'made by '; font-size: 12px; }
-#studio { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: radial-gradient(circle at 50% 42%, #ff9a2a, #c2410c 55%, #5a1a06); transition: opacity .5s; }
-#studio .mark { font-size: 84px; animation: wobble 2s ease-in-out infinite; }
-#studio .nm { font-size: 40px; line-height: 1; text-align: center; color: #fff; -webkit-text-stroke: 5px #3a1004; paint-order: stroke fill; text-shadow: 0 5px 0 #3a1004; letter-spacing: 2px; }
-#studio .pr { font-size: 20px; color: #ffe8b0; -webkit-text-stroke: 3px #3a1004; paint-order: stroke fill; letter-spacing: 4px; }
+#studio { position: fixed; inset: 0; background: #fbf8f3; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; transition: opacity .6s; }
+#studio img { width: min(94vw, 560px); animation: logoIn 1.2s cubic-bezier(.2,1.4,.4,1) both; }
+#studio .presents { font-family: 'Fredoka'; font-weight: 600; color: #6b5a4a; letter-spacing: 6px; margin-top: 6px; animation: fadeIn 1s .8s both; }
+@keyframes logoIn { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 #studio.gone { opacity: 0; pointer-events: none; }
 </style>
 </head>
@@ -124,7 +125,7 @@ button { font-family: inherit; font-weight: 700; color: inherit; cursor: pointer
 <div id="modal" class="screen modal hidden"><div class="panel" id="modalBody"></div></div>
 <div id="flash"></div>
 <div id="loading">🏴‍☠️ Loading…</div>
-<div id="studio"><div class="mark">🐒</div><div class="nm">BAJRANGVERSE<br>STUDIOS</div><div class="pr">presents</div></div>
+<div id="studio"><img src="logo.jpg" alt="BajrangVerse Studios"><div class="presents">PRESENTS</div></div>
 <script src="game.js"></script>
 </body>
 </html>

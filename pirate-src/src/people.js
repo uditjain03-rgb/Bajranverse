@@ -37,17 +37,17 @@ class Person {
   geometry(f) {
     const g = new THREE.BufferGeometry(); g.setIndex(this.indexAttr);
     g.setAttribute('position', new THREE.BufferAttribute(this.positions(f), 3)); g.setAttribute('color', this.colorAttr); g.setAttribute('mask', this.maskAttr);
-    g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 3); return g;
+    g.computeVertexNormals(); g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 3); return g;
   }
 }
 
 // one material for all crowds: vertex colours, flat facets, and per-person clothes / skin / hair colours
 function crowdMaterial() {
-  const m = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.72, metalness: 0.0 });
+  const m = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: false, roughness: 0.75, metalness: 0.0 });
   m.onBeforeCompile = sh => {
     THREE.Material.prototype.onBeforeCompile.call(m, sh);
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float mask; attribute vec3 iTint; attribute vec3 iSkin; attribute vec3 iHair;')
-      .replace('#include <color_vertex>', '#include <color_vertex>\nvColor.rgb *= mask < 0.5 ? vec3(1.0) : mask < 1.5 ? iTint : mask < 2.5 ? iSkin : iHair;');
+      .replace('#include <color_vertex>', '#include <color_vertex>\nvColor.rgb *= mask < 0.5 ? vec3(1.0) : 1.6 * (mask < 1.5 ? iTint : mask < 2.5 ? iSkin : iHair);');
   };
   m.customProgramCacheKey = () => 'crowd' + THREE.Material.prototype.customProgramCacheKey.call(m);
   return m;
@@ -105,10 +105,10 @@ export class Actor extends THREE.Mesh {
     const g = new THREE.BufferGeometry(); g.setIndex(person.indexAttr);
     const N = person.N, pos = new Float32Array(N * 3), c = new Float32Array(N * 3);
     const T = [null, new THREE.Color(cols.tint ?? 0xffffff), new THREE.Color(cols.skin ?? 0xffffff), new THREE.Color(cols.hair ?? 0xffffff)];
-    for (let i = 0; i < N; i++) { const m = person.mask[i], k = T[m]; for (let j = 0; j < 3; j++) c[i * 3 + j] = person.color[i * 3 + j] / 255 * (k ? [k.r, k.g, k.b][j] : 1); }
+    for (let i = 0; i < N; i++) { const m = person.mask[i], k = T[m]; for (let j = 0; j < 3; j++) c[i * 3 + j] = person.color[i * 3 + j] / 255 * (k ? 1.6 * [k.r, k.g, k.b][j] : 1); }
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(c, 3));
     g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 1, 0), 3);
-    super(g, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.65 }));
+    super(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7 }));
     this.person = person; this.frustumCulled = false; this.castShadow = true; this.clip = 'idle'; this.ct = 0; this.prev = null; this.mixT = 1;
     this.pose('idle', 0);
   }
@@ -119,7 +119,7 @@ export class Actor extends THREE.Mesh {
     const [a, b, k] = this.person.frame(clip, t), A = this.person.positions(a), B = this.person.positions(b), out = this.geometry.attributes.position.array;
     const s = k * k * (3 - 2 * k), pv = this.prev && this.mixT < 1 ? this.prev : null, m = pv ? this.mixT : 1;
     for (let i = 0; i < out.length; i++) { const v = A[i] + (B[i] - A[i]) * s; out[i] = pv ? pv[i] + (v - pv[i]) * m : v; }
-    this.geometry.attributes.position.needsUpdate = true;
+    this.geometry.attributes.position.needsUpdate = true; this.geometry.computeVertexNormals();
   }
   done() { const c = this.person.clips[this.clip]; return !c.loop && this.ct >= c.dur; }
 }
