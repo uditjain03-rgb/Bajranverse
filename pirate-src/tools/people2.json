@@ -9,21 +9,21 @@
     "meshes": {
      "Male_Peasant_Arms_1": {
       "mask": 1,
-      "keep": 0.12
+      "keep": 0.156
      },
      "Male_Peasant_Arms_2": {
       "mask": 2,
-      "keep": 0.072
+      "keep": 0.094
      },
      "Male_Peasant_Body": {
       "mask": 1,
-      "keep": 0.09
+      "keep": 0.117
      },
      "Male_Peasant_Feet": {
-      "keep": 0.096
+      "keep": 0.125
      },
      "Male_Peasant_Legs": {
-      "keep": 0.12
+      "keep": 0.156
      }
     }
    },
@@ -33,10 +33,10 @@
     "meshes": {
      "SuperHero_Male": {
       "mask": 2,
-      "keep": 0.12
+      "keep": 0.156
      },
      "Eyes": {
-      "keep": 0.15
+      "keep": 0.195
      },
      "Eyebrows": {
       "skip": true
@@ -49,10 +49,10 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.12
+      "keep": 0.156
      }
     },
-    "keep": 0.12
+    "keep": 0.156
    },
    {
     "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_Beard.gltf",
@@ -60,10 +60,10 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.12
+      "keep": 0.156
      }
     },
-    "keep": 0.12
+    "keep": 0.156
    },
    {
     "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Regular.gltf",
@@ -71,46 +71,46 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.12
+      "keep": 0.156
      }
     },
-    "keep": 0.09
+    "keep": 0.117
    }
   ],
   "clips": [
    {
     "name": "run",
     "src": "Sprint_Loop",
-    "frames": 10,
+    "frames": 8,
     "loop": true,
     "inPlace": true
    },
    {
     "name": "throw",
     "src": "Sword_Attack",
-    "frames": 8
+    "frames": 6
    },
    {
     "name": "idle",
     "src": "Idle_Loop",
-    "frames": 6,
+    "frames": 4,
     "loop": true
    },
    {
     "name": "victory",
     "src": "Dance_Loop",
-    "frames": 12,
+    "frames": 8,
     "loop": true
    },
    {
     "name": "hit",
     "src": "Hit_Chest",
-    "frames": 5
+    "frames": 4
    },
    {
     "name": "jump",
     "src": "Jump_Loop",
-    "frames": 4,
+    "frames": 3,
     "loop": true,
     "inPlace": true
    }
@@ -126,21 +126,21 @@
     "meshes": {
      "Male_Peasant_Arms_1": {
       "mask": 1,
-      "keep": 0.12
+      "keep": 0.156
      },
      "Male_Peasant_Arms_2": {
       "mask": 2,
-      "keep": 0.072
+      "keep": 0.094
      },
      "Male_Peasant_Body": {
       "mask": 1,
-      "keep": 0.09
+      "keep": 0.117
      },
      "Male_Peasant_Feet": {
-      "keep": 0.096
+      "keep": 0.125
      },
      "Male_Peasant_Legs": {
-      "keep": 0.12
+      "keep": 0.156
      }
     }
    },
@@ -150,10 +150,10 @@
     "meshes": {
      "SuperHero_Male": {
       "mask": 2,
-      "keep": 0.12
+      "keep": 0.156
      },
      "Eyes": {
-      "keep": 0.15
+      "keep": 0.195
      },
      "Eyebrows": {
       "skip": true
@@ -166,10 +166,10 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.12
+      "keep": 0.156
      }
     },
-    "keep": 0.12
+    "keep": 0.156
    },
    {
     "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Regular.gltf",
@@ -177,46 +177,46 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.12
+      "keep": 0.156
      }
     },
-    "keep": 0.09
+    "keep": 0.117
    }
   ],
   "clips": [
    {
     "name": "run",
     "src": "Sprint_Loop",
-    "frames": 10,
+    "frames": 8,
     "loop": true,
     "inPlace": true
    },
    {
     "name": "throw",
     "src": "Sword_Attack",
-    "frames": 8
+    "frames": 6
    },
    {
     "name": "idle",
     "src": "Idle_Loop",
-    "frames": 6,
+    "frames": 4,
     "loop": true
    },
    {
     "name": "victory",
     "src": "Dance_Loop",
-    "frames": 12,
+    "frames": 8,
     "loop": true
    },
    {
     "name": "hit",
     "src": "Hit_Chest",
-    "frames": 5
+    "frames": 4
    },
    {
     "name": "jump",
     "src": "Jump_Loop",
-    "frames": 4,
+    "frames": 3,
     "loop": true,
     "inPlace": true
    }
@@ -243,21 +243,21 @@
     "meshes": {
      "Male_Peasant_Arms_1": {
       "mask": 1,
-      "keep": 0.12
+      "keep": 0.156
      },
      "Male_Peasant_Arms_2": {
       "mask": 2,
-      "keep": 0.072
+      "keep": 0.094
      },
      "Male_Peasant_Body": {
       "mask": 1,
-      "keep": 0.09
+      "keep": 0.117
      },
      "Male_Peasant_Feet": {
-      "keep": 0.096
+      "keep": 0.125
      },
      "Male_Peasant_Legs": {
-      "keep": 0.12
+      "keep": 0.156
      }
     }
    },
@@ -267,10 +267,10 @@
     "meshes": {
      "SuperHero_Male": {
       "mask": 2,
-      "keep": 0.12
+      "keep": 0.156
      },
      "Eyes": {
-      "keep": 0.15
+      "keep": 0.195
      },
      "Eyebrows": {
       "skip": true
@@ -283,10 +283,10 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.12
+      "keep": 0.156
      }
     },
-    "keep": 0.12
+    "keep": 0.156
    },
    {
     "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_Beard.gltf",
@@ -294,10 +294,10 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.12
+      "keep": 0.156
      }
     },
-    "keep": 0.12
+    "keep": 0.156
    },
    {
     "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Regular.gltf",
@@ -305,46 +305,46 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.12
+      "keep": 0.156
      }
     },
-    "keep": 0.09
+    "keep": 0.117
    }
   ],
   "clips": [
    {
     "name": "run",
     "src": "Sprint_Loop",
-    "frames": 10,
+    "frames": 8,
     "loop": true,
     "inPlace": true
    },
    {
     "name": "throw",
     "src": "Sword_Attack",
-    "frames": 8
+    "frames": 6
    },
    {
     "name": "idle",
     "src": "Idle_Loop",
-    "frames": 6,
+    "frames": 4,
     "loop": true
    },
    {
     "name": "victory",
     "src": "Dance_Loop",
-    "frames": 12,
+    "frames": 8,
     "loop": true
    },
    {
     "name": "hit",
     "src": "Hit_Chest",
-    "frames": 5
+    "frames": 4
    },
    {
     "name": "jump",
     "src": "Jump_Loop",
-    "frames": 4,
+    "frames": 3,
     "loop": true,
     "inPlace": true
    }
@@ -359,17 +359,17 @@
     "file": "Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/Female_Peasant.gltf",
     "meshes": {
      "Female_Peasant_Arms": {
-      "keep": 0.072
+      "keep": 0.094
      },
      "Female_Peasant_Body": {
       "mask": 1,
-      "keep": 0.09
+      "keep": 0.117
      },
      "Female_Peasant_Feet": {
-      "keep": 0.096
+      "keep": 0.125
      },
      "Female_Peasant_Legs": {
-      "keep": 0.12
+      "keep": 0.156
      }
     }
    },
@@ -379,10 +379,10 @@
     "meshes": {
      "Superhero_Female": {
       "mask": 2,
-      "keep": 0.12
+      "keep": 0.156
      },
      "Eyes": {
-      "keep": 0.15
+      "keep": 0.195
      },
      "Eyebrows": {
       "skip": true
@@ -395,10 +395,10 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.12
+      "keep": 0.156
      }
     },
-    "keep": 0.12
+    "keep": 0.156
    },
    {
     "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Female.gltf",
@@ -406,46 +406,46 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.12
+      "keep": 0.156
      }
     },
-    "keep": 0.09
+    "keep": 0.117
    }
   ],
   "clips": [
    {
     "name": "run",
     "src": "Sprint_Loop",
-    "frames": 10,
+    "frames": 8,
     "loop": true,
     "inPlace": true
    },
    {
     "name": "throw",
     "src": "Sword_Attack",
-    "frames": 8
+    "frames": 6
    },
    {
     "name": "idle",
     "src": "Idle_Loop",
-    "frames": 6,
+    "frames": 4,
     "loop": true
    },
    {
     "name": "victory",
     "src": "Dance_Loop",
-    "frames": 12,
+    "frames": 8,
     "loop": true
    },
    {
     "name": "hit",
     "src": "Hit_Chest",
-    "frames": 5
+    "frames": 4
    },
    {
     "name": "jump",
     "src": "Jump_Loop",
-    "frames": 4,
+    "frames": 3,
     "loop": true,
     "inPlace": true
    }
@@ -460,17 +460,17 @@
     "file": "Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/Female_Peasant.gltf",
     "meshes": {
      "Female_Peasant_Arms": {
-      "keep": 0.072
+      "keep": 0.094
      },
      "Female_Peasant_Body": {
       "mask": 1,
-      "keep": 0.09
+      "keep": 0.117
      },
      "Female_Peasant_Feet": {
-      "keep": 0.096
+      "keep": 0.125
      },
      "Female_Peasant_Legs": {
-      "keep": 0.12
+      "keep": 0.156
      }
     }
    },
@@ -480,10 +480,10 @@
     "meshes": {
      "Superhero_Female": {
       "mask": 2,
-      "keep": 0.12
+      "keep": 0.156
      },
      "Eyes": {
-      "keep": 0.15
+      "keep": 0.195
      },
      "Eyebrows": {
       "skip": true
@@ -496,10 +496,10 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.12
+      "keep": 0.156
      }
     },
-    "keep": 0.12
+    "keep": 0.156
    },
    {
     "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Female.gltf",
@@ -507,46 +507,46 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.12
+      "keep": 0.156
      }
     },
-    "keep": 0.09
+    "keep": 0.117
    }
   ],
   "clips": [
    {
     "name": "run",
     "src": "Sprint_Loop",
-    "frames": 10,
+    "frames": 8,
     "loop": true,
     "inPlace": true
    },
    {
     "name": "throw",
     "src": "Sword_Attack",
-    "frames": 8
+    "frames": 6
    },
    {
     "name": "idle",
     "src": "Idle_Loop",
-    "frames": 6,
+    "frames": 4,
     "loop": true
    },
    {
     "name": "victory",
     "src": "Dance_Loop",
-    "frames": 12,
+    "frames": 8,
     "loop": true
    },
    {
     "name": "hit",
     "src": "Hit_Chest",
-    "frames": 5
+    "frames": 4
    },
    {
     "name": "jump",
     "src": "Jump_Loop",
-    "frames": 4,
+    "frames": 3,
     "loop": true,
     "inPlace": true
    }
@@ -562,37 +562,37 @@
     "meshes": {
      "Male_Ranger_Body": {
       "mask": 1,
-      "keep": 0.09
+      "keep": 0.117
      },
      "Male_Ranger_Head_Hood": {
       "mask": 1,
-      "keep": 0.108
+      "keep": 0.14
      },
      "Male_Ranger_Arms_1": {
       "mask": 1,
-      "keep": 0.12
+      "keep": 0.156
      },
      "Male_Ranger_Arms_2": {
       "mask": 2,
-      "keep": 0.072
+      "keep": 0.094
      },
      "Male_Ranger_Arms_Bracer": {
-      "keep": 0.06
+      "keep": 0.078
      },
      "Male_Ranger_Feet_Boots": {
-      "keep": 0.096
+      "keep": 0.125
      },
      "Male_Ranger_Acc_Pauldron": {
-      "keep": 0.12
+      "keep": 0.156
      },
      "Male_Ranger_Body_Belt_1": {
-      "keep": 0.12
+      "keep": 0.156
      },
      "Male_Ranger_Body_Belt_2": {
-      "keep": 0.12
+      "keep": 0.156
      },
      "Male_Ranger_Legs": {
-      "keep": 0.12
+      "keep": 0.156
      }
     }
    },
@@ -602,10 +602,10 @@
     "meshes": {
      "SuperHero_Male": {
       "mask": 2,
-      "keep": 0.12
+      "keep": 0.156
      },
      "Eyes": {
-      "keep": 0.15
+      "keep": 0.195
      },
      "Eyebrows": {
       "skip": true
@@ -618,10 +618,10 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.12
+      "keep": 0.156
      }
     },
-    "keep": 0.09
+    "keep": 0.117
    }
   ],
   "weapon": {
@@ -649,30 +649,30 @@
    {
     "name": "run",
     "src": "Jog_Fwd_Loop",
-    "frames": 10,
+    "frames": 8,
     "loop": true,
     "inPlace": true
    },
    {
     "name": "shoot",
     "src": "Pistol_Shoot",
-    "frames": 6
+    "frames": 5
    },
    {
     "name": "idle",
     "src": "Pistol_Idle_Loop",
-    "frames": 6,
+    "frames": 4,
     "loop": true
    },
    {
     "name": "hit",
     "src": "Hit_Chest",
-    "frames": 5
+    "frames": 4
    },
    {
     "name": "defeat",
     "src": "Death01",
-    "frames": 10
+    "frames": 8
    }
   ]
  },
@@ -949,6 +949,559 @@
     "depth": 0.2,
     "width": 0.3,
     "sink": 0.05
+   }
+  ]
+ },
+ {
+  "id": "pirate_lo",
+  "scale": 0.97,
+  "keep": 0.2,
+  "parts": [
+   {
+    "file": "Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/Male_Peasant.gltf",
+    "meshes": {
+     "Male_Peasant_Arms_1": {
+      "mask": 1,
+      "keep": 0.078
+     },
+     "Male_Peasant_Arms_2": {
+      "mask": 2,
+      "keep": 0.047
+     },
+     "Male_Peasant_Body": {
+      "mask": 1,
+      "keep": 0.059
+     },
+     "Male_Peasant_Feet": {
+      "keep": 0.062
+     },
+     "Male_Peasant_Legs": {
+      "keep": 0.078
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Base Characters/Godot - UE/Superhero_Male_FullBody.gltf",
+    "headOnly": 1.45,
+    "meshes": {
+     "SuperHero_Male": {
+      "mask": 2,
+      "keep": 0.078
+     },
+     "Eyes": {
+      "keep": 0.098
+     },
+     "Eyebrows": {
+      "skip": true
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_SimpleParted.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.078
+     }
+    },
+    "keep": 0.078
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_Beard.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.078
+     }
+    },
+    "keep": 0.078
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Regular.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.078
+     }
+    },
+    "keep": 0.06
+   }
+  ],
+  "clips": [
+   {
+    "name": "run",
+    "src": "Sprint_Loop",
+    "frames": 6,
+    "loop": true,
+    "inPlace": true
+   },
+   {
+    "name": "throw",
+    "src": "Sword_Attack",
+    "frames": 4
+   },
+   {
+    "name": "idle",
+    "src": "Idle_Loop",
+    "frames": 2,
+    "loop": true
+   },
+   {
+    "name": "victory",
+    "src": "Dance_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "hit",
+    "src": "Hit_Chest",
+    "frames": 2
+   },
+   {
+    "name": "jump",
+    "src": "Jump_Loop",
+    "frames": 2,
+    "loop": true,
+    "inPlace": true
+   }
+  ]
+ },
+ {
+  "id": "pirate2_lo",
+  "scale": 0.97,
+  "keep": 0.2,
+  "parts": [
+   {
+    "file": "Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/Male_Peasant.gltf",
+    "meshes": {
+     "Male_Peasant_Arms_1": {
+      "mask": 1,
+      "keep": 0.078
+     },
+     "Male_Peasant_Arms_2": {
+      "mask": 2,
+      "keep": 0.047
+     },
+     "Male_Peasant_Body": {
+      "mask": 1,
+      "keep": 0.059
+     },
+     "Male_Peasant_Feet": {
+      "keep": 0.062
+     },
+     "Male_Peasant_Legs": {
+      "keep": 0.078
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Base Characters/Godot - UE/Superhero_Male_FullBody.gltf",
+    "headOnly": 1.45,
+    "meshes": {
+     "SuperHero_Male": {
+      "mask": 2,
+      "keep": 0.078
+     },
+     "Eyes": {
+      "keep": 0.098
+     },
+     "Eyebrows": {
+      "skip": true
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_Buzzed.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.078
+     }
+    },
+    "keep": 0.078
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Regular.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.078
+     }
+    },
+    "keep": 0.06
+   }
+  ],
+  "clips": [
+   {
+    "name": "run",
+    "src": "Sprint_Loop",
+    "frames": 6,
+    "loop": true,
+    "inPlace": true
+   },
+   {
+    "name": "throw",
+    "src": "Sword_Attack",
+    "frames": 4
+   },
+   {
+    "name": "idle",
+    "src": "Idle_Loop",
+    "frames": 2,
+    "loop": true
+   },
+   {
+    "name": "victory",
+    "src": "Dance_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "hit",
+    "src": "Hit_Chest",
+    "frames": 2
+   },
+   {
+    "name": "jump",
+    "src": "Jump_Loop",
+    "frames": 2,
+    "loop": true,
+    "inPlace": true
+   }
+  ],
+  "hats": [
+   {
+    "file": "uacp/Pirate_Male.fbx",
+    "mats": {
+     "Red": 12593194
+    },
+    "depth": 0.33,
+    "width": 0.205,
+    "sink": 0.125
+   }
+  ]
+ },
+ {
+  "id": "pirate3_lo",
+  "scale": 0.97,
+  "keep": 0.2,
+  "parts": [
+   {
+    "file": "Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/Male_Peasant.gltf",
+    "meshes": {
+     "Male_Peasant_Arms_1": {
+      "mask": 1,
+      "keep": 0.078
+     },
+     "Male_Peasant_Arms_2": {
+      "mask": 2,
+      "keep": 0.047
+     },
+     "Male_Peasant_Body": {
+      "mask": 1,
+      "keep": 0.059
+     },
+     "Male_Peasant_Feet": {
+      "keep": 0.062
+     },
+     "Male_Peasant_Legs": {
+      "keep": 0.078
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Base Characters/Godot - UE/Superhero_Male_FullBody.gltf",
+    "headOnly": 1.45,
+    "meshes": {
+     "SuperHero_Male": {
+      "mask": 2,
+      "keep": 0.078
+     },
+     "Eyes": {
+      "keep": 0.098
+     },
+     "Eyebrows": {
+      "skip": true
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_Long.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.078
+     }
+    },
+    "keep": 0.078
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_Beard.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.078
+     }
+    },
+    "keep": 0.078
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Regular.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.078
+     }
+    },
+    "keep": 0.06
+   }
+  ],
+  "clips": [
+   {
+    "name": "run",
+    "src": "Sprint_Loop",
+    "frames": 6,
+    "loop": true,
+    "inPlace": true
+   },
+   {
+    "name": "throw",
+    "src": "Sword_Attack",
+    "frames": 4
+   },
+   {
+    "name": "idle",
+    "src": "Idle_Loop",
+    "frames": 2,
+    "loop": true
+   },
+   {
+    "name": "victory",
+    "src": "Dance_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "hit",
+    "src": "Hit_Chest",
+    "frames": 2
+   },
+   {
+    "name": "jump",
+    "src": "Jump_Loop",
+    "frames": 2,
+    "loop": true,
+    "inPlace": true
+   }
+  ]
+ },
+ {
+  "id": "pirateF_lo",
+  "scale": 0.97,
+  "keep": 0.2,
+  "parts": [
+   {
+    "file": "Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/Female_Peasant.gltf",
+    "meshes": {
+     "Female_Peasant_Arms": {
+      "keep": 0.047
+     },
+     "Female_Peasant_Body": {
+      "mask": 1,
+      "keep": 0.059
+     },
+     "Female_Peasant_Feet": {
+      "keep": 0.062
+     },
+     "Female_Peasant_Legs": {
+      "keep": 0.078
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Base Characters/Godot - UE/Superhero_Female_FullBody.gltf",
+    "headOnly": 1.4,
+    "meshes": {
+     "Superhero_Female": {
+      "mask": 2,
+      "keep": 0.078
+     },
+     "Eyes": {
+      "keep": 0.098
+     },
+     "Eyebrows": {
+      "skip": true
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_Buns.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.078
+     }
+    },
+    "keep": 0.078
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Female.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.078
+     }
+    },
+    "keep": 0.06
+   }
+  ],
+  "clips": [
+   {
+    "name": "run",
+    "src": "Sprint_Loop",
+    "frames": 6,
+    "loop": true,
+    "inPlace": true
+   },
+   {
+    "name": "throw",
+    "src": "Sword_Attack",
+    "frames": 4
+   },
+   {
+    "name": "idle",
+    "src": "Idle_Loop",
+    "frames": 2,
+    "loop": true
+   },
+   {
+    "name": "victory",
+    "src": "Dance_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "hit",
+    "src": "Hit_Chest",
+    "frames": 2
+   },
+   {
+    "name": "jump",
+    "src": "Jump_Loop",
+    "frames": 2,
+    "loop": true,
+    "inPlace": true
+   }
+  ]
+ },
+ {
+  "id": "pirateF2_lo",
+  "scale": 0.97,
+  "keep": 0.2,
+  "parts": [
+   {
+    "file": "Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/Female_Peasant.gltf",
+    "meshes": {
+     "Female_Peasant_Arms": {
+      "keep": 0.047
+     },
+     "Female_Peasant_Body": {
+      "mask": 1,
+      "keep": 0.059
+     },
+     "Female_Peasant_Feet": {
+      "keep": 0.062
+     },
+     "Female_Peasant_Legs": {
+      "keep": 0.078
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Base Characters/Godot - UE/Superhero_Female_FullBody.gltf",
+    "headOnly": 1.4,
+    "meshes": {
+     "Superhero_Female": {
+      "mask": 2,
+      "keep": 0.078
+     },
+     "Eyes": {
+      "keep": 0.098
+     },
+     "Eyebrows": {
+      "skip": true
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_Long.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.078
+     }
+    },
+    "keep": 0.078
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Female.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.078
+     }
+    },
+    "keep": 0.06
+   }
+  ],
+  "clips": [
+   {
+    "name": "run",
+    "src": "Sprint_Loop",
+    "frames": 6,
+    "loop": true,
+    "inPlace": true
+   },
+   {
+    "name": "throw",
+    "src": "Sword_Attack",
+    "frames": 4
+   },
+   {
+    "name": "idle",
+    "src": "Idle_Loop",
+    "frames": 2,
+    "loop": true
+   },
+   {
+    "name": "victory",
+    "src": "Dance_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "hit",
+    "src": "Hit_Chest",
+    "frames": 2
+   },
+   {
+    "name": "jump",
+    "src": "Jump_Loop",
+    "frames": 2,
+    "loop": true,
+    "inPlace": true
    }
   ]
  }

@@ -109,10 +109,10 @@ export function buildWorld(lv, scene) {
   const P = KIT ? KPROPS[T.props] : PROPS[T.props];
   for (let z = 10; z > zEnd + 20; z -= rnd(6, 11)) for (const s of [-1, 1]) {
     if (Math.random() < 0.75) { const o = P.near(); o.position.set(s * rnd(PATH_W / 2 + 2, PATH_W / 2 + 9), 0, z + rnd(-3, 3)); o.rotation.y = rnd(0, PI * 2); g.add(o); }
-    if (Math.random() < 0.6) { const o = P.far(); o.position.set(s * rnd(PATH_W / 2 + 12, PATH_W / 2 + 40), 0, z + rnd(-4, 4)); o.rotation.y = rnd(0, PI * 2); o.scale.multiplyScalar(rnd(1, 1.8)); g.add(o); }
+    if (Math.random() < 0.42) { const o = P.far(); o.position.set(s * rnd(PATH_W / 2 + 12, PATH_W / 2 + 40), 0, z + rnd(-4, 4)); o.rotation.y = rnd(0, PI * 2); o.scale.multiplyScalar(rnd(1, 1.8)); g.add(o); }
   }
   // grass, flowers and stones right along the edges of the path
-  if (P.edge) for (let z = 10; z > zEnd + 20; z -= rnd(2.5, 5)) for (const s of [-1, 1]) if (Math.random() < 0.7) { const o = P.edge(); o.position.set(s * rnd(PATH_W / 2 + 0.6, PATH_W / 2 + 2.2), 0, z); o.rotation.y = rnd(0, PI * 2); g.add(o); }
+  if (P.edge) for (let z = 10; z > zEnd + 20; z -= rnd(3.5, 6.5)) for (const s of [-1, 1]) if (Math.random() < 0.6) { const o = P.edge(); o.position.set(s * rnd(PATH_W / 2 + 0.6, PATH_W / 2 + 2.2), 0, z); o.rotation.y = rnd(0, PI * 2); g.add(o); }
   // fences along parts of the path
   for (let z = -20; z > zEnd + 40; z -= rnd(40, 90)) { const n = Math.floor(rnd(4, 9)); for (const s of [-1, 1]) g.add(fence(s * (PATH_W / 2 + 0.6), z, n, T)); z -= n * 2.5; }
   // big mountains far away
@@ -128,13 +128,13 @@ export function buildWorld(lv, scene) {
     const ff = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xd8ff6a, size: 0.25, transparent: true, opacity: 0.9 })); g.add(ff);
     anims.push(t => { ff.material.opacity = 0.6 + Math.sin(t * 3) * 0.3; });
   }
-  scene.fog = new THREE.Fog(T.fog, 60, 210);
+  scene.fog = new THREE.Fog(T.fog, 55, 175);
   g.traverse(o => { o.frustumCulled = false; });
   const chunks = mergeStatic(g);
   return {
     group: g, sky, update(dt, t) { anims.forEach(a => a(t)); },
     // only the scenery near the camera is drawn
-    cull(z, all) { for (const c of chunks) c.visible = all || (c.userData.z0 > z - 230 && c.userData.z1 < z + 40); },
+    cull(z, all) { for (const c of chunks) c.visible = all || (c.userData.z0 > z - 170 && c.userData.z1 < z + 30); },
     dispose() { scene.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); },
   };
 }
@@ -237,7 +237,7 @@ export function mergeStatic(root) {
     const geos = G.list.map(o => { let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); g.applyMatrix4(o.matrixWorld); for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv', 'color'].includes(k)) g.deleteAttribute(k); return g; });
     const m = mergeGeometries(geos, false); geos.forEach(g => g.dispose());
     if (!m) continue;
-    const mesh = new THREE.Mesh(m, G.mat); mesh.castShadow = G.cast; mesh.receiveShadow = G.recv; mesh.frustumCulled = false;
+    const mesh = new THREE.Mesh(m, G.mat); mesh.castShadow = false; mesh.receiveShadow = G.recv; mesh.frustumCulled = false;   // scenery casts no real-time shadow (much faster)
     if (!chunks.has(G.ck)) { const c = new THREE.Group(); c.userData.z0 = -G.ck * CHUNK; c.userData.z1 = -(G.ck + 1) * CHUNK; chunks.set(G.ck, c); root.add(c); }
     chunks.get(G.ck).add(mesh);
   }

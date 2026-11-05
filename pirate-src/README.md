@@ -29,8 +29,8 @@ renders the app icon.
 ## Credits
 Characters: "Universal Base Characters", "Modular Character Outfits - Fantasy", "Universal Animation Library", hats from
 "Ultimate Animated Character Pack" and weapons from "Pirate Pack", all by Quaternius (CC0).
-Music (cheerful, major-key tracks from OpenGameArt.org): "Pirates!" by Eric Matyas, soundimage.org (CC-BY 4.0); CC0 tracks
-"Banana Track" (Skrjablin), "Happy Vibes" (Ruskerdax), "Loop Town" (Fupi), "Shine Blitz" (Chris Murphy), "Happy Beat"
-(Burabotti), "Treasure Hunter" (TAD).
+Music: title and victory tunes by BajrangVerse Studios (recorded from Monster Mayhem Run); "Galway", "Achaidh Cheide",
+"Pixel Peeker Polka - faster", "Life of Riley", "Run Amok", "Hyperfun" by Kevin MacLeod (incompetech.com), CC-BY 4.0.
+Castle, trees, rocks and props: Quaternius Medieval Village / Stylized Nature / Fantasy Props MegaKits (CC0).
 Studio logo: from Monster Mayhem Run.
 Ads: Google AdMob — the IDs in the app are Google's TEST IDs; replace them with your own before publishing.

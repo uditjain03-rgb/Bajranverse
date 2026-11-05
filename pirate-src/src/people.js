@@ -5,10 +5,11 @@
 import * as THREE from 'three';
 
 const PI = Math.PI;
-export function loadPeople(buf) {
+export async function loadPeople(buf) {
   const dv = new DataView(buf), hl = dv.getUint32(4, true);
   const head = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 8, hl))), base = (8 + hl + 3) & ~3, out = {};
   for (const h of head.chars) out[h.id] = new Person(h, buf, base);
+  await Promise.all(Object.values(out).map(p => p.loadTexture()));
   return out;
 }
 
@@ -22,6 +23,15 @@ class Person {
     this.indexAttr = new THREE.BufferAttribute(this.index, 1);
     this.colorAttr = new THREE.BufferAttribute(this.color, 3, true);
     this.maskAttr = new THREE.BufferAttribute(new Float32Array(this.mask), 1);
+    if (h.tex) { this.uvAttr = new THREE.BufferAttribute(new Uint16Array(buf, base + h.o[4], N * 2), 2, true); this.jpg = new Uint8Array(buf, base + h.o[5], h.jl); }
+  }
+  // the person's texture sheet (outfit, skin, eyes, hair in one picture)
+  async loadTexture() {
+    if (!this.jpg) return;
+    const blob = new Blob([this.jpg], { type: 'image/jpeg' }); let img;
+    try { img = await createImageBitmap(blob, { imageOrientation: 'none' }); }
+    catch (e) { img = await new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = URL.createObjectURL(blob); }); }
+    const t = new THREE.Texture(img); t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; t.generateMipmaps = true; t.needsUpdate = true; this.tex = t;
   }
   positions(f) {
     if (this.cache[f]) return this.cache[f];
@@ -42,23 +52,27 @@ class Person {
   }
   geometry(f) {
     const g = new THREE.BufferGeometry(); g.setIndex(this.indexAttr);
-    g.setAttribute('position', new THREE.BufferAttribute(this.positions(f), 3)); g.setAttribute('color', this.colorAttr); g.setAttribute('mask', this.maskAttr);
+    g.setAttribute('position', new THREE.BufferAttribute(this.positions(f), 3)); g.setAttribute('color', this.colorAttr); g.setAttribute('mask', this.maskAttr); if (this.uvAttr) g.setAttribute('uv', this.uvAttr);
     g.setAttribute('normal', new THREE.BufferAttribute(this.normals(f), 3)); g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 3); return g;
   }
 }
 
-// one material for all crowds: vertex colours, flat facets, and per-person clothes / skin / hair colours
-function crowdMaterial() {
-  const m = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: false, roughness: 0.75, metalness: 0.0 });
+// the people's material: their own texture, with clothes / skin / hair recoloured per person (from the texture's
+// light and shade, so all the fabric and face detail stays). Crowds take the colours per instance, heroes as uniforms.
+function personMaterial(person, inst, cols = {}) {
+  const m = new THREE.MeshStandardMaterial({ vertexColors: true, map: person.tex || null, roughness: 0.78, metalness: 0.0 });
+  const U = { uTint: { value: new THREE.Color(cols.tint ?? 0xffffff) }, uSkin: { value: new THREE.Color(cols.skin ?? 0xffffff) }, uHair: { value: new THREE.Color(cols.hair ?? 0xffffff) } };
   m.onBeforeCompile = sh => {
-    THREE.Material.prototype.onBeforeCompile.call(m, sh);
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float mask; attribute vec3 iTint; attribute vec3 iSkin; attribute vec3 iHair;')
-      .replace('#include <color_vertex>', '#include <color_vertex>\nvColor.rgb *= mask < 0.5 ? vec3(1.0) : 1.6 * (mask < 1.5 ? iTint : mask < 2.5 ? iSkin : iHair);');
+    THREE.Material.prototype.onBeforeCompile.call(m, sh); Object.assign(sh.uniforms, U);
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float mask; varying vec3 vTintC; varying float vM;\n' + (inst ? 'attribute vec3 iTint; attribute vec3 iSkin; attribute vec3 iHair;' : 'uniform vec3 uTint; uniform vec3 uSkin; uniform vec3 uHair;'))
+      .replace('#include <color_vertex>', '#include <color_vertex>\nvM = mask; vTintC = ' + (inst ? 'mask < 1.5 ? iTint : mask < 2.5 ? iSkin : iHair;' : 'mask < 1.5 ? uTint : mask < 2.5 ? uSkin : uHair;'));
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vTintC; varying float vM;')
+      .replace('#include <map_fragment>', '#include <map_fragment>\nif (vM > 0.5) { float l = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114)); diffuseColor.rgb = vTintC * (0.3 + l * 1.45); }');
   };
-  m.customProgramCacheKey = () => 'crowd' + THREE.Material.prototype.customProgramCacheKey.call(m);
+  m.customProgramCacheKey = () => (inst ? 'crowd' : 'hero') + THREE.Material.prototype.customProgramCacheKey.call(m);
   return m;
 }
-let CM = null;
+
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(0, 0, 0, 'YXZ'), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _c = new THREE.Color();
 const lin = new Map();   // colour (hex) → linear rgb, worked out once
@@ -66,7 +80,7 @@ function rgb(hex) { let v = lin.get(hex); if (!v) { _c.set(hex); v = [_c.r, _c.g
 // a crowd of one kind of person. draw(list) every frame with {x, y, z, ry, rx, rz, s, clip, t, tint, skin, hair}
 export class Crowd {
   constructor(scene, person, o = {}) {
-    this.scene = scene; this.p = person; this.buckets = new Map(); this.o = o; CM = CM || crowdMaterial();
+    this.scene = scene; this.p = person; this.buckets = new Map(); this.o = o; this.mat = personMaterial(person, true);
     this.used = [];
   }
   bucket(f) {
@@ -79,7 +93,7 @@ export class Crowd {
     if (b.mesh) { this.scene.remove(b.mesh); b.mesh.dispose(); }
     const g = this.p.geometry(b.f);
     for (const k of ['iTint', 'iSkin', 'iHair']) g.setAttribute(k, new THREE.InstancedBufferAttribute(new Float32Array(cap * 3).fill(1), 3));
-    b.mesh = new THREE.InstancedMesh(g, CM, cap); b.mesh.frustumCulled = false; b.mesh.castShadow = !!this.o.shadow; b.mesh.count = 0;
+    b.mesh = new THREE.InstancedMesh(g, this.mat, cap); b.mesh.frustumCulled = false; b.mesh.castShadow = !!this.o.shadow; b.mesh.count = 0;
     this.scene.add(b.mesh); b.cap = cap;
   }
   // make every pose's mesh up front (while loading) so nothing is built in the middle of the game
@@ -113,12 +127,10 @@ export class Crowd {
 export class Actor extends THREE.Mesh {
   constructor(person, cols = {}) {
     const g = new THREE.BufferGeometry(); g.setIndex(person.indexAttr);
-    const N = person.N, pos = new Float32Array(N * 3), c = new Float32Array(N * 3);
-    const T = [null, new THREE.Color(cols.tint ?? 0xffffff), new THREE.Color(cols.skin ?? 0xffffff), new THREE.Color(cols.hair ?? 0xffffff)];
-    for (let i = 0; i < N; i++) { const m = person.mask[i], k = T[m]; for (let j = 0; j < 3; j++) c[i * 3 + j] = person.color[i * 3 + j] / 255 * (k ? 1.6 * [k.r, k.g, k.b][j] : 1); }
-    g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(N * 3), 3)); g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+    const N = person.N, pos = new Float32Array(N * 3);
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(N * 3), 3)); g.setAttribute('color', person.colorAttr); g.setAttribute('mask', person.maskAttr); if (person.uvAttr) g.setAttribute('uv', person.uvAttr);
     g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 1, 0), 3);
-    super(g, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7 }));
+    super(g, personMaterial(person, false, cols));
     this.person = person; this.frustumCulled = false; this.castShadow = true; this.clip = 'idle'; this.ct = 0; this.prev = null; this.mixT = 1;
     this.pose('idle', 0);
   }

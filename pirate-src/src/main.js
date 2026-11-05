@@ -214,7 +214,7 @@ function makeLevel(n) {
 const G = { state: 'load', t: 0, z: 0, x: 0, tx: 0, speed: 0, crew: [], flying: [], apples: 0, lost: 0, finale: null, shake: 0, slow: 1 };
 let P = null, lv = null, W = null, castle = null, rocky = null, lalchi = null, crowds = {}, crowdG = null, blobs = null;
 const objs = [];
-const HERD_SPEED = 15, SP = 0.66, MAX_DRAWN = 100;
+const HERD_SPEED = 15, SP = 0.66, MAX_DRAWN = 90;
 // the army stays inside the path: rows of up to 9 pirates across, more rows behind
 const colsFor = n => Math.max(1, Math.min(9, Math.ceil(Math.sqrt(n * 1.15))));
 function slot(i, n) { const c = colsFor(n), r = Math.floor(i / c), k = i % c, inRow = Math.min(c, n - r * c); return [(k - (inRow - 1) / 2) * SP + (r % 2 ? SP * 0.22 : 0), 1.1 + r * SP * 0.92]; }
@@ -354,9 +354,10 @@ function rampAt(z) { for (const o of objs) if (o.t === 'ramp') { const l = o.z -
 
 // ---------------- update ----------------
 const _p = new THREE.Vector3();
-const lists = { pirate: [], pirate2: [], pirate3: [], pirateF: [], pirateF2: [], g: [] };
+const lists = { pirate: [], pirate2: [], pirate3: [], pirateF: [], pirateF2: [], pirate_lo: [], pirate2_lo: [], pirate3_lo: [], pirateF_lo: [], pirateF2_lo: [], g: [] };
+const NEAR = 12;   // the first rows are drawn in full detail, the rest with the lighter version
 function person(q, extra) { const o = { x: q.x, y: q.y || 0, z: q.z, ry: q.ry || 0, rx: q.rx || 0, rz: q.rz || 0, s: q.s ?? 1, clip: q.clip || 'run', t: q.t || 0, tint: q.tint, skin: q.skin, hair: q.hair, ...extra }; return o; }
-function pushCrew(q, extra) { (lists[q.kind] || lists.pirate).push(person(q, extra)); }
+function pushCrew(q, extra, far) { (lists[far ? q.kind + '_lo' : q.kind] || lists.pirate).push(person(q, extra)); }
 function update(dt) {
   G.t += dt; W.update(dt, G.t); W.cull(G.finale ? castle.z + 20 : G.z); if ((G.state === 'play' || G.state === 'home') && Math.random() < dt * 0.06) sfxT('gull', 6); if (bannerT > 0) { bannerT -= dt; if (bannerT <= 0) $('banner').classList.remove('show'); }
   for (const k in lists) lists[k].length = 0;
@@ -381,7 +382,7 @@ function update(dt) {
       q.ry = G.state === 'home' ? PI : (G.tx - G.x) * -0.06; q.rx = 0; q.y = 0;
       const ra = play && rampAt(q.z); if (ra) { q.y = ra.y; if (ra.air) { q.clip = 'jump'; airborne = true; if (Math.abs(q.x) > ra.o.w / 2 + 0.25) { losePirate(q, 'fall', Math.sign(q.x)); q.vy = -1; sfxT('whoa', 0.2); } } }
     }
-    if (i < MAX_DRAWN) pushCrew(q);
+    if (i < MAX_DRAWN) pushCrew(q, undefined, i >= NEAR);
   });
   G.air = airborne;
   // lost pirates tumble away
@@ -429,7 +430,7 @@ function updateObj(o, dt) {
     }
     for (const k of ['p0', 'p1']) { const pl = o[k]; if (pl.userData.pop) { pl.userData.pop += dt; pl.scale.setScalar(1 + pl.userData.pop * 3); pl.material.opacity = Math.max(0, 1 - pl.userData.pop * 3); } }
   } else if (o.t === 'strays') {
-    for (const q of o.list) if (q.st === 'idle') { q.t = (q.t || 0) + dt; pushCrew(q, { clip: 'victory', ry: PI }); }
+    if (dz > -110) for (const q of o.list) if (q.st === 'idle') { q.t = (q.t || 0) + dt; pushCrew(q, { clip: 'victory', ry: PI }); }
     if (!o.done && G.state === 'play' && Math.abs(dz) < 1.5 + herdDepth() * 0.5 && Math.abs(o.x - G.x) < herdHalf() + 2) {
       o.done = true; o.list.forEach(q => { q.st = 'run'; G.crew.push(q); }); reslot(); sfx('ahoy'); sfx('crewCheer', 0.1);
       popText(o.list[0].name + ' & ' + (o.n - 1) + ' friends joined!', _p.set(o.x, 3.2, o.z), '#c8ffb0', 24, 1.4); puff(_p.set(o.x, 1, o.z), 10, 0xffffff, { star: true, cols: [0xffd23f, 0xffffff] });
@@ -502,7 +503,7 @@ function updateObj(o, dt) {
       w.t += dt;
       if (w.st === 'fly') { w.dt += dt; w.vy -= 18 * dt; w.x += w.vx * dt; w.z += w.vz * dt; w.y = Math.max(0, w.y + w.vy * dt); w.rx = (w.rx || 0) + w.spin * dt; w.rz = (w.rz || 0) + w.spin * 0.6 * dt; w.clip = 'hit'; w.t = Math.min(w.dt, 0.4); w.s = Math.max(0.01, 1 - Math.max(0, w.dt - 1.2) * 2); if (w.dt > 1.8) w.gone = true; }
       else { w.clip = fighting || dz > -20 ? 'shoot' : 'idle'; if (w.clip === 'shoot') w.t = (w.t % 0.5); }
-      lists.g.push(person(w, { ry: PI }));
+      if (dz > -110) lists.g.push(person(w, { ry: PI }));
     }
     if (!o.said && G.state === 'play' && dz > -24) { o.said = true; sfx('halt'); popText('HALT! LORD LALCHI\'S GUARDS!', _p.set(o.x, 3.2, o.z), '#ffb0a8', 22, 1.2); }
     if (!o.done && G.state === 'play' && dz > -(1.2 + 7)) { o.done = true; G.guardFight = { o, t: 0 }; sfx('charge'); }
@@ -747,7 +748,7 @@ function gift() {
 function settings() {
   const t = k => `<button class="toggle ${PF.set[k] ? 'on' : ''}" data-s="${k}"></button>`;
   openModal(`<h2>SETTINGS</h2><div class="list"><div class="item"><div class="ico">🔊</div><div class="txt"><b>Sound</b></div>${t('sound')}</div><div class="item"><div class="ico">🎵</div><div class="txt"><b>Music</b></div>${t('music')}</div><div class="item"><div class="ico">📳</div><div class="txt"><b>Vibration</b></div>${t('vib')}</div><div class="item"><div class="ico">✨</div><div class="txt"><b>Sharp graphics</b><span>Turn off on slower phones</span></div>${t('hi')}</div></div>
-    <p class="tip"><b>Rocky's Pirate Army</b><br>made by <b>BajrangVerse Studios</b><br>Characters: Quaternius (CC0)<br>Music: "Pirates!" by Eric Matyas, soundimage.org (CC-BY 4.0) · public-domain (CC0) tracks "Banana Track" by Skrjablin, "Happy Vibes" by Ruskerdax, "Loop Town" by Fupi, "Shine Blitz" by Chris Murphy, "Happy Beat" by Burabotti and "Treasure Hunter" by TAD (OpenGameArt.org)<br>Free to play with optional ads (Google AdMob) · no accounts · your progress stays on your phone</p><div class="row"><button class="btn" id="closeB">BACK</button></div>`);
+    <p class="tip"><b>Rocky's Pirate Army</b><br>made by <b>BajrangVerse Studios</b><br>Characters: Quaternius (CC0)<br>Title and victory music: BajrangVerse Studios<br>Music: "Galway", "Achaidh Cheide", "Pixel Peeker Polka - faster", "Life of Riley", "Run Amok", "Hyperfun" by Kevin MacLeod (incompetech.com), licensed under Creative Commons: By Attribution 4.0<br>Castle and nature: Quaternius (CC0)<br>Free to play with optional ads (Google AdMob) · no accounts · your progress stays on your phone</p><div class="row"><button class="btn" id="closeB">BACK</button></div>`);
   document.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { const k = b.dataset.s; PF.set[k] = !PF.set[k]; save(); b.classList.toggle('on', PF.set[k]); click(); if (k === 'music') { if (PF.set.music) music(G.state === 'home' ? 'title' : lv.world.music); else Music.stop(); } if (k === 'hi') { QUAL = PF.set.hi ? 3 : 2; resize(); } });
   $('closeB').onclick = () => { click(); closeModal(); if (G.state === 'pause') resume(); };
 }
@@ -811,10 +812,12 @@ const PERF = window.__perf = { upd: 0, ren: 0, n: 0, reset() { this.upd = this.r
 // ---------------- boot: the studio card, then load the people ----------------
 function loadBin(url) { return new Promise((ok, no) => { const x = new XMLHttpRequest(); x.open('GET', url); x.responseType = 'arraybuffer'; x.onload = () => (x.status === 200 || x.status === 0) && x.response ? ok(x.response) : no(new Error('load ' + x.status)); x.onerror = () => no(new Error('load')); x.send(); }); }
 const t0 = performance.now(), Q = new URLSearchParams(location.search);
+// the BajrangVerse tune plays with the studio logo (the app allows sound before the first tap; a browser waits for one)
+if (PF.set.music && !Q.get('fast')) { try { Music.play('title'); } catch (e) { /* needs a tap first */ } }
 Promise.all(['people.bin', 'castle.glb', 'nature.glb'].map(loadBin)).then(async ([buf, cb, nb]) => {
-  P = loadPeople(buf);
+  P = await loadPeople(buf);
   const gl = new GLTFLoader(); setCastleModel((await gl.parseAsync(cb, '')).scene.getObjectByName('castle')); setNature((await gl.parseAsync(nb, '')).scene.getObjectByName('nature'));
-  for (const k of ['pirate', 'pirate2', 'pirate3', 'pirateF', 'pirateF2']) crowds[k] = new Crowd(scene, P[k]); crowdG = new Crowd(scene, P.guard); blobs = new Blobs(scene, dotTex, 600);
+  for (const k of ['pirate', 'pirate2', 'pirate3', 'pirateF', 'pirateF2']) { crowds[k] = new Crowd(scene, P[k]); crowds[k + '_lo'] = new Crowd(scene, P[k + '_lo']); } crowdG = new Crowd(scene, P.guard); blobs = new Blobs(scene, dotTex, 600);
   for (const k in crowds) crowds[k].prewarm(24); crowdG.prewarm(16); psys(false, false); psys(false, true); psys(true, false); psys(true, true);
   rocky = new Actor(P.hero, { tint: 0xb3202a, skin: 0xb97a52, hair: 0x1a1210 }); rocky.scale.setScalar(1.08); scene.add(rocky);
   lalchi = new Actor(P.villain, { tint: 0x7a1a8a, skin: 0xd8a070, hair: 0x2a2a2a }); scene.add(lalchi);
@@ -853,5 +856,7 @@ function iconShot() {
 window.__goto = t => { const o = objs.find(o => o.t === t && o.z < G.z); if (!o) return false; G.z = o.z + 26; reslot(); G.crew.forEach(q => { q.z = G.z + q.oz; }); return true; };
 window.__lv = n => makeLevel(n).ev.map(e => e.t).join(" ");
 window.__calls = () => { const r = {}; const tag = o => { let q = o; while (q.parent && q.parent !== scene) q = q.parent; return q === W.group ? 'world' : castle && q === castle.group ? 'castle' : objs.some(x => x.obj === q) ? 'events' : q.isSprite ? 'sprites' : q.type + ':' + (q.name || ''); }; scene.traverseVisible(o => { if ((o.isMesh || o.isSprite || o.isPoints) && !(o.isInstancedMesh && o.count === 0)) { const k = tag(o); r[k] = (r[k] || 0) + 1; } }); return r; };
+window.__wtris = () => { const r = {}; W.group.traverseVisible(o => { if (o.isMesh) { const k = (o.material.name || (o.material.map ? 'tex' : '#' + (o.material.color ? o.material.color.getHexString() : ''))) + (o.parent && o.parent.userData.z0 !== undefined ? '' : ':' + (o.name || o.type)); const t = (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3; r[k] = (r[k] || 0) + t; } }); return Object.entries(r).sort((a, b) => b[1] - a[1]).slice(0, 14).map(([k, v]) => k + '=' + Math.round(v)).join(' '); };
+window.__alltris = () => { const r = {}; scene.children.forEach(top => { let t = 0; top.traverseVisible(o => { if (o.isMesh || o.isPoints) { const n = (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3 * (o.isInstancedMesh ? o.count : 1); t += n; } }); const k = top === W.group ? 'world' : castle && top === castle.group ? 'castle' : objs.some(x => x.obj === top) ? 'events' : (top.isInstancedMesh ? 'inst:' + (top.material.name || top.geometry.type) : top.type) + (top === rocky ? ':rocky' : top === lalchi ? ':lalchi' : ''); r[k] = (r[k] || 0) + Math.round(t); }); return JSON.stringify(Object.entries(r).filter(e => e[1] > 500).sort((a, b) => b[1] - a[1])); };
 window.__G = G; window.__play = play; window.__castle = () => castle; window.__end = () => { G.z = -lv.L + 3; return lv.L; }; window.__tap = () => tapFire();
 window.__tris = () => { let t = 0; scene.traverse(o => { if (o.isInstancedMesh && o.count && o.visible) t += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3 * o.count; }); return Math.round(t); };

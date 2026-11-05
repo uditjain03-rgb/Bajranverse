@@ -1,11 +1,12 @@
-// The music: cheerful, upbeat recorded tracks in major keys (public-domain / CC-BY, see the credits in Settings),
+// The music: the BajrangVerse Studios title and victory tunes (from Monster Mayhem Run) and lively Celtic-jig and
+// upbeat tracks by Kevin MacLeod (incompetech.com, CC-BY 4.0, credited in Settings),
 // streamed from the app's files and looped, with a soft cross-fade when the track changes.
 const FILES = {
-  title: 'treasure', beach: 'happy_vibes', jungle: 'loop_town', snow: 'shine_blitz', volcano: 'pirates', coral: 'happy_vibes', night: 'loop_town',
-  fight: 'banana', bossfight: 'banana', win: 'happy_beat',
+  title: 'bv_title', beach: 'galway', jungle: 'polka', snow: 'achaidh', volcano: 'galway', coral: 'riley', night: 'achaidh',
+  fight: 'run_amok', bossfight: 'hyperfun', win: 'bv_win',
 };
 // loudness matching (measured): every track plays at about the same level
-const GAIN = { treasure: 0.5, happy_vibes: 0.38, loop_town: 0.5, shine_blitz: 0.35, pirates: 0.82, banana: 0.53, happy_beat: 1 };
+const GAIN = { bv_title: 0.95, bv_win: 1, galway: 0.8, polka: 0.8, achaidh: 0.75, riley: 0.8, run_amok: 0.8, hyperfun: 0.8 };
 let cur = null, el = null, volume = 0.95, fades = [];
 const els = {};
 function audio(name) {

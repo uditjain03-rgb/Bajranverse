@@ -52,8 +52,25 @@ async function loadPart(P, S) {
     let wi = idx.map(i => canon[i]); const tri = []; for (let i = 0; i < wi.length; i += 3) if (wi[i] !== wi[i + 1] && wi[i + 1] !== wi[i + 2] && wi[i] !== wi[i + 2]) tri.push(wi[i], wi[i + 1], wi[i + 2]);
     const target = Math.max(12, Math.floor(tri.length * (rule.keep ?? P.keep ?? S.keep ?? 0.25) / 3) * 3);
     let [simp] = MeshoptSimplifier.simplify(new Uint32Array(tri), new Float32Array(pos.array), 3, target, 0.5, []);
-    if (simp.length > target * 2.2) [simp] = MeshoptSimplifier.simplifySloppy(new Uint32Array(tri), new Float32Array(pos.array), 3, null, target, 0.5);   // small separate pieces (buckles, straps)
+    const lo = S.id.endsWith('_lo'), feet = /Feet|Boots/.test(m.name);
+    if (simp.length > target * 1.6 && (/Boots|Bracer|Belt|Pauldron/.test(m.name) || (lo && !feet))) {   // small pieces that resist (boots, straps, hair): a rougher pass, minus any stretched triangles it makes
+      let [sl] = MeshoptSimplifier.simplifySloppy(new Uint32Array(tri), new Float32Array(pos.array), 3, null, target, 0.5);
+      const P3 = i => [pos.getX(i), pos.getY(i), pos.getZ(i)], el = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]), keep = [];
+      for (let t = 0; t < sl.length; t += 3) { const a = P3(sl[t]), b = P3(sl[t + 1]), c = P3(sl[t + 2]); if (lo || Math.max(el(a, b), el(b, c), el(a, c)) < 0.12) keep.push(sl[t], sl[t + 1], sl[t + 2]); }
+      if (keep.length > target * 0.4) simp = new Uint32Array(keep);
+    }
     if (window.DEBUG) console.log('simp', m.name, tri.length / 3, '->', simp.length / 3);
+    // back from welded points to real vertices: each corner takes the copy whose texture coordinate fits its triangle
+    const copies = new Map(); for (let i = 0; i < n; i++) { const c = canon[i]; if (!copies.has(c)) copies.set(c, []); copies.get(c).push(i); }
+    const U = i => uv ? [uv.getX(i), uv.getY(i)] : [0, 0], d2 = (a, b) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2;
+    const cp = c => copies.get(c) || [c];
+    const real = [];
+    for (let t = 0; t < simp.length; t += 3) {
+      let best = null, bs = 1e9;
+      for (const a of cp(simp[t])) { const ua = U(a); let b = null, bd = 1e9, c = null, cd = 1e9; for (const x of cp(simp[t + 1])) { const d = d2(U(x), ua); if (d < bd) { bd = d; b = x; } } for (const x of cp(simp[t + 2])) { const d = d2(U(x), ua); if (d < cd) { cd = d; c = x; } } if (bd + cd < bs) { bs = bd + cd; best = [a, b, c]; } }
+      real.push(...best);
+    }
+    simp = real;
     // colours from the texture (at the original vertices' uvs) and masks
     const mat = Array.isArray(m.material) ? m.material[0] : m.material, px = pixels(mat.map), used = [...new Set(simp)];
     const colours = new Map();
@@ -63,7 +80,7 @@ async function loadPart(P, S) {
       if (rule.mask && rule.gray !== false) { const l = (c[0] * 0.3 + c[1] * 0.55 + c[2] * 0.15); const k = Math.min(1.6, (rule.bright || 1) * Math.pow(l, 0.75) * 1.9); c = [k, k, k]; }
       colours.set(v, c);
     }
-    out.push({ m, root, idx: simp, used, colours, mask: rule.mask || 0 });
+    out.push({ m, root, idx: simp, used, colours, mask: rule.mask || 0, map: rule.color === undefined && mat.map && mat.map.image ? mat.map : null, uv });
   }
   return { root, meshes: out, anim: new THREE.AnimationMixer(root) };
 }
@@ -104,7 +121,7 @@ async function bakeChar(S) {
   const parts = []; for (const P of S.parts) parts.push(await loadPart(P, S));
   // one vertex list for the whole person
   const verts = [], index = [];   // verts: {mesh, v, colour, mask}
-  for (const p of parts) for (const M of p.meshes) { const base = verts.length, map = new Map(); M.used.forEach((v, i) => { map.set(v, base + i); verts.push({ M, v, c: M.colours.get(v), mask: M.mask }); }); for (const i of M.idx) index.push(map.get(i)); }
+  for (const p of parts) for (const M of p.meshes) { const base = verts.length, map = new Map(); M.used.forEach((v, i) => { map.set(v, base + i); verts.push({ M, v, c: M.colours.get(v), mask: M.mask, tex: M.map, uv: M.uv ? [M.uv.getX(v), M.uv.getY(v)] : [0, 0] }); }); for (const i of M.idx) index.push(map.get(i)); }
   // hats: rigid pieces that follow the head bone
   const rigid = [];
   if (S.hats) {
@@ -118,8 +135,21 @@ async function bakeChar(S) {
   for (const r of rigid) { index.push(verts.length); verts.push({ rigid: r, c: r.c, mask: 0 }); }
   let W = null; if (S.weapon) W = await weaponGeo(S.weapon);
   const n = verts.length, wn = W ? W.pos.length / 3 : 0, N = n + wn;
+  // one texture sheet per person: every texture it uses in a 3 x 3 grid; the last cell is plain white (for hats and weapons)
+  const AT = 1024, CELL = Math.floor(AT / 3), pad = 3, imgs = [];
+  for (const q of verts) if (q.tex && !imgs.includes(q.tex.image)) imgs.push(q.tex.image);
+  if (imgs.length > 8) throw new Error('too many textures for ' + S.id);
+  const ac = document.createElement('canvas'); ac.width = ac.height = AT; const ax = ac.getContext('2d'); ax.fillStyle = '#ffffff'; ax.fillRect(0, 0, AT, AT);
+  imgs.forEach((im, k) => ax.drawImage(im, (k % 3) * CELL, Math.floor(k / 3) * CELL, CELL, CELL));
+  const cellUV = (k, u, v) => { const fu = u - Math.floor(u), fv = v - Math.floor(v); return [((k % 3) * CELL + pad + fu * (CELL - 2 * pad)) / AT, (Math.floor(k / 3) * CELL + pad + fv * (CELL - 2 * pad)) / AT]; };
+  const uvA = new Uint16Array(N * 2), white = cellUV(8, 0.5, 0.5);
   const color = new Uint8Array(N * 3), mask = new Uint8Array(N);
-  verts.forEach((q, i) => { for (let k = 0; k < 3; k++) color[i * 3 + k] = Math.round(Math.min(1, q.c[k] / (q.mask ? 1.6 : 1)) * 255); mask[i] = q.mask; });
+  verts.forEach((q, i) => {
+    const t = q.tex ? cellUV(imgs.indexOf(q.tex.image), q.uv[0], q.uv[1]) : white; uvA[i * 2] = Math.round(t[0] * 65535); uvA[i * 2 + 1] = Math.round(t[1] * 65535);
+    for (let k = 0; k < 3; k++) color[i * 3 + k] = q.tex ? 255 : Math.round(Math.min(1, q.c[k]) * 255); mask[i] = q.tex ? q.mask : 0;
+  });
+  for (let i = 0; i < wn; i++) { uvA[(n + i) * 2] = Math.round(white[0] * 65535); uvA[(n + i) * 2 + 1] = Math.round(white[1] * 65535); }
+  const jpg = Uint8Array.from(atob(ac.toDataURL('image/jpeg', 0.86).split(',')[1]), c => c.charCodeAt(0));
   // tintable parts are stored at 1/1.6 so a tint can brighten them; the shader multiplies by 1.6 (see people.js)
   for (let i = 0; i < wn; i++) for (let k = 0; k < 3; k++) color[(n + i) * 3 + k] = Math.round(W.col[i * 3 + k] * 255);
   const idx = new Uint16Array(index.length + (W ? wn : 0)); idx.set(index); for (let i = 0; i < wn; i++) idx[index.length + i] = n + i;
@@ -149,7 +179,7 @@ async function bakeChar(S) {
   for (const p of frames) for (let i = 0; i < p.length; i++) { const k = i % 3; if (p[i] < min[k]) min[k] = p[i]; if (p[i] > max[k]) max[k] = p[i]; }
   const q = new Int16Array(frames.length * N * 3);
   frames.forEach((p, f) => { for (let i = 0; i < p.length; i++) { const k = i % 3; q[f * N * 3 + i] = Math.round((p[i] - min[k]) / (max[k] - min[k] || 1) * 65535) - 32768; } });
-  return { id: S.id, N, ni: idx.length, min, max, clips, tint16: true, data: [idx, color, mask, q] };
+  return { id: S.id, N, ni: idx.length, min, max, clips, tex: true, jl: jpg.length, data: [idx, color, mask, q, uvA, jpg] };
 }
 
 window.bake = async specs => {
