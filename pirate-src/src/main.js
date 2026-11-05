@@ -5,9 +5,11 @@
 // lines up and FIRES: every shot chips the walls, the guards on the walls shoot back, Rocky's cannon booms, and when
 // the fort falls Lalchi tumbles into the sea. One control: drag left and right (and tap to fire at the fort).
 import * as THREE from 'three';
-import { WORLDS, PATH_W, buildWorld, setBend, bendPoint, slopeAt, canvasTex, flat, mesh } from './world.js';
+import { WORLDS, PATH_W, buildWorld, setBend, bendPoint, slopeAt, canvasTex, flat, mesh, setNature } from './world.js';
 import { loadPeople, Crowd, Actor, Blobs } from './people.js';
-import { buildCastle, WALL_TOP, GATE_TOP, TOWER_TOP } from './castle.js';
+import { buildCastle, setCastleModel, GATE_TOP } from './castle.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { Audio } from './audio.js';
 import { Music } from './music.js';
 import './sfx.js';
@@ -55,8 +57,10 @@ const hemi = new THREE.HemisphereLight(0xdcecff, 0x8a7a5a, 1.5); scene.add(hemi)
 const sun = new THREE.DirectionalLight(0xffeccc, 2.6); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.03;
 Object.assign(sun.shadow.camera, { left: -18, right: 18, top: 20, bottom: -14, near: 1, far: 80 }); scene.add(sun, sun.target);
 const rim = new THREE.DirectionalLight(0x9ac8ff, 0.7); rim.position.set(6, 6, -10); scene.add(rim);
+// soft image-based light (sky reflections) makes every material look richer
+{ const pm = new THREE.PMREMGenerator(renderer); const env = pm.fromScene(new RoomEnvironment(), 0.04).texture; scene.environment = env; scene.environmentIntensity = 0.45; pm.dispose(); }
 // quality steps: 3 sharp, 2 normal, 1 lower resolution, 0 lowest without real-time shadows (picked automatically from the frame rate)
-let QUAL = PF.set.hi ? 3 : 2; const DPR = [0.75, 1, 1.3, 1.6];
+let QUAL = PF.set.hi ? 3 : 2; const DPR = [1, 1.25, 1.6, 2];
 function resize() { const w = innerWidth, h = innerHeight; renderer.setPixelRatio(Math.min(devicePixelRatio || 1, DPR[QUAL])); renderer.setSize(w, h, false); cam.aspect = w / h; cam.fov = w / h < 0.6 ? 60 : 52; cam.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
 
@@ -181,9 +185,9 @@ function makeLevel(n) {
   };
   while (z > -L + 40) {
     k++;
-    let p = k <= 2 || R() < 0.28 ? 'gate' : pk(['strays', 'apples', 'powder', ...(has('hay') ? ['hay'] : []), ...(has('wolves') ? ['wolves', 'wolves'] : []), ...(has('cannons') ? ['cannons', 'cannons'] : []), ...(has('ramp') ? ['ramp'] : []), ...(has('kraken') ? ['kraken', 'kraken'] : []), ...(has('bridge') ? ['bridge'] : []), ...(has('spinner') ? ['spinner'] : []), ...(has('log') ? ['log'] : [])]);
-    if (p === 'powder' && ev.filter(e => e.t === 'powder').length >= 2) p = 'apples';
-    if (!['gate', 'strays', 'apples', 'powder'].includes(p) && ev.filter(e => e.t === p).length >= 2) p = R() < 0.5 ? 'gate' : 'strays';
+    let p = k <= 2 || R() < 0.28 ? 'gate' : pk(['strays', 'apples', 'powder', 'boost', 'boost', ...(has('hay') ? ['hay'] : []), ...(has('wolves') ? ['wolves', 'wolves'] : []), ...(has('cannons') ? ['cannons', 'cannons'] : []), ...(has('ramp') ? ['ramp'] : []), ...(has('kraken') ? ['kraken', 'kraken'] : []), ...(has('bridge') ? ['bridge'] : []), ...(has('spinner') ? ['spinner'] : []), ...(has('log') ? ['log'] : [])]);
+    if ((p === 'powder' || p === 'boost') && ev.filter(e => e.t === p).length >= 2) p = 'apples';
+    if (!['gate', 'strays', 'apples', 'powder', 'boost'].includes(p) && ev.filter(e => e.t === p).length >= 2) p = R() < 0.5 ? 'gate' : 'strays';
     const fresh = Object.keys(UNLOCK).find(q => UNLOCK[q] === n && !ev.some(e => e.t === q));
     if (k === 3 && fresh) p = fresh;
     if (p === 'gate') gate();
@@ -195,21 +199,22 @@ function makeLevel(n) {
     else if (p === 'spinner') ev.push({ t: 'spinner', z, x: pk([-2, 0, 2]), sp: r(1.2, 1.8) + d });
     else if (p === 'log') ev.push({ t: 'log', z, sp: r(1.4, 1.9) + d * 0.6 });
     else if (p === 'powder') ev.push({ t: 'powder', z, x: pk([-2.4, 2.4]) });
+    else if (p === 'boost') ev.push({ t: 'boost', z });
     else if (p === 'cannons') ev.push({ t: 'cannons', z, side: pk([-1, 1]), shots: 3 + Math.round(d * 2) });
     else if (p === 'ramp') ev.push({ t: 'ramp', z, w: r(6.4, 7.2) - d * 0.8 });
     else if (p === 'kraken') ev.push({ t: 'kraken', z, side: pk([-1, 1]), ph: R() * 3 });
-    z -= p === 'bridge' ? 46 : p === 'ramp' ? 36 : r(24, 32);
+    z -= p === 'bridge' ? 46 : p === 'ramp' ? 36 : p === 'boost' ? 18 : r(26, 34);
   }
-  const hp = Math.max(120, Math.round(best * (boss ? 6 : 5)));   // the fort's strength, in bullets
-  const defs = Math.min(12, 3 + Math.floor(n / 2) + (boss ? 2 : 0));
-  return { n, world, boss, L, ev, hp, d, defs };
+  const hp = Math.max(5, Math.round(best * (boss ? 0.45 : 0.36)));   // the castle's strength: one bomb each
+  const guards = n <= 1 ? 0 : Math.min(24, Math.round(best * 0.12));
+  return { n, world, boss, L, ev, hp, d, guards };
 }
 
 // ---------------- state ----------------
 const G = { state: 'load', t: 0, z: 0, x: 0, tx: 0, speed: 0, crew: [], flying: [], apples: 0, lost: 0, finale: null, shake: 0, slow: 1 };
 let P = null, lv = null, W = null, castle = null, rocky = null, lalchi = null, crowds = {}, crowdG = null, blobs = null;
 const objs = [];
-const HERD_SPEED = 12, SP = 0.66, MAX_DRAWN = 100;
+const HERD_SPEED = 15, SP = 0.66, MAX_DRAWN = 100;
 // the army stays inside the path: rows of up to 9 pirates across, more rows behind
 const colsFor = n => Math.max(1, Math.min(9, Math.ceil(Math.sqrt(n * 1.15))));
 function slot(i, n) { const c = colsFor(n), r = Math.floor(i / c), k = i % c, inRow = Math.min(c, n - r * c); return [(k - (inRow - 1) / 2) * SP + (r % 2 ? SP * 0.22 : 0), 1.1 + r * SP * 0.92]; }
@@ -242,7 +247,8 @@ function startLevel(n, playNow) {
   reslot(); G.crew.forEach(q => { q.x = q.ox; q.z = G.z + q.oz; });
   for (const e of lv.ev) spawnEvent(e);
   castle = buildCastle(scene, lv.world, -lv.L - 22, lv.hp); castle.group.traverse(o => { o.frustumCulled = false; });
-  lalchi.position.set(0, GATE_TOP, castle.z + 0.5); lalchi.rotation.set(0, PI, 0); lalchi.scale.setScalar(1.15); lalchi.visible = true; lalchi.play('idle');
+  castle.onTopple = n => { sfx('crumble'); G.shake = Math.max(G.shake, 0.5); for (let i = 0; i < 6; i++) puff(_p.set((n.endsWith('L') ? -1 : n.endsWith('R') ? 1 : 0) * rnd(2, 9), rnd(0.5, 4), castle.z + rnd(-3, 2)), 3, 0xc8bca8, { size: 2.6, speed: 3, life: 1.6, grav: -0.4 }); };
+  lalchi.position.set(0, GATE_TOP, castle.z + 0.4); lalchi.rotation.set(0, PI, 0); lalchi.scale.setScalar(1.15); lalchi.visible = true; lalchi.play('idle');
   rocky.position.set(0, 0, G.z - 1.2); rocky.rotation.set(0, 0, 0); rocky.visible = true;
   $('lvl').textContent = 'LEVEL ' + n; $('appleN').textContent = '0';
   G.state = playNow ? 'play' : 'home';
@@ -306,6 +312,10 @@ function spawnEvent(e) {
     mesh(new THREE.SphereGeometry(0.42, 14, 10), new THREE.MeshStandardMaterial({ color: 0x1a1a22, metalness: 0.5, roughness: 0.3 }), 0, 1.05, 0, b);
     const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: dotTex, color: 0xffa030, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); glow.scale.setScalar(3.2); glow.position.y = 0.4; b.add(glow); o.glow = glow;
     const sign = new THREE.Sprite(new THREE.SpriteMaterial({ map: canvasTex(256, 96, (c, w, h) => { c.fillStyle = '#ffd23f'; c.beginPath(); c.roundRect(4, 4, w - 8, h - 8, 26); c.fill(); c.lineWidth = 7; c.strokeStyle = '#3a2410'; c.stroke(); c.font = 'bold 48px Fredoka, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#3a2410'; c.fillText('💣 BIG BOMBS', w / 2, h / 2 + 4); }), transparent: true })); sign.scale.set(2.6, 0.98, 1); sign.position.y = 2.4; b.add(sign);
+  } else if (e.t === 'boost') {   // a speed pad: glowing arrows across the path
+    const arrowTex = canvasTex(128, 128, (c, w, h) => { c.fillStyle = 'rgba(0,0,0,0)'; c.clearRect(0, 0, w, h); c.fillStyle = '#fff'; for (const y of [10, 60]) { c.beginPath(); c.moveTo(w / 2, y); c.lineTo(w - 12, y + 44); c.lineTo(w - 36, y + 44); c.lineTo(w / 2, y + 16); c.lineTo(36, y + 44); c.lineTo(12, y + 44); c.closePath(); c.fill(); } });
+    const pad = new THREE.Mesh(new THREE.PlaneGeometry(PATH_W - 0.6, 4), new THREE.MeshBasicMaterial({ map: arrowTex, color: 0x40e0ff, transparent: true, depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending }));
+    pad.rotation.x = -PI / 2; pad.position.y = 0.06; g.add(pad); arrowTex.wrapS = THREE.RepeatWrapping; arrowTex.repeat.set(4, 1); o.pad = pad;
   } else if (e.t === 'cannons') {   // one of Lalchi's cannons beside the path fires at the army
     const c = makeCannon(); c.scale.setScalar(1.3); c.position.set(e.side * (PATH_W / 2 + 2.6), 0.5, 0); c.rotation.y = e.side > 0 ? PI / 2 : -PI / 2; g.add(c); o.c = c;
     mesh(new THREE.BoxGeometry(3, 0.5, 3), flat(0x8a8478), e.side * (PATH_W / 2 + 2.6), 0.25, 0, g);
@@ -354,7 +364,9 @@ function update(dt) {
   const play = G.state === 'play';
   if (play) {
     const sl = slopeAt(G.z);
-    G.speed = damp(G.speed, HERD_SPEED * clamp(1 - sl * 0.9, 0.75, 1.3) * (G.guardFight ? 0.12 : 1), 3, dt);
+    G.boost = Math.max(0, (G.boost || 0) - dt);
+    G.speed = damp(G.speed, HERD_SPEED * clamp(1 - sl * 0.9, 0.75, 1.3) * (G.guardFight ? 0.12 : 1) * (G.boost > 0 ? 1.7 : 1), G.boost > 0 ? 6 : 3, dt);
+    if (G.boost > 0 && Math.random() < dt * 40) puff(_p.set(G.x + rnd(-5, 5), rnd(0.5, 3), G.z - rnd(4, 12)), 1, 0xffffff, { size: 0.25, speed: 0, life: 0.25, grav: 0, grow: 3 });
     G.z -= G.speed * dt;
     const lim = Math.max(0, PATH_W / 2 - 0.45 - herdHalf()); G.tx = clamp(G.tx, -lim, lim); G.x = damp(G.x, G.tx, 8, dt);
     if (G.z < -lv.L) startFinale();
@@ -438,6 +450,9 @@ function updateObj(o, dt) {
     if (G.state === 'play' && ly < 2.2) for (const q of [...G.crew]) if (near(q, lx, o.z, 1.5, 1.4)) { losePirate(q, 'hit', Math.sign(Math.cos(G.t * o.sp)) || 1); sfxT('bonk', 0.1); }
   } else if (o.t === 'bridge') {
     if (G.state === 'play' && dz > -o.len - 1 && dz < herdDepth() + 1) for (const q of [...G.crew]) if (q.z < o.z && q.z > o.z - o.len && Math.abs(q.x) > o.w / 2) { losePirate(q, 'fall', Math.sign(q.x)); q.vy = 1; sfxT('splash', 0.12); puff(_p.set(q.x, 0.3, q.z), 4, 0x9ad8ff); }
+  } else if (o.t === 'boost') {
+    o.pad.material.opacity = 0.6 + Math.sin(G.t * 12) * 0.35;
+    if (!o.done && G.state === 'play' && dz > 0) { o.done = true; G.boost = 1.6; sfx('whoosh'); sfx('gateGood'); banner('⚡ SPEED BOOST!', '', 0.7); vib(30); G.shake = 0.15; }
   } else if (o.t === 'powder') {
     if (o.b.visible) { o.b.rotation.y += dt * 1.5; o.b.position.y = 0.75 + Math.sin(G.t * 3) * 0.12; o.glow.material.opacity = 0.5 + Math.sin(G.t * 8) * 0.3; }
     if (!o.done && G.state === 'play' && Math.abs(o.z - G.z - herdDepth() * 0.3) < herdDepth() * 0.5 + 0.8 && Math.abs(o.x - G.x) < herdHalf() + 0.7) {
@@ -508,10 +523,11 @@ function updateObj(o, dt) {
   }
 }
 
-// ---------------- the finale: the army fires at Lord Lalchi's fort ----------------
-const FIRE_LINE = 17;
-// where Lalchi's guards stand: the wall tops, the gatehouse and the front towers
-const SPOTS = [[-3.4, 'w'], [3.4, 'w'], [-1.3, 'g'], [1.3, 'g'], [-4.6, 'w'], [4.6, 'w'], [-7.6, 't'], [7.6, 't'], [-5.6, 'w'], [5.6, 'w'], [-2.6, 'w'], [2.6, 'w']];
+// ---------------- the finale: bomb Lord Lalchi's castle ----------------
+// Simple rules: the castle has a strength number (shown over its gate). First Lalchi's guards in front of the gate are
+// bombed, one for one. Then the army charges the gate: every pirate who gets there throws one bomb = 1 less strength.
+// Strength 0 → the castle comes down and the gold is ours. Run out of pirates first → the castle holds.
+const FIRE_LINE = 15;
 let rockyCannon = null, boat = null, flag = null, chest = null;
 const jollyTex = canvasTex(128, 96, (c, w, h) => { c.fillStyle = '#111'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.beginPath(); c.arc(w / 2, 38, 20, 0, 7); c.fill(); c.fillRect(w / 2 - 12, 50, 24, 12); c.fillStyle = '#111'; c.beginPath(); c.arc(w / 2 - 8, 36, 6, 0, 7); c.arc(w / 2 + 8, 36, 6, 0, 7); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 7; c.beginPath(); c.moveTo(w / 2 - 34, 66); c.lineTo(w / 2 + 34, 90); c.moveTo(w / 2 + 34, 66); c.lineTo(w / 2 - 34, 90); c.stroke(); });
 function makeCannon() {
@@ -525,162 +541,130 @@ function makeCannon() {
   brl.rotation.x = 0.18; o.userData.brl = brl; o.traverse(q => { q.frustumCulled = false; });
   return o;
 }
-function fortExtras(clear) {
+function fortExtras() {
   if (rockyCannon) { scene.remove(rockyCannon); rockyCannon = null; }
   if (boat) { scene.remove(boat); boat = null; } if (flag) { scene.remove(flag); flag = null; } if (chest) { scene.remove(chest); chest = null; }
-  void clear;
+}
+function formUp(F) {   // the army forms wide rows facing the castle
+  const list = G.crew.filter(q => q.st === 'form' || q.st === 'run'), n = list.length, cols = Math.min(12, Math.max(1, n));
+  list.forEach((q, i) => { const r = Math.floor(i / cols), k = i % cols, inRow = Math.min(cols, n - r * cols); q.fx = (k - (inRow - 1) / 2) * 0.7 + (r % 2 ? 0.2 : 0); q.fz = F.line + r * 0.85; q.st = 'form'; });
 }
 function startFinale() {
-  G.state = 'finale'; music(lv.boss ? 'bossfight' : 'fight'); G.guardFight = null;
-  const line = castle.z + FIRE_LINE;
-  const F = G.finale = { t: 0, done: false, win: false, line, tapCD: 0, taps: 0, cannonT: 4, reinforceT: 9, defs: [], lal: { x: 0, dir: 1, stopT: 0 }, shout: 0 };
-  G.x = 0; G.tx = 0;
-  // formation: wide rows facing the fort
-  const n = G.crew.length, cols = Math.min(13, Math.max(1, n));
-  G.crew.forEach((q, i) => { const r = Math.floor(i / cols), k = i % cols, inRow = Math.min(cols, n - r * cols); q.fx = (k - (inRow - 1) / 2) * 0.66 + (r % 2 ? 0.2 : 0); q.fz = line + r * 0.85; q.st = 'fire'; q.cd = 0.8 + Math.random() * 1.6; q.clip = 'run'; });
-  // Lalchi's guards on the wall
-  for (let i = 0; i < lv.defs; i++) F.defs.push(defender(i));
-  rockyCannon = makeCannon(); rockyCannon.position.set(-3.6, 0, line - 2.4); scene.add(rockyCannon);
-  banner('BOMBS AWAY!', 'TAP TAP TAP to throw more bombs!', 1.8); sfx('capCharge'); sfx('crewCheer', 0.4); sfx('adStop', 1.0);
-  setTimeout(() => G.finale && popText('NOBODY TOUCHES MY GOLD!', _p.set(0, GATE_TOP + 3.2, castle.z), '#ffd0f0', 22, 1.8), 1900);
-  $('hint').innerHTML = '<span class="hand">👆</span><br>TAP TAP TAP TO THROW BOMBS!'; $('hint').classList.remove('hidden');
+  G.state = 'finale'; music(lv.boss ? 'bossfight' : 'fight'); G.guardFight = null; G.x = 0; G.tx = 0;
+  const F = G.finale = { t: 0, done: false, win: false, line: castle.z + FIRE_LINE, phase: 'guards', next: 0.8, boost: 0, guards: [], lal: { x: 0, dir: 1, talkT: 1.5 } };
+  formUp(F);
+  // Lalchi's guards stand in rows in front of the gate
+  const ng = lv.guards, cols = 8;
+  for (let i = 0; i < ng; i++) { const r = Math.floor(i / cols), k = i % cols, inRow = Math.min(cols, ng - r * cols); F.guards.push({ x: (k - (inRow - 1) / 2) * 0.85, z: castle.z + 4.5 + r * 0.9, y: 0, t: Math.random(), clip: 'idle', tint: pick(GUARD_COATS), skin: pick(SKINS), hair: pick(HAIRS), st: 'idle' }); }
+  banner('ATTACK!', ng ? 'Beat the guards, then bomb the castle!' : 'Bomb the castle down!', 2.2); sfx('capCharge'); sfx('crewCheer', 0.4); sfx('halt', 1.0);
+  setTimeout(() => G.finale && popText('NOBODY TOUCHES MY GOLD!', _p.set(0, GATE_TOP + 3.2, castle.z), '#ffd0f0', 22, 1.8), 1600);
+  $('hint').innerHTML = '<span class="hand">👆</span><br>TAP TO CHARGE FASTER!'; $('hint').classList.remove('hidden'); setTimeout(() => $('hint').classList.add('hidden'), 3500);
   $('castleHP').classList.remove('hidden'); updateHP();
 }
-function defender(i, rise) {
-  const used = new Set((G.finale ? G.finale.defs : []).filter(d => d.st === 'up').map(d => d.spot)); let k = i % SPOTS.length; if (rise) { const free = SPOTS.map((_, j) => j).filter(j => !used.has(j)); k = free.length ? pick(free) : k; }
-  const [x, w] = SPOTS[k], y = w === 'g' ? GATE_TOP : w === 't' ? TOWER_TOP : WALL_TOP, z = castle.z + (w === 'g' ? 0.5 : w === 't' ? -0.4 : -0.45);
-  return { spot: k, x, y: y + (rise ? -1.4 : 0), ty: y, z, t: Math.random(), clip: 'idle', tint: pick(GUARD_COATS), skin: pick(SKINS), hair: pick(HAIRS), hp: 1, cd: rnd(1.5, 3), st: 'up' };
-}
-function updateHP() { $('hpN').textContent = Math.max(0, castle.hp); $('hpFill').style.width = Math.max(0, castle.hp / castle.max * 100) + '%'; }
-function damage(n) { const F = G.finale; if (!F || F.done) return; castle.hp = Math.max(0, Math.round((castle.hp - n) * 10) / 10); updateHP(); if (castle.hp <= 0) castleDown(); }
-function pirateFire(q) {   // a pirate throws a lit bomb at the fort (or at a guard on the wall)
-  const F = G.finale; q.clip = 'throw'; q.t = 0; q.cd = rnd(3.0, 4.0);
-  const alive = F.defs.filter(d => d.st === 'up'), from = [q.x + 0.25, 1.75, q.z - 0.3], pw = G.bombPow;
-  if (alive.length && Math.random() < 0.12) {
-    const d = pick(alive);
-    throwBomb(from, [d.x, d.y + 0.8, d.z], 0.85, 3.5, () => { boom(_p.set(d.x, d.y + 0.8, d.z + 0.3), 0.9 + pw * 0.15, { wall: true }); if (d.st !== 'up') return; d.st = 'fall'; d.t = 0; d.vy = rnd(5, 8); d.vz = rnd(2, 4); d.vx = rnd(-2, 2); d.spin = rnd(5, 9); sfxT('whoa', 0.2); if (Math.random() < 0.4) popText(pick(['GOT HIM!', 'BYE BYE!', 'FLYING GUARD!']), _p.set(d.x, d.y + 2.2, d.z), '#fff', 22, 0.8); });
-  } else {
-    const x = rnd(-6.6, 6.6), y = rnd(0.6, Math.abs(x) < 2.3 ? 6.6 : 4.6), zz = castle.z + (Math.abs(x) < 2.3 ? 1.4 : 0.5);
-    throwBomb(from, [x, y, zz], 0.85, 3.5, () => { if (Math.random() < Math.min(1, 300 / castle.max)) castle.blast(x, y, pw - 1 + (Math.random() < 0.5 ? 1 : 0)); boom(_p.set(x, y, zz + 0.3), 0.8 + pw * 0.2, { wall: true }); damage(1.5 + (pw - 1) * 0.9); }, 0.9 + pw * 0.12);
-  }
-}
-function tapFire() {
-  const F = G.finale; if (!F || F.done) return false;
-  const ready = G.crew.filter(q => q.st === 'fire' && q.arrived).sort((a, b) => a.cd - b.cd), k = Math.max(2, Math.ceil(ready.length * 0.07));
-  if (!ready.length) return false;
-  ready.slice(0, k).forEach(pirateFire);
-  F.taps++; if (F.taps % 12 === 0 && F.cannonT < 3) F.cannonT = Math.min(F.cannonT, 0.05);
-  return true;
-}
-function fireCannon() {
-  const F = G.finale, c = rockyCannon; c.userData.kick = 0.4;
-  const x = rnd(-3.5, 3.5), y = rnd(1.2, 4), from = c.position.clone().add(new THREE.Vector3(0, 1.0, -1.8));
-  puff(from, 10, 0xdddddd, { size: 1.4, speed: 3, life: 0.9, grav: -0.5 }); puff(from, 4, 0xffa83a, { size: 1, speed: 4, life: 0.25, add: true });
-  sfx('cannon'); G.shake = Math.max(G.shake, 0.3); vib(30);
-  const ball = mesh(new THREE.SphereGeometry(0.3, 12, 10), new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.5, roughness: 0.4 }), from.x, from.y, from.z); ball.frustumCulled = false; scene.add(ball);
-  (F.balls = F.balls || []).push({ ball, t: 0, T: 0.7, a: from, x, y });
-  popText('ROCKY\'S CANNON!', _p.set(c.position.x, 3, c.position.z), '#ffe066', 24, 0.9);
-}
+function updateHP() { $('hpN').textContent = Math.max(0, Math.ceil(castle.hp)); $('hpFill').style.width = Math.max(0, castle.hp / castle.max * 100) + '%'; const f = $('fortN'); f.textContent = '🏰 ' + Math.max(0, Math.ceil(castle.hp)); f.classList.remove('bump'); void f.offsetWidth; f.classList.add('bump'); }
+function tapFire() { const F = G.finale; if (!F || F.done) return false; F.boost = 0.5; return true; }
 function updateFinale(dt) {
-  const F = G.finale; F.t += dt; F.tapCD -= dt;
-  // the army runs to the firing line, then fires
+  const F = G.finale; F.t += dt; F.boost = Math.max(0, F.boost - dt);
+  const fast = F.boost > 0 ? 2.2 : 1;
+  // the army: forms up, fights the guards, then charges one by one and bombs the gate
   for (const q of G.crew) {
-    if (q.st === 'fire') {
-      q.x = damp(q.x, q.fx, 4, dt); q.z = damp(q.z, q.fz, 4, dt); q.ry = 0; q.rx = 0; q.y = 0;
-      q.arrived = Math.abs(q.z - q.fz) < 0.8;
-      if (!q.arrived) { q.clip = 'run'; q.t = (q.t || 0) + dt; }
-      else { q.t = (q.t || 0) + dt; if (q.clip === 'run') { q.clip = 'idle'; q.t = Math.random(); } if (q.clip === 'throw' && q.t > 0.75) { q.clip = 'idle'; q.t = Math.random() * 2; } q.cd -= dt; if (!F.done && q.cd <= 0) pirateFire(q); }
-    } else if (q.st === 'party') { q.clip = 'victory'; q.t = (q.t || 0) + dt; q.ry = damp(q.ry || 0, 0, 2, dt); q.y = Math.max(0, Math.sin(q.t * 6 + q.ph) * 0.35); }
-  }
-  // Rocky's cannon
-  if (rockyCannon) { const c = rockyCannon; c.userData.kick = Math.max(0, (c.userData.kick || 0) - dt); c.userData.brl.position.z = c.userData.kick * 0.8; F.cannonT -= dt; if (!F.done && F.cannonT <= 0) { F.cannonT = 5.5; fireCannon(); } }
-  for (const B of [...(F.balls || [])]) { B.t += dt; const k = Math.min(1, B.t / B.T); B.ball.position.set(B.a.x + (B.x - B.a.x) * k, B.a.y + (B.y - B.a.y) * k + Math.sin(k * PI) * 2.5, B.a.z + (castle.z + 1.4 - B.a.z) * k); if (k >= 1) { scene.remove(B.ball); F.balls.splice(F.balls.indexOf(B), 1); if (!castle.down) castle.blast(B.x, B.y, 4); boom(_p.set(B.x, B.y, castle.z + 1.6), 2.4, { wall: true }); puff(_p.set(B.x, B.y, castle.z + 0.8), 10, 0xd8c8a8, { size: 1.6, speed: 5, life: 0.8 }); sfx('crumble'); G.shake = Math.max(G.shake, 0.5); popText('BOOM!', _p.set(B.x, B.y + 1.5, castle.z + 1), '#ffb03a', 36, 0.8); damage(Math.ceil(castle.max * 0.04)); } }
-  // Rocky: pointing his cutlass at the fort, shouting
-  if (!F.win) { rocky.position.x = damp(rocky.position.x, -2.6, 3, dt); rocky.position.z = damp(rocky.position.z, F.line - 1.6, 3, dt); rocky.position.y = 0; rocky.rotation.y = 0.15; if (Math.abs(rocky.position.z - (F.line - 1.6)) > 1) rocky.play('run'); else if (rocky.clip !== 'throw' || rocky.done()) rocky.play('throw', true); rocky.update(dt, 0.9); }
-  // the guards on the wall shoot back; fallen ones tumble off
-  for (const d of F.defs) {
-    d.t += dt;
-    if (d.st === 'up') {
-      d.y = damp(d.y, d.ty, 5, dt); d.cd -= dt; if (d.clip === 'shoot' && d.t > 0.55) { d.clip = 'idle'; d.t = Math.random(); }
-      if (!F.done && d.cd <= 0 && G.crew.length) {
-        d.cd = rnd(2.0, 3.2) * (1 - Math.min(0.35, lv.n * 0.01)); d.clip = 'shoot'; d.t = 0;
-        const q = pick(G.crew), from = [d.x - 0.25, d.y + 1.25, d.z + 0.9];
-        flashAt(_p.set(...from), 0.9); sfxT('musket', 0.1);
-        shoot(from, [q.x, 1.1, q.z], 0.25, () => { if (G.crew.includes(q) && Math.random() < 0.8) { losePirate(q, 'shot', Math.sign(q.x) || 1); sfxT('ouch', 0.2); } else puff(_p.set(q.x + rnd(-1, 1), 0.3, q.z), 2, 0xd8c8a8, { size: 0.5 }); });
+    q.t = (q.t || 0) + dt;
+    if (q.st === 'form') { q.x = damp(q.x, q.fx, 4, dt); q.z = damp(q.z, q.fz, 4, dt); q.ry = 0; q.y = 0; const far = Math.abs(q.z - q.fz) > 0.6; if (q.thr > 0) { q.thr -= dt; q.clip = 'throw'; q.t = 0.75 - q.thr; } else q.clip = far ? 'run' : 'idle'; }
+    else if (q.st === 'charge') {
+      const dx = q.tx - q.x, dz = q.tz - q.z, d = Math.hypot(dx, dz), sp = 9 * fast;
+      if (d > 0.4) { q.x += dx / d * Math.min(d, sp * dt); q.z += dz / d * Math.min(d, sp * dt); q.clip = 'run'; q.ry = Math.atan2(-dx, -dz); }
+      else {   // at the castle: throw the bomb
+        q.st = 'thrown'; q.clip = 'throw'; q.t = 0; q.ry = 0;
+        const x = clamp(q.x + rnd(-1.5, 1.5), -6.5, 6.5), y = rnd(1.2, 6), zz = castle.z + (Math.abs(x) < 1.6 ? 1.3 : 0.6);
+        throwBomb([q.x + 0.2, 1.7, q.z - 0.3], [x, y, zz], 0.45, 1.6, () => { if (F.done) return; boom(_p.set(x, y, zz + 0.3), 1 + G.bombPow * 0.25, { wall: true }); castle.hp -= 1; castle.blast(x, y, G.bombPow); updateHP(); vib(8); if (castle.hp <= 0) castleDown(); }, 1 + (G.bombPow - 1) * 0.2);
       }
-    } else if (d.st === 'fall') { d.vy -= 18 * dt; d.y += d.vy * dt; d.z += d.vz * dt; d.x += (d.vx || 0) * dt; d.clip = 'hit'; d.t = Math.min(d.t, 0.4); d.rx = (d.rx || 0) + dt * (d.spin || 5); if (d.y < 0) { d.st = 'gone'; puff(_p.set(d.x, 0.5, d.z), 6, 0xd8c8a8, { size: 1 }); sfxT('bonk', 0.1); } }
-    if (d.st !== 'gone') lists.g.push(person(d, { ry: PI, rx: d.rx || 0 }));
+    } else if (q.st === 'thrown') { if (q.t > 0.75) { q.st = 'cheer'; q.t = Math.random(); } }
+    else if (q.st === 'cheer' || q.st === 'party') { q.clip = 'victory'; q.y = q.st === 'party' ? Math.max(0, Math.sin(q.t * 6 + (q.ph || 0)) * 0.35) : 0; q.ry = q.st === 'party' ? 0 : PI * 0.9; }
   }
-  // Lord Lalchi: paces the wall shaking his fist; calls for more guards; panics when the fort is nearly down
+  // the guards: fight back one for one
+  for (const w of F.guards) {
+    if (w.gone) continue; w.t += dt;
+    if (w.st === 'fly') { w.dt += dt; w.vy -= 18 * dt; w.x += w.vx * dt; w.z += w.vz * dt; w.y = Math.max(0, w.y + w.vy * dt); w.rx = (w.rx || 0) + w.spin * dt; w.clip = 'hit'; w.t = Math.min(w.dt, 0.4); w.s = Math.max(0.01, 1 - Math.max(0, w.dt - 1.2) * 2); if (w.dt > 1.8) w.gone = true; }
+    else { w.clip = F.phase === 'guards' ? 'shoot' : 'idle'; if (w.clip === 'shoot') w.t %= 0.55; }
+    lists.g.push(person(w, { ry: PI }));
+  }
+  F.next -= dt * fast;
+  if (!F.done && F.next <= 0) {
+    const ready = G.crew.filter(q => q.st === 'form');
+    if (F.phase === 'guards') {
+      F.next = 0.22;
+      const w = F.guards.find(q => q.st === 'idle');
+      if (!w) { if (!F.guards.some(q => q.st === 'targeted')) { F.phase = 'charge'; F.next = 0.6; banner('BOMB THE CASTLE!', 'Every pirate throws one bomb', 1.4); sfx('charge'); } }
+      else if (ready.length) {
+        const q = pick(ready.slice(0, Math.min(ready.length, 14))); q.thr = 0.75; w.st = 'targeted';
+        throwBomb([q.x + 0.25, 1.7, q.z - 0.3], [w.x, 0.4, w.z], 0.5, 2.6, () => { boom(_p.set(w.x, 0.6, w.z), 0.9); w.st = 'fly'; w.dt = 0; w.vx = rnd(-4, 4); w.vy = rnd(8, 11); w.vz = rnd(-4, -1); w.spin = rnd(6, 10); });
+        const sh = pick(ready); flashAt(_p.set(w.x - 0.2, 1.3, w.z + 0.8), 0.9); sfxT('musket', 0.07);
+        shoot([w.x - 0.2, 1.3, w.z + 0.8], [sh.x, 1.1, sh.z], 0.18, () => { if (G.crew.includes(sh) && sh.st === 'form') { losePirate(sh, 'shot', Math.sign(sh.x) || 1); sfxT('ouch', 0.15); } });
+      }
+    } else if (ready.length) {   // the charge: the next pirate runs to the gate
+      F.next = 0.13; const q = ready[0]; q.st = 'charge'; q.tx = rnd(-5.5, 5.5); q.tz = castle.z + 3.2 + rnd(0, 1.5); if (Math.random() < 0.1) sfxT('arr', 0.3);
+    }
+    if (!F.done && !ready.length && !G.crew.some(q => q.st === 'charge' || q.st === 'thrown') && !bombs.length && F.t > 1.5) { F.done = true; $('hint').classList.add('hidden'); setTimeout(() => fail('The castle still has ' + Math.ceil(castle.hp) + ' strength left!', true), 900); }
+  }
+  // Rocky leads the attack beside the army
+  if (!F.win) { rocky.position.x = damp(rocky.position.x, -4.2, 3, dt); rocky.position.z = damp(rocky.position.z, F.line - 1, 3, dt); rocky.position.y = 0; rocky.rotation.y = 0.25; if (Math.abs(rocky.position.z - (F.line - 1)) > 1) rocky.play('run'); else if (rocky.clip !== 'throw' || rocky.done()) rocky.play('throw', true); rocky.update(dt, 0.9); }
+  // Lord Lalchi on top of the gate: shaking his fist, then panicking
   const A = F.lal;
   if (!F.win) {
     const panic = castle.hp < castle.max * 0.35;
-    A.x += A.dir * dt * (panic ? 2.4 : 0.8); if (Math.abs(A.x) > 0.9) { A.dir = -Math.sign(A.x); A.x = Math.sign(A.x) * 0.9; }
-    lalchi.position.set(A.x, GATE_TOP, castle.z + 0.2); lalchi.rotation.y = panic ? (A.dir > 0 ? PI / 2 : -PI / 2) : PI;
+    A.x += A.dir * dt * (panic ? 2.4 : 0.7); if (Math.abs(A.x) > 1.0) { A.dir = -Math.sign(A.x); A.x = Math.sign(A.x) * 1.0; }
+    lalchi.position.set(A.x, GATE_TOP, castle.z + 0.4); lalchi.rotation.y = panic ? (A.dir > 0 ? PI / 2 : -PI / 2) : PI;
     lalchi.play(panic ? 'run' : 'punch'); lalchi.update(dt, panic ? 1.6 : 1);
-    A.stopT -= dt; if (A.stopT <= 0) { A.stopT = 3.2; if (panic) { sfx('adNooo'); popText(pick(['NOOO! MY GOLD!', 'MUMMY!!', 'STOP THEM!']), _p.set(A.x, GATE_TOP + 3.2, castle.z), '#ffd0f0', 24, 1); } else { sfx('adFire'); popText(pick(['FIRE! FIRE!', 'GET THEM!', 'MY GOLD, MY RULES!']), _p.set(A.x, GATE_TOP + 3.2, castle.z), '#ffd0f0', 22, 0.9); } }
-    F.reinforceT -= dt;
-    if (!F.done && F.reinforceT <= 0 && F.defs.filter(d => d.st === 'up').length < 3 && castle.hp > castle.max * 0.3) { F.reinforceT = 8; for (let i = 0; i < 2; i++) F.defs.push(defender(i, true)); sfx('halt'); popText('GUARDS! MORE GUARDS!', _p.set(A.x, GATE_TOP + 3.4, castle.z), '#ffb0a8', 22, 1); }
+    A.talkT -= dt; if (A.talkT <= 0) { A.talkT = 3.2; if (panic) { sfx('adNooo'); popText(pick(['NOOO! MY GOLD!', 'MUMMY!!', 'STOP THEM!']), _p.set(A.x, GATE_TOP + 3.2, castle.z), '#ffd0f0', 24, 1); } else { sfx('adFire'); popText(pick(['GET THEM!', 'MY GOLD, MY RULES!', 'GUARDS!!']), _p.set(A.x, GATE_TOP + 3.2, castle.z), '#ffd0f0', 22, 0.9); } }
   } else lalchi.update(dt);
-  // no pirates left and the fort still stands
-  if (!F.done && !G.crew.length && F.t > 1) { F.done = true; $('hint').classList.add('hidden'); setTimeout(() => fail('The fort is still standing!', true), 900); }
+  // the strength number over the gate
+  const [fx, fy, ok] = project(_p.set(0, GATE_TOP + 1.6, castle.z + 1)); const fe = $('fortN'); fe.style.display = ok && !F.win ? 'block' : 'none'; fe.style.transform = `translate(${fx}px,${fy}px) translate(-50%,-100%)`;
   if (F.win) winScene(dt);
 }
 function castleDown() {
-  const F = G.finale; F.done = true; F.win = true; F.winT = F.t; castle.collapse(); G.slow = 0.35; setTimeout(() => { G.slow = 1; }, 1300); G.shake = 1;
-  $('hint').classList.add('hidden'); bullets.length = 0; bombs.length = 0;
-  sfx('crumble'); sfx('adMama', 0.2); sfx('adNooo', 0.9); sfx('fanfare', 1.6); vib(300); flash('#fff'); music('win');
-  banner('FORT CAPTURED!', '🏴‍☠️ The gold is ours!', 2.4);
-  F.defs.forEach(d => { if (d.st === 'up') { d.st = 'fall'; d.vy = rnd(4, 8); d.vz = rnd(1, 3); d.vx = rnd(-3, 3); d.spin = rnd(4, 8); } });
-  for (let i = 0; i < 8; i++) setTimeout(() => boom(_p.set(rnd(-7, 7), rnd(2, 9), castle.z + rnd(-6, 1)), 2.2), i * 160);
-  F.lalFall = { t: 0, x0: lalchi.position.x, y0: lalchi.position.y }; lalchi.play('hit', true);
+  const F = G.finale; F.done = true; F.win = true; F.winT = F.t; castle.collapse(); G.slow = 0.35; setTimeout(() => { G.slow = 1; }, 1300); G.shake = 1.2;
+  $('hint').classList.add('hidden'); $('fortN').style.display = 'none'; bullets.length = 0; bombs.length = 0;
+  sfx('bigBoom'); sfx('crumble', 0.3); sfx('adNooo', 0.5); sfx('fanfare', 1.6); vib(300); flash('#fff'); music('win');
+  banner('CASTLE CAPTURED!', '🏴‍☠️ The gold is ours!', 2.4);
+  for (let i = 0; i < 10; i++) setTimeout(() => boom(_p.set(rnd(-9, 9), rnd(2, 12), castle.z + rnd(-12, 1)), 2.4), i * 150);
+  for (let i = 0; i < 8; i++) setTimeout(() => puff(_p.set(rnd(-10, 10), rnd(1, 7), castle.z + rnd(-10, 2)), 14, 0xc8bca8, { size: 3, speed: 4, life: 1.8, grav: -0.5 }), i * 180);
+  F.lalFly = { t: 0, x0: lalchi.position.x, y0: lalchi.position.y }; lalchi.play('hit', true);
   G.crew.forEach(q => { q.st = 'party'; q.t = Math.random(); q.ph = Math.random() * 6; });
-  for (let i = 0; i < 6; i++) setTimeout(() => puff(_p.set(rnd(-8, 8), rnd(1, 6), castle.z + rnd(-3, 2)), 14, 0xd8d2c4, { size: 2.2, speed: 4, life: 1.4, grav: -0.5 }), i * 200);
 }
 function winScene(dt) {
   const F = G.finale, W2 = F.t - F.winT;
-  // Lalchi falls off the back of the fort into the sea... and rows away in a tiny boat
-  if (F.lalFall) {
-    const K = F.lalFall; K.t += dt;
-    lalchi.position.set(K.x0 + K.t * 1.2, Math.max(-1.6, K.y0 + 5 * K.t - 12 * K.t * K.t), castle.z - 0.9 - K.t * 4); lalchi.rotation.x = -K.t * 3;
-    if (lalchi.position.y <= -1.5 && !K.splash) {
-      K.splash = true; sfx('bigSplash'); puff(_p.set(lalchi.position.x, -0.5, lalchi.position.z), 26, 0xbfe8ff, { size: 1.6, speed: 7, life: 1, grav: 6 }); lalchi.visible = false;
-      setTimeout(() => {
-        if (!G.finale) return;
-        boat = new THREE.Group(); boat.position.set(-9, -0.9, castle.z - 14); scene.add(boat);
-        const hull = mesh(new THREE.SphereGeometry(1.4, 14, 8, 0, PI * 2, PI / 2, PI / 2), flat(0x8a5a2a), 0, 0.6, 0, boat); hull.scale.set(0.7, 0.6, 1.4);
-        for (const s of [-1, 1]) { const oar = mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.4, 6), flat(0xc8a070), s * 1.2, 0.5, 0, boat); oar.rotation.z = s * 1.1; }
-        boat.traverse(q => { q.frustumCulled = false; });
-        lalchi.visible = true; lalchi.rotation.set(0, PI, 0); lalchi.play('punch'); F.lalFall = null; sfx('adNooo');
-        popText('I\'LL BE BAAACK... MY GOLD!', _p.set(-9, 4, castle.z - 14), '#ffd0f0', 22, 2.2);
-      }, 1300);
-    }
-  } else if (boat) { boat.position.x += dt * 1.2; boat.position.y = -0.9 + Math.sin(G.t * 2) * 0.12; boat.rotation.z = Math.sin(G.t * 2) * 0.08; lalchi.position.set(boat.position.x, boat.position.y + 0.35, boat.position.z); }
+  // Lalchi is blown sky-high and disappears with a twinkle
+  if (F.lalFly) {
+    const K = F.lalFly; K.t += dt;
+    lalchi.position.set(K.x0 + K.t * 3, K.y0 + K.t * 14 - K.t * K.t * 1.2, castle.z - K.t * 12); lalchi.rotation.x += dt * 9; lalchi.rotation.z += dt * 5;
+    if (K.t > 0.3 && !K.said) { K.said = true; popText('NOOOOO... MY GOOOLD!', _p.set(lalchi.position.x, lalchi.position.y + 2, lalchi.position.z), '#ffd0f0', 24, 1.6); sfx('adNooo'); }
+    if (K.t > 2.4) { puff(lalchi.position.clone(), 1, 0xffffff, { star: true, add: true, size: 3, speed: 0, life: 0.6, grav: 0 }); sfx('bell'); lalchi.visible = false; F.lalFly = null; }
+  }
   // Rocky climbs the rubble and raises the flag; the treasure chest bursts open
-  const tz = castle.z + 1.5;
+  const tz = castle.z + 2;
   if (W2 > 1.6 && !flag) {
     const k = Math.min(1, (W2 - 1.6) / 1.4);
-    rocky.position.x = damp(rocky.position.x, 0, 3, dt); rocky.position.z = F.line - 1.6 + (tz - (F.line - 1.6)) * k; rocky.position.y = Math.sin(k * PI) * 1.0 + k * 1.2; rocky.rotation.y = 0; rocky.play('run'); rocky.update(dt);
+    rocky.position.x = damp(rocky.position.x, 0, 3, dt); rocky.position.z = F.line - 1 + (tz - (F.line - 1)) * k; rocky.position.y = Math.sin(k * PI) * 1.0; rocky.rotation.y = 0; rocky.play('run'); rocky.update(dt);
     if (k >= 1) {
       rocky.rotation.y = PI; rocky.play('victory'); sfx('capArr'); sfx('hooray', 0.3); sfx('bell', 0.2);
       popText('THE GOLD IS BACK WITH THE PEOPLE!', _p.set(0, 5, tz), '#ffe066', 22, 2.2);
-      flag = new THREE.Group(); flag.position.set(0.9, 1.2, tz); scene.add(flag);
+      flag = new THREE.Group(); flag.position.set(0.9, 0, tz); scene.add(flag);
       mesh(new THREE.CylinderGeometry(0.06, 0.06, 4.5, 8), flat(0x5a3a1a), 0, 2.25, 0, flag);
       const cloth = mesh(new THREE.PlaneGeometry(1.8, 1.3, 8, 4), new THREE.MeshStandardMaterial({ map: jollyTex, side: THREE.DoubleSide, roughness: 0.8 }), 0.9, 0.6, 0, flag); flag.userData.cloth = cloth;
-      chest = new THREE.Group(); chest.position.set(-1.6, 1.0, tz + 1.2); scene.add(chest);
+      chest = new THREE.Group(); chest.position.set(-1.6, 0, tz + 1.2); scene.add(chest);
       mesh(new THREE.BoxGeometry(1.2, 0.7, 0.8), flat(0x8a4a1a), 0, 0.35, 0, chest); mesh(new THREE.BoxGeometry(1.24, 0.12, 0.84), flat(0xf2c14e, { metalness: 0.6, roughness: 0.3 }), 0, 0.68, 0, chest);
       const lid = new THREE.Group(); lid.position.set(0, 0.7, -0.4); chest.add(lid);
       mesh(new THREE.CylinderGeometry(0.4, 0.4, 1.2, 10, 1, false, 0, PI), flat(0x9a5a2a), 0, 0, 0.4, lid).rotation.z = PI / 2; chest.userData.lid = lid;
-      for (let i = 0; i < 40; i++) { const c = mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.05, 10), new THREE.MeshStandardMaterial({ color: 0xffc21a, metalness: 0.7, roughness: 0.25 }), -1.6, 1.6, tz + 1.2); scene.add(c); fx.push({ s: c, v: new THREE.Vector3(rnd(-3, 3), rnd(6, 11), rnd(-1, 4)), life: 2.2, t: 0, sz: 1, g: 14, coin: true }); }
+      const coinG = new THREE.CylinderGeometry(0.16, 0.16, 0.05, 10), coinM = new THREE.MeshStandardMaterial({ color: 0xffc21a, metalness: 0.7, roughness: 0.25 });
+      for (let i = 0; i < 40; i++) { const c = mesh(coinG, coinM, -1.6, 0.8, tz + 1.2); scene.add(c); fx.push({ s: c, v: new THREE.Vector3(rnd(-3, 3), rnd(6, 11), rnd(-1, 4)), life: 2.2, t: 0, sz: 1, g: 14, coin: true }); }
       [flag, chest].forEach(o => o.traverse(q => { q.frustumCulled = false; }));
       sfx('coins', 0.3); sfx('coins', 0.7);
     }
-  } else if (flag) rocky.update(dt);
-  else rocky.update(dt);
+  } else rocky.update(dt);
   if (flag) { const c = flag.userData.cloth; c.position.y = Math.min(3.6, c.position.y + dt * 2.5); c.rotation.y = Math.sin(G.t * 5) * 0.15; if (chest) chest.userData.lid.rotation.x = Math.max(-1.9, chest.userData.lid.rotation.x - dt * 4); }
-  if (Math.random() < dt * 2.5) { puff(_p.set(rnd(-10, 10), rnd(9, 15), castle.z + rnd(-6, 4)), 22, 0xffffff, { star: true, cols: [0xff4f6a, 0xffd23f, 0x3fcf6e, 0x2f8cf0, 0xff4fa8], speed: 6, life: 1.4, size: 0.5, grav: 3 }); sfxT('firework', 0.4); }
+  if (Math.random() < dt * 2.5) { puff(_p.set(rnd(-10, 10), rnd(9, 15), castle.z + rnd(-6, 4)), 22, 0xffffff, { star: true, add: true, cols: [0xff4f6a, 0xffd23f, 0x3fcf6e, 0x2f8cf0, 0xff4fa8], speed: 6, life: 1.4, size: 0.5, grav: 3 }); sfxT('firework', 0.4); }
   if (Math.random() < dt * 0.8) sfxT('crewCheer', 1.2);
-  if (W2 > 7 && G.state === 'finale') { G.state = 'win'; results(); }
+  if (W2 > 6.5 && G.state === 'finale') { G.state = 'win'; results(); }
 }
 
 // ---------------- ads (AdMob through the app): optional rewarded ads, and a short ad every few levels ----------------
@@ -695,9 +679,8 @@ function revive(n) {
   closeModal(); for (let i = 0; i < n; i++) addPirate({ x: G.x + rnd(-2, 2), z: G.z + rnd(0, 2) });
   reslot(); sfx('crewCheer'); banner('⚓ MORE PIRATES!', '+' + n + ' to the army', 1.2);
   if (G.finale) {
-    const F = G.finale, n2 = G.crew.length, cols = Math.min(13, n2);
-    G.crew.forEach((q, i) => { const r = Math.floor(i / cols), k = i % cols, inRow = Math.min(cols, n2 - r * cols); q.fx = (k - (inRow - 1) / 2) * 0.66; q.fz = F.line + r * 0.85; q.st = 'fire'; q.cd = 0.5 + Math.random(); q.x = q.fx; q.z = q.fz + 6; });
-    F.done = false; G.state = 'finale'; $('castleHP').classList.remove('hidden'); music('fight');
+    const F = G.finale; G.crew.forEach(q => { if (q.st === 'run') { q.st = 'form'; q.z = F.line + 8; } }); formUp(F);
+    F.done = false; F.next = 0.5; G.state = 'finale'; $('castleHP').classList.remove('hidden'); music(lv.boss ? 'bossfight' : 'fight');
   } else { G.state = 'play'; music(lv.world.music); }
 }
 
@@ -793,9 +776,10 @@ function updateCamera(dt) {
   let p, l, k1 = 5, k2 = 6;
   if (G.state === 'home') { const a = Math.sin(G.t * 0.3) * 0.5; p = tmp.set(Math.sin(a) * 7, 3.6, G.z + 7.5); l = tmpL.set(0, 1.2, G.z + 0.5); k1 = 3; k2 = 3; }
   else if (G.finale && G.finale.win && G.finale.t - G.finale.winT > 2.6) { const a = Math.sin((G.finale.t - G.finale.winT) * 0.3) * 0.9; p = tmp.set(Math.sin(a) * 12, 7.5, castle.z + 1.5 + Math.cos(a) * 12); l = tmpL.set(0, 2.5, castle.z + 1.5); k1 = 2; k2 = 3; }
-  else if (G.finale) { p = tmp.set(2.2, 7.2, castle.z + FIRE_LINE + 9); l = tmpL.set(0, 4.6, castle.z + 1); k1 = 2; k2 = 2.5; }
+  else if (G.finale) { p = tmp.set(0, 10.5, castle.z + 33); l = tmpL.set(0, 4, castle.z + 3); k1 = 2; k2 = 2.5; }
   else { const zoom = 1 + Math.min(0.75, G.crew.length / 150), up = G.air ? 2.5 : 0; p = tmp.set(G.x * 0.5 + (G.air ? 4 : 0), 5.6 * zoom + up, G.z + 8.4 * zoom + herdDepth() * 0.45); l = tmpL.set(G.x * 0.7, 1.2 + up * 0.6, G.z - 7); }
   camP.lerp(p, 1 - Math.exp(-k1 * dt)); camL.lerp(l, 1 - Math.exp(-k2 * dt));
+  const fovT = (innerWidth / innerHeight < 0.6 ? 60 : 52) + (G.boost > 0 ? 9 : 0); if (Math.abs(cam.fov - fovT) > 0.05) { cam.fov = damp(cam.fov, fovT, 4, dt); cam.updateProjectionMatrix(); }
   bendPoint(camP, cam.position); if (G.shake > 0) { G.shake -= dt; cam.position.x += rnd(-1, 1) * G.shake * 0.5; cam.position.y += rnd(-1, 1) * G.shake * 0.5; }
   cam.lookAt(bendPoint(camL, tmp));
   if (W) W.sky.position.copy(cam.position);
@@ -809,8 +793,8 @@ function frame(now) {
   const raw = now - lastT; let dt = Math.min(0.05, raw / 1000); lastT = now;
   // too slow for this phone? step the quality down (resolution first, then shadows)
   if ((G.state === 'play' || G.state === 'finale' || G.state === 'home') && raw < 500) {
-    FPS.t += raw; FPS.n++;
-    if (FPS.t > 1500) { const avg = FPS.t / FPS.n; FPS.slow = avg > 24 ? FPS.slow + 1 : 0; FPS.t = FPS.n = 0; if (FPS.slow >= 1 && QUAL > 0) { QUAL--; FPS.slow = 0; if (QUAL === 0) { sun.castShadow = false; scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { m.needsUpdate = true; }); }); } resize(); } }
+    if (G.t > 4) { FPS.t += raw; FPS.n++; }   // the first seconds of a level (loading) don't count
+    if (FPS.t > 2500) { const avg = FPS.t / FPS.n; FPS.slow = avg > 28 ? FPS.slow + 1 : 0; FPS.t = FPS.n = 0; if (FPS.slow >= 2 && QUAL > 0) { QUAL--; FPS.slow = 0; if (QUAL === 0) { sun.castShadow = false; scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { m.needsUpdate = true; }); }); } resize(); } }
   }
   if (G.state === 'load' || G.state === 'pause' || G.state === 'icon') { renderer.render(scene, cam); return; }
   if (G.state === 'play') { if (keys.ArrowLeft) G.tx -= 10 * dt; if (keys.ArrowRight) G.tx += 10 * dt; }
@@ -827,8 +811,9 @@ const PERF = window.__perf = { upd: 0, ren: 0, n: 0, reset() { this.upd = this.r
 // ---------------- boot: the studio card, then load the people ----------------
 function loadBin(url) { return new Promise((ok, no) => { const x = new XMLHttpRequest(); x.open('GET', url); x.responseType = 'arraybuffer'; x.onload = () => (x.status === 200 || x.status === 0) && x.response ? ok(x.response) : no(new Error('load ' + x.status)); x.onerror = () => no(new Error('load')); x.send(); }); }
 const t0 = performance.now(), Q = new URLSearchParams(location.search);
-loadBin('people.bin').then(buf => {
+Promise.all(['people.bin', 'castle.glb', 'nature.glb'].map(loadBin)).then(async ([buf, cb, nb]) => {
   P = loadPeople(buf);
+  const gl = new GLTFLoader(); setCastleModel((await gl.parseAsync(cb, '')).scene.getObjectByName('castle')); setNature((await gl.parseAsync(nb, '')).scene.getObjectByName('nature'));
   for (const k of ['pirate', 'pirate2', 'pirate3', 'pirateF', 'pirateF2']) crowds[k] = new Crowd(scene, P[k]); crowdG = new Crowd(scene, P.guard); blobs = new Blobs(scene, dotTex, 600);
   for (const k in crowds) crowds[k].prewarm(24); crowdG.prewarm(16); psys(false, false); psys(false, true); psys(true, false); psys(true, true);
   rocky = new Actor(P.hero, { tint: 0xb3202a, skin: 0xb97a52, hair: 0x1a1210 }); rocky.scale.setScalar(1.08); scene.add(rocky);

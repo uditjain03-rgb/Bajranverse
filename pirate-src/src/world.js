@@ -89,9 +89,10 @@ export function buildWorld(lv, scene) {
   for (const s of [-1, 1]) {
     const geo = new THREE.PlaneGeometry(70, len, 14, Math.ceil(len / 4)), p = geo.attributes.position, col = [];
     const c1 = new THREE.Color(T.ground), c2 = new THREE.Color(T.ground2);
-    for (let i = 0; i < p.count; i++) { const x = p.getX(i), off = Math.abs(x + s * 35) ; const h = x * s > -30 ? Math.max(0, (Math.abs(x + s * 35) - 6)) * 0.08 * (1 + Math.sin(p.getY(i) * 0.05 + x) * 0.6) : 0; void off; p.setZ(i, h + Math.sin(p.getY(i) * 0.13 + x * 0.4) * 0.25); const c = c1.clone().lerp(c2, Math.random()); col.push(c.r, c.g, c.b); }
+    for (let i = 0; i < p.count; i++) { const x = p.getX(i), off = Math.abs(x + s * 35) ; const h = x * s > -30 ? Math.max(0, (Math.abs(x + s * 35) - 6)) * 0.08 * (1 + Math.sin(p.getY(i) * 0.05 + x) * 0.6) : 0; void off; p.setZ(i, h + Math.sin(p.getY(i) * 0.13 + x * 0.4) * 0.25); const c = c1.clone().lerp(c2, Math.random() * 0.5).lerp(new THREE.Color(1, 1, 1), 0.55); col.push(c.r, c.g, c.b); }
     geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); geo.computeVertexNormals();
-    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 1 }));
+    const gt = groundTex(T);
+    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, map: gt, roughness: 1 }));
     m.rotation.x = -PI / 2; m.position.set(s * (PATH_W / 2 + 35), -0.05, z0 - len / 2); m.receiveShadow = true; g.add(m);
   }
   // the sea all around the island
@@ -105,11 +106,13 @@ export function buildWorld(lv, scene) {
   for (let i = 0; i < 5; i++) { const sh = ship(i % 2 === 1), sx = (i % 2 ? 1 : -1) * rnd(80, 130), sz = z0 - rnd(40, len); sh.position.set(sx, -1.2, sz); sh.rotation.y = rnd(0, PI * 2); sh.userData.dynamic = true; g.add(sh); anims.push(t => { sh.position.y = -1.2 + Math.sin(t * 0.8 + i) * 0.3; sh.rotation.z = Math.sin(t * 0.6 + i) * 0.04; }); }
   for (let i = 0; i < 9; i++) { const gl = gull(), cx = rnd(-30, 30), cz = z0 - rnd(20, len), r = rnd(8, 18), y = rnd(10, 18), sp = rnd(0.3, 0.6), ph = rnd(0, 6); gl.userData.dynamic = true; g.add(gl); anims.push(t => { const a = t * sp + ph; gl.position.set(cx + Math.cos(a) * r, y + Math.sin(t * 1.3 + i) * 0.6, cz + Math.sin(a) * r); gl.rotation.y = -a; gl.userData.wings.forEach((w, k) => { w.rotation.z = (k ? -1 : 1) * Math.sin(t * 9 + i) * 0.5; }); }); }
   // scenery down both sides
-  const P = PROPS[T.props];
+  const P = KIT ? KPROPS[T.props] : PROPS[T.props];
   for (let z = 10; z > zEnd + 20; z -= rnd(6, 11)) for (const s of [-1, 1]) {
     if (Math.random() < 0.75) { const o = P.near(); o.position.set(s * rnd(PATH_W / 2 + 2, PATH_W / 2 + 9), 0, z + rnd(-3, 3)); o.rotation.y = rnd(0, PI * 2); g.add(o); }
     if (Math.random() < 0.6) { const o = P.far(); o.position.set(s * rnd(PATH_W / 2 + 12, PATH_W / 2 + 40), 0, z + rnd(-4, 4)); o.rotation.y = rnd(0, PI * 2); o.scale.multiplyScalar(rnd(1, 1.8)); g.add(o); }
   }
+  // grass, flowers and stones right along the edges of the path
+  if (P.edge) for (let z = 10; z > zEnd + 20; z -= rnd(2.5, 5)) for (const s of [-1, 1]) if (Math.random() < 0.7) { const o = P.edge(); o.position.set(s * rnd(PATH_W / 2 + 0.6, PATH_W / 2 + 2.2), 0, z); o.rotation.y = rnd(0, PI * 2); g.add(o); }
   // fences along parts of the path
   for (let z = -20; z > zEnd + 40; z -= rnd(40, 90)) { const n = Math.floor(rnd(4, 9)); for (const s of [-1, 1]) g.add(fence(s * (PATH_W / 2 + 0.6), z, n, T)); z -= n * 2.5; }
   // big mountains far away
@@ -187,6 +190,21 @@ function chest() { const o = new THREE.Group(); mesh(new THREE.BoxGeometry(0.9, 
 function shipwreck() { const o = new THREE.Group(); const h = mesh(new THREE.BoxGeometry(2.2, 1.2, 5), flat(0x6a3a1a), 0, 0.3, 0, o); h.rotation.z = 0.35; mesh(new THREE.CylinderGeometry(0.1, 0.12, 4, 6), flat(0x5a3a1a), 0.3, 2.2, 0, o).rotation.z = 0.5; mesh(new THREE.PlaneGeometry(1.6, 1.4), new THREE.MeshStandardMaterial({ color: 0xf2ecd8, side: THREE.DoubleSide }), 0.9, 2.6, 0, o).rotation.z = 0.5; return o; }
 function crab() { const o = new THREE.Group(); mesh(new THREE.IcosahedronGeometry(0.25, 0), flat(0xe8402a), 0, 0.2, 0, o).scale.set(1.3, 0.6, 1); for (const s of [-1, 1]) { mesh(new THREE.IcosahedronGeometry(0.1, 0), flat(0xe8402a), s * 0.32, 0.25, -0.15, o); mesh(new THREE.SphereGeometry(0.05, 6, 4), flat(0xffffff), s * 0.08, 0.34, -0.15, o); } return o; }
 function coral() { const o = new THREE.Group(), c = [0xff6a8a, 0xff9a4a, 0xb86aff, 0xffd23f][Math.floor(Math.random() * 4)]; for (let i = 0; i < 5; i++) { const b = mesh(new THREE.CylinderGeometry(0.08, 0.14, rnd(0.8, 1.8), 6), flat(c), rnd(-0.3, 0.3), 0.6, rnd(-0.3, 0.3), o); b.rotation.set(rnd(-0.4, 0.4), 0, rnd(-0.4, 0.4)); } return o; }
+// ready-made textured nature props (CC0 Quaternius "Stylized Nature MegaKit", built by tools/kit.mjs into nature.glb)
+let KIT = null;
+export function setNature(root) { KIT = {}; root.children.forEach(c => { KIT[c.name] = c; }); }
+function kit(names, s0 = 1, s1 = 1.3) { const n = pick(names), src = KIT[n]; const o = src.clone(true); o.scale.setScalar(rnd(s0, s1)); o.traverse(q => { if (q.isMesh) { q.castShadow = true; q.receiveShadow = true; } }); return o; }
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const TREES = ['CommonTree_1', 'CommonTree_2', 'CommonTree_3'], PINES = ['Pine_1', 'Pine_2'], ROCKS = ['Rock_Medium_1', 'Rock_Medium_2', 'Rock_Medium_3'];
+const BUSH = ['Bush_Common', 'Bush_Common_Flowers'], FLOWERS = ['Flower_3_Group', 'Flower_4_Group', 'Bush_Common_Flowers'], PLANTS = ['Fern_1', 'Plant_1_Big', 'Plant_7_Big'], GRASS = ['Grass_Common_Tall', 'Grass_Wispy_Tall'];
+const KPROPS = {
+  beach: { near: () => Math.random() < 0.3 ? crab() : Math.random() < 0.3 ? barrel() : kit([...BUSH, ...ROCKS, ...GRASS], 0.8, 1.2), far: () => Math.random() < 0.6 ? palm() : kit([...TREES, ...ROCKS], 1.2, 1.8), edge: () => kit([...GRASS, ...FLOWERS], 0.8, 1.2) },
+  jungle: { near: () => kit([...PLANTS, ...BUSH, ...FLOWERS], 1, 1.5), far: () => Math.random() < 0.3 ? palm() : kit(TREES, 1.1, 1.7), edge: () => kit([...GRASS, ...PLANTS, ...FLOWERS], 0.8, 1.2) },
+  snow: { near: () => Math.random() < 0.3 ? barrel() : kit([...ROCKS, ...PINES], 0.6, 1), far: () => Math.random() < 0.1 ? igloo() : kit(PINES, 1.2, 1.8), edge: () => kit(ROCKS, 0.3, 0.6) },
+  volcano: { near: () => Math.random() < 0.4 ? lavaPool() : kit(ROCKS, 0.8, 1.4), far: () => kit(['DeadTree_2', ...ROCKS], 1.2, 2), edge: () => kit(ROCKS, 0.3, 0.6) },
+  coral: { near: () => Math.random() < 0.5 ? coral() : kit([...FLOWERS, ...BUSH], 0.9, 1.3), far: () => Math.random() < 0.5 ? palm() : kit(TREES, 1.1, 1.6), edge: () => kit([...FLOWERS, ...GRASS], 0.8, 1.2) },
+  night: { near: () => kit(['Mushroom_Common', ...PLANTS, ...BUSH], 1, 1.6), far: () => kit([...TREES, ...PINES], 1.1, 1.7), edge: () => kit(['Mushroom_Common', ...GRASS], 0.8, 1.3) },
+};
 const PROPS = {
   beach: { near: () => { const r = Math.random(); return r < 0.3 ? crab() : r < 0.55 ? barrel() : r < 0.7 ? chest() : rock(0xd8c8a8, 0.6); }, far: () => Math.random() < 0.75 ? palm() : Math.random() < 0.5 ? shipwreck() : rock(0xb8a888, 2) },
   jungle: { near: () => Math.random() < 0.5 ? flowers([0xff4f6a, 0xffd23f, 0xff8a1a]) : barrel(), far: () => Math.random() < 0.5 ? palm() : roundTree(0x6a4a2a, 0x2f8a3a, rnd(3, 6)) },
@@ -206,6 +224,8 @@ export function mergeStatic(root) {
     if (!o.isMesh || o.isInstancedMesh || o.isSkinnedMesh) return;
     for (let q = o; q && q !== root; q = q.parent) if (q.userData.dynamic) return;
     if (o.geometry.attributes.position.count > 20000) return;   // big ground pieces stay as they are
+    if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+    const bb = o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld); if (bb.max.z - bb.min.z > 25 || bb.max.x - bb.min.x > 60) return;   // long pieces (the path, the ground, the sea) are never hidden
     const g = o.geometry, sig = ['normal', 'uv', 'color'].filter(k => g.attributes[k]).join('');
     const z = new THREE.Vector3().setFromMatrixPosition(o.matrixWorld).z, ck = Math.floor(-z / CHUNK);
     const key = o.material.uuid + '|' + sig + '|' + ck + '|' + o.castShadow + o.receiveShadow;
@@ -225,4 +245,22 @@ export function mergeStatic(root) {
   // empty groups left behind are removed too
   const empty = []; root.traverse(o => { if (o.isGroup && o !== root && !o.children.length && !o.userData.dynamic) empty.push(o); }); empty.forEach(o => o.parent && o.parent.remove(o));
   return [...chunks.values()];
+}
+
+// a detailed ground texture (grass blades, sand grains, snow sparkle, rock) so the ground isn't flat colour
+const gtCache = {};
+function groundTex(T) {
+  if (gtCache[T.id]) return gtCache[T.id];
+  const base = new THREE.Color(T.ground), dark = new THREE.Color(T.ground2), hex = c => '#' + c.getHexString();
+  const t = canvasTex(256, 256, (c, w, h) => {
+    c.fillStyle = hex(base); c.fillRect(0, 0, w, h);
+    for (let i = 0; i < 70; i++) { const g = c.createRadialGradient(0, 0, 0, 0, 0, 1); const x = Math.random() * w, y = Math.random() * h, r = 10 + Math.random() * 30; c.save(); c.translate(x, y); c.scale(r, r); g.addColorStop(0, `rgba(${dark.r * 255 | 0},${dark.g * 255 | 0},${dark.b * 255 | 0},.35)`); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(-1, -1, 2, 2); c.restore(); }
+    const grass = ['beach', 'coral'].includes(T.id) ? 0 : T.id === 'snow' ? 2 : T.id === 'volcano' ? 3 : 1;
+    for (let i = 0; i < 2600; i++) {
+      const x = Math.random() * w, y = Math.random() * h, l = Math.random();
+      if (grass === 1) { c.strokeStyle = l < 0.5 ? `rgba(255,255,200,${0.12 + l * 0.2})` : `rgba(0,40,0,${0.1 + l * 0.15})`; c.lineWidth = 1; c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.random() * 3 - 1.5, y - 3 - Math.random() * 5); c.stroke(); }
+      else { c.fillStyle = l < 0.5 ? `rgba(255,255,255,${0.1 + l * 0.25})` : `rgba(60,40,20,${0.08 + l * 0.12})`; c.fillRect(x, y, grass === 3 ? 2 + l * 3 : 1 + l * 1.5, grass === 3 ? 2 + l * 2 : 1 + l * 1.5); }
+    }
+  });
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(6, 120); return (gtCache[T.id] = t);
 }

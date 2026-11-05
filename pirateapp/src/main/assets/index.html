@@ -36,6 +36,8 @@ button { font-family: inherit; font-weight: 700; color: inherit; cursor: pointer
 #progFill { height: 100%; width: 0; background: linear-gradient(90deg, #ffe066, #8ae04a); }
 #herdN { position: absolute; left: 0; top: 0; font-size: 26px; padding: 4px 14px; border-radius: 22px; background: #fff6e0; color: var(--dark); border: 4px solid var(--dark); box-shadow: 0 4px 0 var(--dark); white-space: nowrap; }
 #herdN.bump { animation: hb .25s; }
+#fortN { position: absolute; left: 0; top: 0; font-size: 34px; padding: 4px 18px; border-radius: 24px; background: linear-gradient(#ff6a5a, #c8202a); color: #fff; border: 4px solid var(--dark); box-shadow: 0 5px 0 var(--dark); white-space: nowrap; -webkit-text-stroke: 3px var(--dark); paint-order: stroke fill; }
+#fortN.bump { animation: hb .2s; }
 @keyframes hb { 40% { scale: 1.25; } }
 #castleHP { position: absolute; left: 50%; transform: translateX(-50%); top: calc(96px + var(--sat)); width: min(80vw, 340px); text-align: center; }
 #castleHP .lab { font-size: 22px; }
@@ -107,6 +109,7 @@ button { font-family: inherit; font-weight: 700; color: inherit; cursor: pointer
   <div id="top"><button class="btn" id="pauseB">❚❚</button><div class="pill out" id="lvl">LEVEL 1</div><div class="pill out">🪙 <span id="appleN">0</span></div></div>
   <div id="prog"><div id="progFill"></div></div>
   <div id="herdN" class="out">🏴‍☠️ 5</div>
+  <div id="fortN" class="out" style="display:none">🏰 0</div>
   <div id="castleHP" class="hidden"><div class="lab out">🏰 LORD LALCHI'S GOLD FORT</div><div id="hpBar"><div id="hpFill"></div><div id="hpN" class="out">0</div></div></div>
   <div id="pops"></div>
   <div id="banner"></div>

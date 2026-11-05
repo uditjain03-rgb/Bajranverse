@@ -10,6 +10,7 @@ for (const w of [600, 700]) fs.copyFileSync(path.join(here, `node_modules/@fonts
 fs.copyFileSync(path.join(here, 'index.html'), path.join(www, 'index.html'));
 fs.copyFileSync(path.join(here, 'assets/people.bin'), path.join(www, 'people.bin'));
 fs.copyFileSync(path.join(here, 'assets/logo.jpg'), path.join(www, 'logo.jpg'));
+for (const f of ['castle.glb', 'nature.glb']) fs.copyFileSync(path.join(here, 'assets', f), path.join(www, f));
 fs.cpSync(path.join(here, 'assets/music'), path.join(www, 'music'), { recursive: true });
 await esbuild.build({
   entryPoints: [path.join(here, 'src/main.js')], bundle: true, minify: !process.env.DEV, format: 'iife', target: 'es2020', outfile: path.join(www, 'game.js'), logLevel: 'warning',

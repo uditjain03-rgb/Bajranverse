@@ -1,114 +1,63 @@
-// Lord Lalchi's fortress, built from about 1,800 real stone blocks (one instanced mesh): a front wall with
-// battlements, a tall gatehouse with an arched gate and portcullis, four round corner towers with pointed roofs,
-// side walls, and a high central keep with Lalchi's gold-coin banner. Bombs blow blocks out of the front; blocks with
-// nothing under them fall; when its strength runs out the whole fortress comes down.
+// Lord Lalchi's castle, made from the CC0 Quaternius "Medieval Village MegaKit" (built by tools/kit.mjs into
+// castle.glb): stone walls with battlements, a big arched gate, four towers with conical tile roofs and a tall keep.
+// It is in sections (left wall, right wall, gate, towers, keep, back). Bomb blasts throw stone chunks and dust; as its
+// strength drops whole sections crack and topple; at zero everything comes down in a huge cloud.
 import * as THREE from 'three';
-import { flat, mesh, canvasTex } from './world.js';
 
-const PI = Math.PI, BW = 0.9, BH = 0.55, BD = 0.9, rnd = (a, b) => a + Math.random() * (b - a);
-export const WALL_TOP = 9 * BH, GATE_TOP = 13 * BH, TOWER_TOP = 16 * BH;
+const PI = Math.PI, rnd = (a, b) => a + Math.random() * (b - a);
+export const WALL_TOP = 6.24, GATE_TOP = 8.74, TOWER_TOP = 9.36;
+let SRC = null;
+export function setCastleModel(scene) { SRC = scene; }
+// the order sections give way as the castle weakens (fraction of strength left)
+const STAGES = [['wallL', 0.66], ['wallR', 0.4], ['towerL', 0.2], ['towerR', 0.1]];
+
 export function buildCastle(scene, T, z, hp) {
   const g = new THREE.Group(); g.position.z = z; scene.add(g);
-  const bricks = [], cells = new Map();
-  const key = (s, i, j, k) => s + ':' + i + ',' + j + ',' + k;
-  const add = (s, i, j, k, x, y, zz, o = {}) => { const b = { s0: s, i, j, k, x, y, z: zz, ry: o.ry || 0, vx: 0, vy: 0, vz: 0, rx: 0, rz: 0, ax: 0, az: 0, st: 0, delay: 0, tint: o.tint ?? 1, front: !!o.front, sc: o.sc || 1 }; bricks.push(b); cells.set(key(s, i, j, k), b); };
-  // front wall (13 wide, 9 high, 2 deep) with battlements
-  for (let j = 0; j < 9; j++) for (let i = -6; i <= 6; i++) for (let k = 0; k < 2; k++) {
-    if (Math.abs(i) <= 2) continue;   // the gatehouse goes here
-    add('w', i, j, k, i * BW + (j % 2 ? BW * 0.25 : 0), BH / 2 + j * BH, -k * BD, { front: k === 0 });
-  }
-  for (let i = -6; i <= 6; i += 2) if (Math.abs(i) > 2) add('w', i, 9, 0, i * BW, BH / 2 + 9 * BH, 0, { tint: 0.92, front: true });
-  // gatehouse: 5 wide, 13 high, sticking out in front of the wall, with an arched gate
-  for (let j = 0; j < 13; j++) for (let i = -2; i <= 2; i++) for (let k = -1; k < 2; k++) {
-    const arch = Math.abs(i) <= 1 && (j < 4 || (j === 4 && i === 0));
-    if (arch) continue;
-    add('g', i, j, k, i * BW + (j % 2 ? BW * 0.2 : 0), BH / 2 + j * BH, -k * BD, { front: k === -1, tint: 0.97 });
-  }
-  for (let i = -2; i <= 2; i += 2) add('g', i, 13, -1, i * BW, BH / 2 + 13 * BH, BD, { tint: 0.9, front: true });
-  // round towers: front corners (16 high) and back corners (14 high), with crenels on top
-  const tower = (s, cx, cz, h, front) => {
-    for (let j = 0; j < h; j++) for (let a = 0; a < 12; a++) { const ang = (a + (j % 2) * 0.5) / 12 * PI * 2, r = 1.9; add(s, a, j, 0, cx + Math.cos(ang) * r, BH / 2 + j * BH, cz + Math.sin(ang) * r, { ry: -ang, tint: 0.95, front: front && Math.sin(ang) > -0.2 }); }
-    for (let a = 0; a < 12; a += 2) { const ang = a / 12 * PI * 2, r = 1.9; add(s, a, h, 0, cx + Math.cos(ang) * r, BH / 2 + h * BH, cz + Math.sin(ang) * r, { ry: -ang, tint: 0.88, front }); }
-  };
-  tower('tl', -7.6, -0.4, 16, true); tower('tr', 7.6, -0.4, 16, true); tower('bl', -7.6, -10.5, 14, false); tower('br', 7.6, -10.5, 14, false);
-  // side walls running back
-  for (const s of [-1, 1]) for (let j = 0; j < 9; j++) for (let k = 0; k < 9; k++) add('s' + s, 0, j, k, s * 7.6, BH / 2 + j * BH, -2.4 - k * BW - (j % 2 ? 0.25 : 0), { ry: PI / 2, tint: 0.93 });
-  // the keep: a tall square tower in the middle (hollow), 7 x 5 blocks, 20 high
-  for (let j = 0; j < 20; j++) for (let i = -3; i <= 3; i++) for (let k = 0; k < 5; k++) {
-    if (i > -3 && i < 3 && k > 0 && k < 4) continue;
-    add('k', i, j, k, i * BW, BH / 2 + j * BH, -4.6 - k * BW, { tint: 1.03 });
-  }
-  for (let i = -3; i <= 3; i += 2) for (const k of [0, 4]) add('k', i, 20, k, i * BW, BH / 2 + 20 * BH, -4.6 - k * BW, { tint: 0.95 });
-  // the blocks: one instanced mesh, each block a little different in colour
-  const geo = new THREE.BoxGeometry(BW * 0.96, BH * 0.93, BD * 0.96);
-  const stone = canvasTex(64, 64, (c, w, h) => { c.fillStyle = '#d8d4cc'; c.fillRect(0, 0, w, h); for (let i = 0; i < 260; i++) { const v = 170 + Math.random() * 70; c.fillStyle = `rgba(${v},${v},${v * 0.97},.5)`; c.fillRect(Math.random() * w, Math.random() * h, 2 + Math.random() * 4, 2 + Math.random() * 3); } c.strokeStyle = 'rgba(70,60,50,.55)'; c.lineWidth = 3; c.strokeRect(1, 1, w - 2, h - 2); });
-  const inst = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ map: stone, roughness: 0.92 }), bricks.length);
-  inst.castShadow = true; inst.receiveShadow = true; inst.frustumCulled = false; g.add(inst);
-  const base = new THREE.Color(T.castle[0]), c = new THREE.Color();
-  bricks.forEach((b, n) => { c.copy(base).multiplyScalar(b.tint * rnd(0.8, 1.06)); inst.setColorAt(n, c); });
-  // the gate (wooden doors and an iron portcullis), roofs, banners
-  const doorM = flat(0x6a4020), ironM = new THREE.MeshStandardMaterial({ color: 0x2a2a30, metalness: 0.7, roughness: 0.4 });
-  const door = new THREE.Group(); door.position.set(0, 0, BD * 1.2); g.add(door);
-  mesh(new THREE.BoxGeometry(2.6, 2.4, 0.25), doorM, 0, 1.2, 0, door);
-  for (let i = -2; i <= 2; i++) mesh(new THREE.BoxGeometry(0.09, 2.6, 0.12), ironM, i * 0.55, 1.3, 0.2, door);
-  for (const y of [0.6, 1.4, 2.2]) mesh(new THREE.BoxGeometry(2.7, 0.09, 0.12), ironM, 0, y, 0.2, door);
-  const roofM = flat(T.castle[1]), roofs = [];
-  for (const [x, zz, h] of [[-7.6, -0.4, 16], [7.6, -0.4, 16], [-7.6, -10.5, 14], [7.6, -10.5, 14]]) { const r = mesh(new THREE.ConeGeometry(2.5, 3.6, 12), roofM, x, h * BH + 2.4, zz, g); r.userData.v = new THREE.Vector3(); roofs.push(r); }
-  const keepRoof = mesh(new THREE.ConeGeometry(4.6, 4.2, 4), roofM, 0, 21 * BH + 2.4, -6.4, g); keepRoof.rotation.y = PI / 4; keepRoof.userData.v = new THREE.Vector3(); roofs.push(keepRoof);
-  const coinTex = canvasTex(128, 160, (cx, w, h) => { cx.fillStyle = '#7a1a8a'; cx.fillRect(0, 0, w, h); cx.fillStyle = '#ffd23f'; cx.fillRect(0, 0, w, 10); cx.fillRect(0, h - 10, w, 10); cx.beginPath(); cx.arc(w / 2, h / 2, 40, 0, 7); cx.fill(); cx.fillStyle = '#c88a00'; cx.font = 'bold 54px sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('₹', w / 2, h / 2 + 3); });
-  const banner = mesh(new THREE.PlaneGeometry(2.6, 3.4), new THREE.MeshStandardMaterial({ map: coinTex, side: THREE.DoubleSide }), 0, 15 * BH, -4.6 + BD * 0.5 + 0.02, g);
-  const flagTex = canvasTex(128, 80, (cx, w, h) => { cx.fillStyle = '#7a1a8a'; cx.fillRect(0, 0, w, h); cx.fillStyle = '#ffd23f'; cx.beginPath(); cx.arc(w / 2, h / 2, 24, 0, 7); cx.fill(); });
-  const flags = roofs.map(r => { const f = new THREE.Group(); f.position.set(r.position.x, r.position.y + 1.7, r.position.z); g.add(f); mesh(new THREE.CylinderGeometry(0.05, 0.05, 2, 5), flat(0x5a3a2a), 0, 1, 0, f); mesh(new THREE.PlaneGeometry(1.4, 0.9), new THREE.MeshStandardMaterial({ map: flagTex, side: THREE.DoubleSide }), 0.7, 1.5, 0, f); return f; });
-  // torches by the gate
-  const fire = [];
-  for (const s of [-1, 1]) { mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.7, 6), flat(0x4a3020), s * 1.9, 2.8, BD * 1.6, g); const f = mesh(new THREE.ConeGeometry(0.16, 0.45, 8), new THREE.MeshBasicMaterial({ color: 0xffa020 }), s * 1.9, 3.35, BD * 1.6, g); fire.push(f); }
-  const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = new THREE.Vector3(), _s = new THREE.Vector3(1, 1, 1);
-  let dirty = 'all'; const settled = [];
+  const root = SRC.clone(true); g.add(root);
+  // each section gets a pivot at the middle of its base, so it falls over around its own foot
+  const secs = {};
+  for (const c of [...root.children]) { const b = new THREE.Box3().setFromObject(c), cx = (b.min.x + b.max.x) / 2, cz = (b.min.z + b.max.z) / 2; const piv = new THREE.Group(); piv.name = c.name; piv.position.set(cx, 0, cz); root.add(piv); piv.add(c); c.position.set(-cx, 0, -cz); secs[c.name] = { o: piv, st: 0, t: 0, dir: Math.sign(cx) || (Math.random() < 0.5 ? -1 : 1) }; }
+  root.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; } });
+  // flying stone chunks (one instanced mesh, using the wall's stone texture)
+  let stoneMat = null; root.traverse(o => { if (o.isMesh && !stoneMat && /UnevenBrick/.test(o.material.name)) stoneMat = o.material; });
+  const chunkGeo = new THREE.BoxGeometry(0.45, 0.32, 0.4), CAP = 220;
+  const chunks = new THREE.InstancedMesh(chunkGeo, stoneMat || new THREE.MeshStandardMaterial({ color: 0x9a8a7a }), CAP); chunks.frustumCulled = false; chunks.castShadow = true; chunks.count = 0; g.add(chunks);
+  const flying = [];
+  const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = new THREE.Vector3(), _s = new THREE.Vector3();
   const C = {
-    group: g, z, hp, max: hp, down: false, front: BD * 1.45, width: 14,
-    // blocks above a hole lose their support and fall
-    loosen(b) { for (let j = b.j + 1; j < 22; j++) { const q = cells.get(key(b.s0, b.i, j, b.k)); if (!q || q.st) continue; q.st = 1; q.delay = (j - b.j) * 0.04; q.vx = rnd(-1, 1); q.vz = rnd(0, 2); cells.delete(key(q.s0, q.i, j, q.k)); } },
-    // a bomb blast at x, y on the front: blocks fly out
+    group: g, z, hp, max: hp, down: false, front: 1.2, width: 22,
+    // a bomb blast at x, y on the front: stone chunks fly out
     blast(x, y, power = 1) {
-      let n = 0; const R = 0.8 + power * 0.35, max = 3 + power * 3;
-      for (const b of bricks) if (!b.st && b.front && Math.abs(b.x - x) < R && Math.abs(b.y - y) < R) {
-        b.st = 1; const dx = b.x - x, dy = b.y - y; b.vx = dx * 5 + rnd(-2, 2); b.vy = dy * 4 + rnd(3, 8); b.vz = rnd(3, 9); b.ax = rnd(-9, 9); b.az = rnd(-9, 9); cells.delete(key(b.s0, b.i, b.j, b.k)); C.loosen(b); n++; dirty = true;
-        if (n >= max) break;
-      }
-      door.position.z = BD * 1.2 - Math.random() * 0.2; door.rotation.z = rnd(-0.06, 0.06);
+      const n = 3 + Math.round(power * 2);
+      for (let i = 0; i < n; i++) { if (flying.length >= CAP) flying.shift(); flying.push({ x: x + rnd(-0.6, 0.6), y: y + rnd(-0.5, 0.5), z: 1.0, vx: rnd(-4, 4), vy: rnd(3, 8), vz: rnd(3, 8), rx: 0, rz: 0, ax: rnd(-9, 9), az: rnd(-9, 9), s: rnd(0.6, 1.4), t: 0 }); }
+      const s = secs.gate; if (s && !s.st) { s.o.position.z = -0.12; }
+      // whole sections give way as the castle weakens
+      for (const [n, at] of STAGES) if (secs[n] && !secs[n].st && C.hp / C.max <= at) C.topple(n, 0.9);
       return n;
     },
     impact(x, y, p) { return C.blast(x, y, p); },
-    // strength gone: everything comes down, tops first, in a big cloud
-    collapse() {
-      C.down = true; dirty = true;
-      for (const b of bricks) if (!b.st) { b.st = 1; b.delay = Math.max(0, 0.7 - b.y * 0.04) + Math.random() * 0.6; b.vx = b.x * rnd(0.15, 0.5) + rnd(-1, 1); b.vy = rnd(0, 4); b.vz = rnd(-2, 4); b.ax = rnd(-5, 5); b.az = rnd(-5, 5); }
-      roofs.forEach(r => { r.userData.v.set(Math.sign(r.position.x || rnd(-1, 1)) * rnd(2, 4), rnd(4, 7), -rnd(3, 6)); r.userData.sink = 0; });
-      banner.userData.fall = true; door.userData.fall = true;
-    },
+    topple(n, k = 1) { const s = secs[n]; if (!s || s.st) return; s.st = 1; s.t = 0; s.k = k; C.onTopple && C.onTopple(n, s.o); },
+    // strength gone: everything comes down, the outer parts first
+    collapse() { C.down = true; let d = 0; for (const n of ['gate', 'wallL', 'wallR', 'towerL', 'towerR', 'keep', 'back', 'backL', 'backR']) { const s = secs[n]; if (s && !s.st) { setTimeout(() => C.topple(n), d); d += 140; } } },
     update(dt) {
-      const mv = [];
-      for (let n = 0; n < bricks.length; n++) {
-        const b = bricks[n];
-        if (b.st !== 1) continue; mv.push(n);
-        if (b.delay > 0) { b.delay -= dt; continue; }
-        b.vy -= 22 * dt; b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; b.rx += b.ax * dt; b.rz += b.az * dt;
-        if (b.y < BH / 2) { b.y = BH / 2; b.vy *= -0.3; b.vx *= 0.55; b.vz *= 0.55; b.ax *= 0.5; b.az *= 0.5; if (Math.abs(b.vy) < 0.8 && Math.hypot(b.vx, b.vz) < 0.6) { settled.push(n); b.st = 2; b.rx = Math.round(b.rx / (PI / 2)) * PI / 2; b.rz = Math.round(b.rz / (PI / 2)) * PI / 2; } }
+      for (const s of Object.values(secs)) {
+        if (s.o.position.z < 0 && !s.st) s.o.position.z = Math.min(0, s.o.position.z + dt * 0.8);
+        if (!s.st) continue; s.t += dt;
+        // lean over, crack, then sink into the ground in a cloud of dust
+        const k = Math.min(1, s.t / 1.4), tilt = k * k * 0.5 * s.k;
+        s.o.rotation.z = -s.dir * tilt; s.o.rotation.x = tilt * 0.4; s.o.position.y = -Math.max(0, s.t - 0.5) * 6 * s.k;
+        if (s.o.position.y < -16) s.o.visible = false;
       }
-      const set = n => { const b = bricks[n]; _e.set(b.rx, b.ry, b.rz); _q.setFromEuler(_e); _m.compose(_p.set(b.x, b.y, b.z), _q, _s); inst.setMatrixAt(n, _m); };
-      if (dirty === 'all') { for (let n = 0; n < bricks.length; n++) set(n); inst.instanceMatrix.needsUpdate = true; }
-      else if (mv.length || settled.length) { mv.forEach(set); settled.forEach(set); inst.instanceMatrix.needsUpdate = true; }
-      dirty = false; settled.length = 0;
-      for (const r of roofs) if (r.userData.v.lengthSq() > 0) { r.userData.v.y -= 20 * dt; r.position.addScaledVector(r.userData.v, dt); r.rotation.z += dt * 2; if (r.position.y < 1.2) { r.position.y = 1.2; r.userData.v.set(0, 0, 0); r.userData.sink = 1; } }
-      for (const r of roofs) if (r.userData.sink) r.position.y = Math.max(-4, r.position.y - dt * 1.2);
-      if (door.userData.fall) { door.rotation.x = Math.min(PI / 2, door.rotation.x + dt * 3); door.position.y = Math.max(0.15, door.position.y - dt * 3); }
-      if (banner.userData.fall) { banner.position.y = Math.max(0.3, banner.position.y - dt * 6); banner.rotation.x = Math.min(PI / 2, banner.rotation.x + dt * 2); }
-      const t = performance.now() / 1000;
-      flags.forEach((f, i) => { f.rotation.y = Math.sin(t * 3 + i) * 0.25; if (C.down) { f.rotation.z = Math.min(PI / 2.2, f.rotation.z + dt * 2); f.position.y = Math.max(1, f.position.y - dt * 5); } });
-      fire.forEach((f, i) => { f.scale.set(1, 0.8 + Math.sin(t * 17 + i * 2) * 0.25, 1); f.visible = !C.down; });
+      let n = 0;
+      for (let i = flying.length - 1; i >= 0; i--) {
+        const c = flying[i]; c.t += dt; c.vy -= 20 * dt; c.x += c.vx * dt; c.y += c.vy * dt; c.z += c.vz * dt; c.rx += c.ax * dt; c.rz += c.az * dt;
+        if (c.y < 0.15) { c.y = 0.15; c.vy *= -0.3; c.vx *= 0.6; c.vz *= 0.6; c.ax *= 0.5; c.az *= 0.5; }
+        if (c.t > 5) { flying.splice(i, 1); continue; }
+        _e.set(c.rx, 0, c.rz); _q.setFromEuler(_e); chunks.setMatrixAt(n++, _m.compose(_p.set(c.x, c.y, c.z), _q, _s.setScalar(c.s)));
+      }
+      chunks.count = n; chunks.instanceMatrix.needsUpdate = true;
     },
-    dispose() { scene.remove(g); geo.dispose(); },
+    dispose() { scene.remove(g); },
   };
-  C.update(0);
   return C;
 }
