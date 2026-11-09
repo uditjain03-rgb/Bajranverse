@@ -9,7 +9,6 @@ import { WORLDS, PATH_W, buildWorld, setBend, bendPoint, slopeAt, canvasTex, fla
 import { loadPeople, Crowd, Actor, Blobs } from './people.js';
 import { buildCastle, setCastleModel, GATE_TOP } from './castle.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { Audio } from './audio.js';
 import { Music } from './music.js';
 import './sfx.js';
@@ -49,18 +48,17 @@ const GUARD_COATS = [0xc8302a, 0xd03a2a, 0xb82822];
 const coatCol = () => pick((COATS[PF.coat] || COATS.mixed).cols);
 
 // ---------------- renderer, lights ----------------
-const renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: (devicePixelRatio || 1) < 2, powerPreference: 'high-performance' });   // sharp phone screens don't need anti-aliasing (it costs a lot)
+const renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: !/aa=0/.test(location.search), powerPreference: 'high-performance' });   // MSAA is nearly free on phone (tile) GPUs and stops edges shimmering
 renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
-renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.enabled = false;   // no real-time shadow pass: soft blob shadows under everyone instead (phones)
 const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(55, 1, 0.3, 320);
-const hemi = new THREE.HemisphereLight(0xdcecff, 0x8a7a5a, 1.5); scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xffeccc, 2.6); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.03;
+const hemi = new THREE.HemisphereLight(0xe4f0ff, 0x9a8a6a, 2.5); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffeccc, 2.9);
 Object.assign(sun.shadow.camera, { left: -18, right: 18, top: 20, bottom: -14, near: 1, far: 80 }); scene.add(sun, sun.target);
 const rim = new THREE.DirectionalLight(0x9ac8ff, 0.7); rim.position.set(6, 6, -10); scene.add(rim);
-// soft image-based light (sky reflections) makes every material look richer
-{ const pm = new THREE.PMREMGenerator(renderer); const env = pm.fromScene(new RoomEnvironment(), 0.04).texture; scene.environment = env; scene.environmentIntensity = 0.45; pm.dispose(); }
-// quality steps: 3 sharp, 2 normal, 1 lower resolution, 0 lowest without real-time shadows (picked automatically from the frame rate)
-let QUAL = PF.set.hi ? 3 : 2; const DPR = [1, 1.25, 1.6, 2];
+
+// render resolution (pixels per screen point). Never below 1.5, so the picture always stays sharp on a phone.
+let QUAL = PF.set.hi ? 2 : 0; const DPR = [1.5, 1.75, 2];
 function resize() { const w = innerWidth, h = innerHeight; renderer.setPixelRatio(Math.min(devicePixelRatio || 1, DPR[QUAL])); renderer.setSize(w, h, false); cam.aspect = w / h; cam.fov = w / h < 0.6 ? 60 : 52; cam.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
 
@@ -140,19 +138,19 @@ function updateBombs(dt) {
   }
   bombMesh.count = n; bombMesh.instanceMatrix.needsUpdate = true; sparkGeo.setDrawRange(0, n); sparkGeo.attributes.position.needsUpdate = true; _bs.set(1, 1, 1);
 }
-const rings = [];
+const rings = [], ringGeo = new THREE.RingGeometry(0.6, 0.9, 24), ringPool = [];   // blast rings are kept and reused: making and freeing them made the phone rebuild a shader in the middle of the fight
 const ringMat = new THREE.MeshBasicMaterial({ color: 0xffe0a0, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
 function boom(p, s = 1, o = {}) {
   puff(p, Math.round(5 + 3 * s), 0xffffff, { cols: [0xfff2a0, 0xffc040, 0xff7a20, 0xff4a10], add: true, size: 1.1 * s, speed: 3.5 * s, life: 0.35, grav: -1, grow: 1.4 });
   puff(p, Math.round(3 + 2 * s), 0x5a5550, { size: 1.4 * s, speed: 1.6 * s, life: 1.1, grav: -1.6, grow: 1.2 });
   puff(p, Math.round(4 * s), 0xffd060, { star: true, add: true, size: 0.3, speed: 7 * s, life: 0.5, grav: 8 });
-  if (rings.length < 12) { const r = new THREE.Mesh(new THREE.RingGeometry(0.6, 0.9, 24), ringMat.clone()); r.position.copy(p); r.position.y = Math.max(0.1, p.y * (o.wall ? 1 : 0) + 0.1); if (o.wall) r.rotation.set(0, 0, 0); else r.rotation.x = -PI / 2; r.frustumCulled = false; scene.add(r); rings.push({ r, t: 0, s }); }
+  if (rings.length < 12) { const r = ringPool.pop() || new THREE.Mesh(ringGeo, ringMat.clone()); r.scale.setScalar(1); r.rotation.set(0, 0, 0); r.position.copy(p); r.position.y = Math.max(0.1, p.y * (o.wall ? 1 : 0) + 0.1); if (o.wall) r.rotation.set(0, 0, 0); else r.rotation.x = -PI / 2; r.frustumCulled = false; scene.add(r); rings.push({ r, t: 0, s }); }
   puff(p, 1, 0xffe8b0, { add: true, size: 3.2 * s, speed: 0, life: 0.14, grav: 0, grow: 0.3 });
   sfxT(s > 1.5 ? 'bigBoom' : 'boom', 0.05); G.shake = Math.max(G.shake, 0.12 * s);
 }
 const _p2 = new THREE.Vector3();
 function updateBooms(dt) {
-  for (let i = rings.length - 1; i >= 0; i--) { const R = rings[i]; R.t += dt; const k = R.t / 0.4; R.r.scale.setScalar(1 + k * 4 * R.s); R.r.material.opacity = 0.8 * (1 - k); if (k >= 1) { scene.remove(R.r); R.r.material.dispose(); rings.splice(i, 1); } }
+  for (let i = rings.length - 1; i >= 0; i--) { const R = rings[i]; R.t += dt; const k = R.t / 0.4; R.r.scale.setScalar(1 + k * 4 * R.s); R.r.material.opacity = 0.8 * (1 - k); if (k >= 1) { scene.remove(R.r); ringPool.push(R.r); rings.splice(i, 1); } }
 }
 // floating words (DOM)
 const pops = [];
@@ -212,9 +210,9 @@ function makeLevel(n) {
 
 // ---------------- state ----------------
 const G = { state: 'load', t: 0, z: 0, x: 0, tx: 0, speed: 0, crew: [], flying: [], apples: 0, lost: 0, finale: null, shake: 0, slow: 1 };
-let P = null, lv = null, W = null, castle = null, rocky = null, lalchi = null, crowds = {}, crowdG = null, blobs = null;
+let P = null, lv = null, W = null, castle = null, rocky = null, lalchi = null, crowds = {}, crowdG = null, crowdGL = null, blobs = null;
 const objs = [];
-const HERD_SPEED = 15, SP = 0.66, MAX_DRAWN = 90;
+const HERD_SPEED = 15, SP = 0.66, MAX_DRAWN = 80;
 // the army stays inside the path: rows of up to 9 pirates across, more rows behind
 const colsFor = n => Math.max(1, Math.min(9, Math.ceil(Math.sqrt(n * 1.15))));
 function slot(i, n) { const c = colsFor(n), r = Math.floor(i / c), k = i % c, inRow = Math.min(c, n - r * c); return [(k - (inRow - 1) / 2) * SP + (r % 2 ? SP * 0.22 : 0), 1.1 + r * SP * 0.92]; }
@@ -253,7 +251,7 @@ function startLevel(n, playNow) {
   $('lvl').textContent = 'LEVEL ' + n; $('appleN').textContent = '0';
   G.state = playNow ? 'play' : 'home';
   // send everything to the graphics chip now (while the level starts) rather than in the middle of the run
-  try { W.cull(-1e6, true); objs.forEach(o => { o.obj.visible = true; }); renderer.compile(scene, cam); renderer.render(scene, cam); W.cull(G.z); } catch (e) { /* not needed */ }
+  try { W.cull(-1e6, true); objs.forEach(o => { o.obj.visible = true; }); const ring = ringPool.pop() || new THREE.Mesh(ringGeo, ringMat.clone()); scene.add(ring); renderer.compile(scene, cam); renderer.render(scene, cam); scene.remove(ring); ringPool.push(ring); W.cull(G.z); } catch (e) { /* not needed */ }
   if (playNow) {
     music(lv.world.music); banner(lv.boss ? '💰 LALCHI\'S BIG FORT!' : 'LEVEL ' + n, lv.world.name, 1.5); sfx('capCharge'); sfx('crewCheer', 0.3);
     popText('CHALO, ARMY! LET\'S GO!', _p.set(0, 3.4, G.z - 1), '#ffe066', 26, 1.3);
@@ -354,8 +352,8 @@ function rampAt(z) { for (const o of objs) if (o.t === 'ramp') { const l = o.z -
 
 // ---------------- update ----------------
 const _p = new THREE.Vector3();
-const lists = { pirate: [], pirate2: [], pirate3: [], pirateF: [], pirateF2: [], pirate_lo: [], pirate2_lo: [], pirate3_lo: [], pirateF_lo: [], pirateF2_lo: [], g: [] };
-const NEAR = 12;   // the first rows are drawn in full detail, the rest with the lighter version
+const lists = { pirate: [], pirate2: [], pirate3: [], pirateF: [], pirateF2: [], pirate_lo: [], pirate2_lo: [], pirate3_lo: [], pirateF_lo: [], pirateF2_lo: [], g: [], gl: [] };
+const NEAR = 10;   // the first rows are drawn in full detail, the rest with the lighter version
 function person(q, extra) { const o = { x: q.x, y: q.y || 0, z: q.z, ry: q.ry || 0, rx: q.rx || 0, rz: q.rz || 0, s: q.s ?? 1, clip: q.clip || 'run', t: q.t || 0, tint: q.tint, skin: q.skin, hair: q.hair, ...extra }; return o; }
 function pushCrew(q, extra, far) { (lists[far ? q.kind + '_lo' : q.kind] || lists.pirate).push(person(q, extra)); }
 function update(dt) {
@@ -366,7 +364,7 @@ function update(dt) {
   if (play) {
     const sl = slopeAt(G.z);
     G.boost = Math.max(0, (G.boost || 0) - dt);
-    G.speed = damp(G.speed, HERD_SPEED * clamp(1 - sl * 0.9, 0.75, 1.3) * (G.guardFight ? 0.12 : 1) * (G.boost > 0 ? 1.7 : 1), G.boost > 0 ? 6 : 3, dt);
+    G.speed = damp(G.speed, HERD_SPEED * clamp(1 - sl * 0.9, 0.75, 1.3) * (G.guardFight ? 0.2 : 1) * (G.boost > 0 ? 1.7 : 1), G.boost > 0 ? 6 : 3, dt);
     if (G.boost > 0 && Math.random() < dt * 40) puff(_p.set(G.x + rnd(-5, 5), rnd(0.5, 3), G.z - rnd(4, 12)), 1, 0xffffff, { size: 0.25, speed: 0, life: 0.25, grav: 0, grow: 3 });
     G.z -= G.speed * dt;
     const lim = Math.max(0, PATH_W / 2 - 0.45 - herdHalf()); G.tx = clamp(G.tx, -lim, lim); G.x = damp(G.x, G.tx, 8, dt);
@@ -374,10 +372,13 @@ function update(dt) {
   }
   // the army: each pirate runs to his place in the formation (and never outside the path)
   const lim = PATH_W / 2 - 0.4, runRate = G.speed / HERD_SPEED;
+  // runners share two running rhythms (half a stride apart): far fewer poses on screen, far fewer draw calls
+  G.runT = (G.runT || 0) + dt * (0.4 + runRate * 0.75);
   G.crew.forEach((q, i) => {
     if (q.st === 'run') {
       q.x = clamp(damp(q.x, G.x + q.ox, 7, dt), -lim, lim); q.z = damp(q.z, G.z + q.oz, 7, dt); q.t = (q.t || 0) + dt * (G.state === 'home' ? 0 : 0.4 + runRate * 0.75); q.ph += dt;
       q.clip = G.state === 'home' ? 'idle' : 'run'; if (G.state === 'home') q.t = G.t + q.ph;
+      if (q.clip === 'run') { if (q.beat === undefined) q.beat = Math.random() < 0.5 ? 0 : 0.333; q.t = G.runT + q.beat; }
       if (q.thr > 0) { q.thr -= dt; q.clip = 'throw'; q.t = 0.75 - q.thr; }
       q.ry = G.state === 'home' ? PI : (G.tx - G.x) * -0.06; q.rx = 0; q.y = 0;
       const ra = play && rampAt(q.z); if (ra) { q.y = ra.y; if (ra.air) { q.clip = 'jump'; airborne = true; if (Math.abs(q.x) > ra.o.w / 2 + 0.25) { losePirate(q, 'fall', Math.sign(q.x)); q.vy = -1; sfxT('whoa', 0.2); } } }
@@ -389,7 +390,7 @@ function update(dt) {
   for (let i = G.flying.length - 1; i >= 0; i--) {
     const q = G.flying[i]; q.t += dt; q.vy -= 20 * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.z += q.vz * dt; q.rx = (q.rx || 0) + q.spin * dt * 0.6; q.rz = (q.rz || 0) + q.spin * 0.5 * dt;
     if (q.st !== 'fall' && q.y < 0 && q.t > 0.2) { q.y = 0; q.vy *= -0.35; q.vx *= 0.6; q.vz *= 0.6; q.spin *= 0.5; }
-    pushCrew(q, { clip: 'hit', t: Math.min(q.t, 0.5), s: Math.max(0.01, 1 - Math.max(0, q.t - 1.3)) });
+    pushCrew(q, { clip: 'hit', t: Math.min(q.t, 0.5), s: Math.max(0.01, 1 - Math.max(0, q.t - 1.3)) }, i < G.flying.length - 4);   // only the newest few in full detail
     if (q.t > 2.3) G.flying.splice(i, 1);
   }
   for (const o of objs) updateObj(o, dt);
@@ -403,10 +404,10 @@ function update(dt) {
     rocky.update(dt, G.state === 'home' || G.guardFight ? 1 : 0.4 + runRate * 0.75);
     lalchi.play('idle'); lalchi.update(dt);
   }
-  if (castle) castle.update(dt);
+  if (castle) { castle.group.visible = !!G.finale || G.z - castle.z < 190; castle.update(dt); }   // hidden while it is still lost in the fog
   updateFx(dt); updateBullets(dt); updateBombs(dt); updateBooms(dt);
-  for (const k in crowds) crowds[k].draw(lists[k]); crowdG.draw(lists.g);
-  blobs.draw([...Object.keys(crowds).map(k => lists[k]), lists.g, [{ x: rocky.position.x, z: rocky.position.z, y: rocky.position.y, s: 1.2 }]], 0.95);
+  for (const k in crowds) crowds[k].draw(lists[k]); crowdG.draw(lists.g); crowdGL.draw(lists.gl);
+  blobs.draw([...Object.keys(crowds).map(k => lists[k]), lists.g, lists.gl, [{ x: rocky.position.x, z: rocky.position.z, y: rocky.position.y, s: 1.2 }]], 0.95);
   // the army counter over the army
   const [hx, hy, ok] = project(_p.set(G.x, 3.3, G.z + 0.6));
   const hc = $('herdN'); hc.style.display = ok && G.state === 'play' ? 'block' : 'none'; hc.style.transform = `translate(${hx}px,${hy}px) translate(-50%,-100%)`; const tx = '🏴‍☠️ ' + (G.crew.length + 1); if (hc.textContent !== tx) { hc.textContent = tx; hc.classList.remove('bump'); void hc.offsetWidth; hc.classList.add('bump'); }
@@ -415,7 +416,7 @@ function update(dt) {
 function near(q, x, z, rx, rz) { return Math.abs(q.x - x) < rx && Math.abs(q.z - z) < rz; }
 function updateObj(o, dt) {
   const dz = o.z - G.z;
-  o.obj.visible = G.finale ? false : dz > -150 && dz < 45;   // far-away things are not drawn
+  o.obj.visible = G.finale ? false : dz > -140 && dz < 25;   // far-away things are not drawn
   if (o.t === 'gate') {
     if (!o.done && G.state === 'play' && dz > 0) {   // the army's front is through the gate
       o.done = true; const side = G.x >= 0 ? 1 : 0, op = o.ops[side], pl = o['p' + side]; const before = G.crew.length + 1; let after = before;
@@ -430,7 +431,7 @@ function updateObj(o, dt) {
     }
     for (const k of ['p0', 'p1']) { const pl = o[k]; if (pl.userData.pop) { pl.userData.pop += dt; pl.scale.setScalar(1 + pl.userData.pop * 3); pl.material.opacity = Math.max(0, 1 - pl.userData.pop * 3); } }
   } else if (o.t === 'strays') {
-    if (dz > -110) for (const q of o.list) if (q.st === 'idle') { q.t = (q.t || 0) + dt; pushCrew(q, { clip: 'victory', ry: PI }); }
+    if (dz > -110 && dz < 20) for (const q of o.list) if (q.st === 'idle') { q.t = (q.t || 0) + dt; pushCrew(q, { clip: 'victory', ry: PI }, dz < -30); }
     if (!o.done && G.state === 'play' && Math.abs(dz) < 1.5 + herdDepth() * 0.5 && Math.abs(o.x - G.x) < herdHalf() + 2) {
       o.done = true; o.list.forEach(q => { q.st = 'run'; G.crew.push(q); }); reslot(); sfx('ahoy'); sfx('crewCheer', 0.1);
       popText(o.list[0].name + ' & ' + (o.n - 1) + ' friends joined!', _p.set(o.x, 3.2, o.z), '#c8ffb0', 24, 1.4); puff(_p.set(o.x, 1, o.z), 10, 0xffffff, { star: true, cols: [0xffd23f, 0xffffff] });
@@ -503,15 +504,16 @@ function updateObj(o, dt) {
       w.t += dt;
       if (w.st === 'fly') { w.dt += dt; w.vy -= 18 * dt; w.x += w.vx * dt; w.z += w.vz * dt; w.y = Math.max(0, w.y + w.vy * dt); w.rx = (w.rx || 0) + w.spin * dt; w.rz = (w.rz || 0) + w.spin * 0.6 * dt; w.clip = 'hit'; w.t = Math.min(w.dt, 0.4); w.s = Math.max(0.01, 1 - Math.max(0, w.dt - 1.2) * 2); if (w.dt > 1.8) w.gone = true; }
       else { w.clip = fighting || dz > -20 ? 'shoot' : 'idle'; if (w.clip === 'shoot') w.t = (w.t % 0.5); }
-      if (dz > -110) lists.g.push(person(w, { ry: PI }));
+      if (dz > -110 && dz < 20) (dz > -28 ? lists.g : lists.gl).push(person(w, { ry: PI }));   // far guards in the lighter version
     }
     if (!o.said && G.state === 'play' && dz > -24) { o.said = true; sfx('halt'); popText('HALT! LORD LALCHI\'S GUARDS!', _p.set(o.x, 3.2, o.z), '#ffb0a8', 22, 1.2); }
     if (!o.done && G.state === 'play' && dz > -(1.2 + 7)) { o.done = true; G.guardFight = { o, t: 0 }; sfx('charge'); }
     if (fighting) {   // a shoot-out: every pirate shot drops a guard, every guard shot knocks a pirate away
       const F = G.guardFight; F.t += dt;
-      if (F.t > 0.15) {
+      // big squads fall in bigger volleys (same 1:1 losses), so a shoot-out never stalls the run for long
+      if (F.t > 0.15) for (let vol = Math.max(1, Math.ceil(o.list.filter(q => !q.gone && q.st === 'idle').length / 8)), v = 0; v < vol; v++) {
         F.t = 0; const w = o.list.find(q => !q.gone && q.st === 'idle');
-        if (!w) { if (o.list.some(q => q.st === 'targeted')) return; G.guardFight = null; banner('GUARDS DEFEATED!', '', 0.9); sfx('crewCheer'); popText(pick(['SHABAASH!', 'EASY!', 'NEXT!']), _p.set(G.x, 3.6, G.z), '#ffe066', 26); return; }
+        if (!w) { if (v > 0 || o.list.some(q => q.st === 'targeted')) return; G.guardFight = null; banner('GUARDS DEFEATED!', '', 0.9); sfx('crewCheer'); popText(pick(['SHABAASH!', 'EASY!', 'NEXT!']), _p.set(G.x, 3.6, G.z), '#ffe066', 26); return; }
         if (!G.crew.length) { G.guardFight = null; fail('Lalchi\'s guards won the shoot-out!'); return; }
         const q = pick(G.crew.slice(0, Math.min(G.crew.length, 14)));
         q.thr = 0.75; w.st = 'targeted';
@@ -587,7 +589,7 @@ function updateFinale(dt) {
     if (w.gone) continue; w.t += dt;
     if (w.st === 'fly') { w.dt += dt; w.vy -= 18 * dt; w.x += w.vx * dt; w.z += w.vz * dt; w.y = Math.max(0, w.y + w.vy * dt); w.rx = (w.rx || 0) + w.spin * dt; w.clip = 'hit'; w.t = Math.min(w.dt, 0.4); w.s = Math.max(0.01, 1 - Math.max(0, w.dt - 1.2) * 2); if (w.dt > 1.8) w.gone = true; }
     else { w.clip = F.phase === 'guards' ? 'shoot' : 'idle'; if (w.clip === 'shoot') w.t %= 0.55; }
-    lists.g.push(person(w, { ry: PI }));
+    lists.gl.push(person(w, { ry: PI }));
   }
   F.next -= dt * fast;
   if (!F.done && F.next <= 0) {
@@ -749,7 +751,7 @@ function settings() {
   const t = k => `<button class="toggle ${PF.set[k] ? 'on' : ''}" data-s="${k}"></button>`;
   openModal(`<h2>SETTINGS</h2><div class="list"><div class="item"><div class="ico">🔊</div><div class="txt"><b>Sound</b></div>${t('sound')}</div><div class="item"><div class="ico">🎵</div><div class="txt"><b>Music</b></div>${t('music')}</div><div class="item"><div class="ico">📳</div><div class="txt"><b>Vibration</b></div>${t('vib')}</div><div class="item"><div class="ico">✨</div><div class="txt"><b>Sharp graphics</b><span>Turn off on slower phones</span></div>${t('hi')}</div></div>
     <p class="tip"><b>Rocky's Pirate Army</b><br>made by <b>BajrangVerse Studios</b><br>Characters: Quaternius (CC0)<br>Title and victory music: BajrangVerse Studios<br>Music: "Galway", "Achaidh Cheide", "Pixel Peeker Polka - faster", "Life of Riley", "Run Amok", "Hyperfun" by Kevin MacLeod (incompetech.com), licensed under Creative Commons: By Attribution 4.0<br>Castle and nature: Quaternius (CC0)<br>Free to play with optional ads (Google AdMob) · no accounts · your progress stays on your phone</p><div class="row"><button class="btn" id="closeB">BACK</button></div>`);
-  document.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { const k = b.dataset.s; PF.set[k] = !PF.set[k]; save(); b.classList.toggle('on', PF.set[k]); click(); if (k === 'music') { if (PF.set.music) music(G.state === 'home' ? 'title' : lv.world.music); else Music.stop(); } if (k === 'hi') { QUAL = PF.set.hi ? 3 : 2; resize(); } });
+  document.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { const k = b.dataset.s; PF.set[k] = !PF.set[k]; save(); b.classList.toggle('on', PF.set[k]); click(); if (k === 'music') { if (PF.set.music) music(G.state === 'home' ? 'title' : lv.world.music); else Music.stop(); } if (k === 'hi') { QUAL = PF.set.hi ? 2 : 0; resize(); } });
   $('closeB').onclick = () => { click(); closeModal(); if (G.state === 'pause') resume(); };
 }
 function pause() { if (G.state !== 'play' && G.state !== 'finale') return; G.paused = G.state; G.state = 'pause'; Music.stop(); openModal(`<h2>PAUSED</h2><div class="row"><button class="btn big green" id="resB">RESUME</button></div><div class="row"><button class="btn small" id="setB2">SETTINGS</button><button class="btn small" id="homeB">HOME</button></div>`); $('resB').onclick = () => { click(); closeModal(); resume(); }; $('setB2').onclick = settings; $('homeB').onclick = () => { click(); goHome(); }; }
@@ -791,11 +793,11 @@ const WARP = +(new URLSearchParams(location.search).get('warp') || 1);
 const FPS = { t: 0, n: 0, slow: 0 };
 function frame(now) {
   requestAnimationFrame(frame);
-  const raw = now - lastT; let dt = Math.min(0.05, raw / 1000); lastT = now;
-  // too slow for this phone? step the quality down (resolution first, then shadows)
+  const raw = now - lastT; let dt = Math.min(0.067, raw / 1000); lastT = now;   // the game keeps its real speed down to 15 frames a second (no slow motion)
+  // too slow for this phone? render a little less sharp (never below 1.5 pixels per point)
   if ((G.state === 'play' || G.state === 'finale' || G.state === 'home') && raw < 500) {
     if (G.t > 4) { FPS.t += raw; FPS.n++; }   // the first seconds of a level (loading) don't count
-    if (FPS.t > 2500) { const avg = FPS.t / FPS.n; FPS.slow = avg > 28 ? FPS.slow + 1 : 0; FPS.t = FPS.n = 0; if (FPS.slow >= 2 && QUAL > 0) { QUAL--; FPS.slow = 0; if (QUAL === 0) { sun.castShadow = false; scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { m.needsUpdate = true; }); }); } resize(); } }
+    if (FPS.t > 2500) { const avg = FPS.t / FPS.n; FPS.slow = avg > 30 ? FPS.slow + 1 : 0; FPS.t = FPS.n = 0; if (FPS.slow >= 2 && QUAL > 0) { QUAL--; FPS.slow = 0; resize(); } }
   }
   if (G.state === 'load' || G.state === 'pause' || G.state === 'icon') { renderer.render(scene, cam); return; }
   if (G.state === 'play') { if (keys.ArrowLeft) G.tx -= 10 * dt; if (keys.ArrowRight) G.tx += 10 * dt; }
@@ -816,9 +818,11 @@ const t0 = performance.now(), Q = new URLSearchParams(location.search);
 if (PF.set.music && !Q.get('fast')) { try { Music.play('title'); } catch (e) { /* needs a tap first */ } }
 Promise.all(['people.bin', 'castle.glb', 'nature.glb'].map(loadBin)).then(async ([buf, cb, nb]) => {
   P = await loadPeople(buf);
-  const gl = new GLTFLoader(); setCastleModel((await gl.parseAsync(cb, '')).scene.getObjectByName('castle')); setNature((await gl.parseAsync(nb, '')).scene.getObjectByName('nature'));
-  for (const k of ['pirate', 'pirate2', 'pirate3', 'pirateF', 'pirateF2']) { crowds[k] = new Crowd(scene, P[k]); crowds[k + '_lo'] = new Crowd(scene, P[k + '_lo']); } crowdG = new Crowd(scene, P.guard); blobs = new Blobs(scene, dotTex, 600);
-  for (const k in crowds) crowds[k].prewarm(24); crowdG.prewarm(16); psys(false, false); psys(false, true); psys(true, false); psys(true, true);
+  const gl = new GLTFLoader(), sharp = o => { o.traverse(m => { if (m.isMesh && m.material.map) m.material.map.anisotropy = 2; }); return o; };   // crisp textures at a glancing angle
+  setCastleModel(sharp((await gl.parseAsync(cb, '')).scene.getObjectByName('castle'))); setNature(sharp((await gl.parseAsync(nb, '')).scene.getObjectByName('nature')));
+  for (const k of ['pirate', 'pirate2', 'pirate3', 'pirateF', 'pirateF2']) { crowds[k] = new Crowd(scene, P[k]); crowds[k + '_lo'] = new Crowd(scene, P[k + '_lo']); } crowdG = new Crowd(scene, P.guard); crowdGL = new Crowd(scene, P.guard_lo || P.guard); blobs = new Blobs(scene, dotTex, 600);
+  for (const k in crowds) crowds[k].prewarm(24); crowdG.prewarm(24); crowdGL.prewarm(32);
+  { const all = [...Object.values(crowds), crowdG, crowdGL]; all.forEach(c => c.gpuWarm(true)); for (const k in P) if (P[k].tex) renderer.initTexture(P[k].tex); renderer.compile(scene, cam); renderer.render(scene, cam); all.forEach(c => c.gpuWarm(false)); } psys(false, false); psys(false, true); psys(true, false); psys(true, true);
   rocky = new Actor(P.hero, { tint: 0xb3202a, skin: 0xb97a52, hair: 0x1a1210 }); rocky.scale.setScalar(1.08); scene.add(rocky);
   lalchi = new Actor(P.villain, { tint: 0x7a1a8a, skin: 0xd8a070, hair: 0x2a2a2a }); scene.add(lalchi);
   if (Q.get('level')) PF.level = +Q.get('level');
@@ -844,7 +848,7 @@ function lineup() {
 // used to render the app icon
 function iconShot() {
   G.state = 'icon'; $('home').classList.add('hidden'); $('studio').classList.add('gone');
-  for (const k in crowds) crowds[k].draw([]); crowdG.draw([]); blobs.draw([]); lalchi.visible = false; objs.forEach(o => { o.obj.visible = false; });
+  for (const k in crowds) crowds[k].draw([]); crowdG.draw([]); crowdGL.draw([]); blobs.draw([]); lalchi.visible = false; objs.forEach(o => { o.obj.visible = false; });
   W.group.visible = false; castle.group.visible = false; scene.fog = null;
   scene.background = canvasTex(512, 512, (c, w, h) => { const g = c.createRadialGradient(w / 2, h * 0.42, 10, w / 2, h / 2, w * 0.75); g.addColorStop(0, '#fff3b0'); g.addColorStop(0.35, '#ffc23a'); g.addColorStop(0.75, '#f0700f'); g.addColorStop(1, '#b8360a'); c.fillStyle = g; c.fillRect(0, 0, w, h); c.fillStyle = 'rgba(255,255,255,.13)'; for (let i = 0; i < 16; i++) { const a0 = i / 16 * PI * 2; c.beginPath(); c.moveTo(w / 2, h * 0.42); c.arc(w / 2, h * 0.42, w, a0, a0 + PI / 16); c.fill(); } });
   for (let i = 0; i < 9; i++) { const a = i / 9 * PI * 2 + 0.3, c = mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.03, 18), new THREE.MeshStandardMaterial({ color: 0xffc21a, metalness: 0.8, roughness: 0.25, emissive: 0xa86a00 }), Math.cos(a) * 0.95, 1.25 + Math.sin(a) * 0.75, -0.5); c.rotation.set(PI / 2 + rnd(-0.6, 0.6), rnd(-0.6, 0.6), 0); scene.add(c); }
@@ -858,5 +862,6 @@ window.__lv = n => makeLevel(n).ev.map(e => e.t).join(" ");
 window.__calls = () => { const r = {}; const tag = o => { let q = o; while (q.parent && q.parent !== scene) q = q.parent; return q === W.group ? 'world' : castle && q === castle.group ? 'castle' : objs.some(x => x.obj === q) ? 'events' : q.isSprite ? 'sprites' : q.type + ':' + (q.name || ''); }; scene.traverseVisible(o => { if ((o.isMesh || o.isSprite || o.isPoints) && !(o.isInstancedMesh && o.count === 0)) { const k = tag(o); r[k] = (r[k] || 0) + 1; } }); return r; };
 window.__wtris = () => { const r = {}; W.group.traverseVisible(o => { if (o.isMesh) { const k = (o.material.name || (o.material.map ? 'tex' : '#' + (o.material.color ? o.material.color.getHexString() : ''))) + (o.parent && o.parent.userData.z0 !== undefined ? '' : ':' + (o.name || o.type)); const t = (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3; r[k] = (r[k] || 0) + t; } }); return Object.entries(r).sort((a, b) => b[1] - a[1]).slice(0, 14).map(([k, v]) => k + '=' + Math.round(v)).join(' '); };
 window.__alltris = () => { const r = {}; scene.children.forEach(top => { let t = 0; top.traverseVisible(o => { if (o.isMesh || o.isPoints) { const n = (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3 * (o.isInstancedMesh ? o.count : 1); t += n; } }); const k = top === W.group ? 'world' : castle && top === castle.group ? 'castle' : objs.some(x => x.obj === top) ? 'events' : (top.isInstancedMesh ? 'inst:' + (top.material.name || top.geometry.type) : top.type) + (top === rocky ? ':rocky' : top === lalchi ? ':lalchi' : ''); r[k] = (r[k] || 0) + Math.round(t); }); return JSON.stringify(Object.entries(r).filter(e => e[1] > 500).sort((a, b) => b[1] - a[1])); };
+window.__T = THREE; window.__R = renderer; window.__S = scene; window.__C = cam; window.__setQ = q => { QUAL = q; resize(); };
 window.__G = G; window.__play = play; window.__castle = () => castle; window.__end = () => { G.z = -lv.L + 3; return lv.L; }; window.__tap = () => tapFire();
 window.__tris = () => { let t = 0; scene.traverse(o => { if (o.isInstancedMesh && o.count && o.visible) t += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3 * o.count; }); return Math.round(t); };

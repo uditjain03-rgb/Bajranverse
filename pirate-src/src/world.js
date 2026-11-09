@@ -38,7 +38,34 @@ gl_Position = projectionMatrix * mvPosition;`;
 THREE.ShaderChunk.worldpos_vertex = THREE.ShaderChunk.worldpos_vertex.replace('worldPosition = modelMatrix * worldPosition;', 'worldPosition = modelMatrix * worldPosition;\n\tworldPosition.xyz = goatBend(worldPosition.xyz);');
 THREE.ShaderLib.sprite.vertexShader = THREE.ShaderLib.sprite.vertexShader.replace('vec4 mvPosition = modelViewMatrix[ 3 ];', 'vec4 mvPosition = viewMatrix * vec4( goatBend( ( modelMatrix * vec4( 0.0, 0.0, 0.0, 1.0 ) ).xyz ), 1.0 );');
 const OFF = { value: new THREE.Vector4(-400, 0, 0, 0) };
-THREE.Material.prototype.onBeforeCompile = function (sh) { sh.uniforms.uGX = U.uGX; sh.uniforms.uGY = U.uGY; sh.uniforms.uGE = this.userData.flat ? OFF : U.uGE; };
+// Phone GPUs: every lit material is drawn with its lighting worked out per vertex (sun, sky/ground light, rim light
+// and a small sun highlight), and only a texture read per pixel. Per-pixel PBR lighting cost about 10x more per frame
+// and made the game drop resolution (blurry) and lag on phones.
+const LIT = { MeshStandardMaterial: 1, MeshLambertMaterial: 1, MeshPhongMaterial: 1, MeshPhysicalMaterial: 1 };
+function vertexLit(sh) {
+  const spec = sh.shaderType === 'MeshStandardMaterial' || sh.shaderType === 'MeshPhysicalMaterial';
+  sh.vertexShader = THREE.ShaderLib.basic.vertexShader
+    .replace('#include <common>', '#include <common>\n#include <lights_pars_begin>\nvarying vec3 vLit; varying vec3 vSpec;' + (spec ? '\nuniform float roughness;' : ''))
+    .replace('#if defined ( USE_ENVMAP ) || defined ( USE_SKINNING )', '#if 1')
+    .replace(/}\s*$/, `	vec3 N = normalize( transformedNormal ); vec3 lit = ambientLightColor; vSpec = vec3( 0.0 );
+	#if NUM_HEMI_LIGHTS > 0
+	for ( int i = 0; i < NUM_HEMI_LIGHTS; i ++ ) lit += getHemisphereLightIrradiance( hemisphereLights[ i ], N );
+	#endif
+	#if NUM_DIR_LIGHTS > 0
+	vec3 Vd = normalize( -mvPosition.xyz );
+	for ( int i = 0; i < NUM_DIR_LIGHTS; i ++ ) {
+		float d = dot( N, directionalLights[ i ].direction );
+		lit += max( d, 0.0 ) * directionalLights[ i ].color;
+		${spec ? 'if ( i == 0 && d > 0.0 ) { float r = clamp( roughness, 0.05, 1.0 ); vec3 H = normalize( directionalLights[ i ].direction + Vd ); vSpec = directionalLights[ i ].color * pow( max( dot( N, H ), 0.0 ), exp2( 9.0 * ( 1.0 - r ) + 1.0 ) ) * ( 1.0 - r ) * 0.35; }' : ''}
+	}
+	#endif
+	vLit = lit * RECIPROCAL_PI;
+}`);
+  sh.fragmentShader = THREE.ShaderLib.basic.fragmentShader
+    .replace('#include <common>', '#include <common>\nvarying vec3 vLit; varying vec3 vSpec; uniform vec3 emissive;\n#include <emissivemap_pars_fragment>')
+    .replace('reflectedLight.indirectDiffuse *= diffuseColor.rgb;', 'reflectedLight.indirectDiffuse *= diffuseColor.rgb * vLit;\n\tvec3 totalEmissiveRadiance = emissive;\n\t#include <emissivemap_fragment>\n\treflectedLight.indirectDiffuse += totalEmissiveRadiance + vSpec;');
+}
+THREE.Material.prototype.onBeforeCompile = function (sh) { if (LIT[sh.shaderType]) vertexLit(sh); sh.uniforms.uGX = U.uGX; sh.uniforms.uGY = U.uGY; sh.uniforms.uGE = this.userData.flat ? OFF : U.uGE; };
 THREE.Material.prototype.customProgramCacheKey = function () { return this.userData.flat ? 'f' : 'b'; };
 let B = null;
 export function setBend(n, endZ) {
@@ -82,7 +109,7 @@ export function buildWorld(lv, scene) {
     c.fillStyle = T.pathEdge; c.fillRect(0, 0, 14, h); c.fillRect(w - 14, 0, 14, h);
     c.fillStyle = 'rgba(0,0,0,.07)'; c.fillRect(w * 0.28, 0, 18, h); c.fillRect(w * 0.68, 0, 18, h);
   });
-  pathTex.wrapS = pathTex.wrapT = THREE.RepeatWrapping; pathTex.repeat.set(1, len / 20);
+  pathTex.anisotropy = 8; pathTex.wrapS = pathTex.wrapT = THREE.RepeatWrapping; pathTex.repeat.set(1, len / 20);
   const path = new THREE.Mesh(new THREE.PlaneGeometry(PATH_W, len, 2, Math.ceil(len / 2)), new THREE.MeshStandardMaterial({ map: pathTex, roughness: 0.95 }));
   path.rotation.x = -PI / 2; path.position.set(0, 0.02, z0 - len / 2); path.receiveShadow = true; g.add(path);
   // the ground either side: sand or grass (or snow, rock, coral) with soft bumps
@@ -91,20 +118,20 @@ export function buildWorld(lv, scene) {
     const c1 = new THREE.Color(T.ground), c2 = new THREE.Color(T.ground2);
     for (let i = 0; i < p.count; i++) { const x = p.getX(i), off = Math.abs(x + s * 35) ; const h = x * s > -30 ? Math.max(0, (Math.abs(x + s * 35) - 6)) * 0.08 * (1 + Math.sin(p.getY(i) * 0.05 + x) * 0.6) : 0; void off; p.setZ(i, h + Math.sin(p.getY(i) * 0.13 + x * 0.4) * 0.25); const c = c1.clone().lerp(c2, Math.random() * 0.5).lerp(new THREE.Color(1, 1, 1), 0.55); col.push(c.r, c.g, c.b); }
     geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); geo.computeVertexNormals();
-    const gt = groundTex(T);
+    const gt = groundTex(T); gt.anisotropy = 4;
     const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, map: gt, roughness: 1 }));
     m.rotation.x = -PI / 2; m.position.set(s * (PATH_W / 2 + 35), -0.05, z0 - len / 2); m.receiveShadow = true; g.add(m);
   }
   // the sea all around the island
   const sea = new THREE.Mesh(new THREE.PlaneGeometry(700, len + 400, 20, Math.ceil((len + 400) / 8)), new THREE.MeshStandardMaterial({ color: T.sea, roughness: 0.25, metalness: 0.1, emissive: T.id === 'volcano' ? 0x8a2a00 : 0x000000 }));
-  sea.rotation.x = -PI / 2; sea.position.set(0, -1.2, z0 - len / 2); g.add(sea);
+  sea.rotation.x = -PI / 2; sea.position.set(0, -1.2, z0 - len / 2); sea.renderOrder = 1; g.add(sea);   // drawn after the land: hidden sea pixels are skipped
   for (const s of [-1, 1]) { const e = new THREE.Mesh(new THREE.BoxGeometry(2, 2.4, len, 1, 1, Math.ceil(len / 4)), flat(T.ground2)); e.position.set(s * (PATH_W / 2 + 71), -1, z0 - len / 2); g.add(e); }
   // ships at sea, gulls in the sky, moving waves
   const wavesT = canvasTex(256, 256, (c, w, h) => { c.fillStyle = '#ffffff'; c.fillRect(0, 0, w, h); c.strokeStyle = 'rgba(0,40,80,.18)'; c.lineWidth = 6; for (let y = 0; y < h; y += 32) { c.beginPath(); for (let x = 0; x <= w; x += 8) c.lineTo(x, y + Math.sin(x / w * PI * 4) * 6); c.stroke(); } });
   wavesT.wrapS = wavesT.wrapT = THREE.RepeatWrapping; wavesT.repeat.set(30, (len + 400) / 24); sea.material.map = wavesT; sea.material.needsUpdate = true;
   anims.push(t => { wavesT.offset.set(t * 0.05, t * 0.08); });
-  for (let i = 0; i < 5; i++) { const sh = ship(i % 2 === 1), sx = (i % 2 ? 1 : -1) * rnd(80, 130), sz = z0 - rnd(40, len); sh.position.set(sx, -1.2, sz); sh.rotation.y = rnd(0, PI * 2); sh.userData.dynamic = true; g.add(sh); anims.push(t => { sh.position.y = -1.2 + Math.sin(t * 0.8 + i) * 0.3; sh.rotation.z = Math.sin(t * 0.6 + i) * 0.04; }); }
-  for (let i = 0; i < 9; i++) { const gl = gull(), cx = rnd(-30, 30), cz = z0 - rnd(20, len), r = rnd(8, 18), y = rnd(10, 18), sp = rnd(0.3, 0.6), ph = rnd(0, 6); gl.userData.dynamic = true; g.add(gl); anims.push(t => { const a = t * sp + ph; gl.position.set(cx + Math.cos(a) * r, y + Math.sin(t * 1.3 + i) * 0.6, cz + Math.sin(a) * r); gl.rotation.y = -a; gl.userData.wings.forEach((w, k) => { w.rotation.z = (k ? -1 : 1) * Math.sin(t * 9 + i) * 0.5; }); }); }
+  for (let i = 0; i < 5; i++) { const sh = oneMesh(ship(i % 2 === 1)), sx = (i % 2 ? 1 : -1) * rnd(80, 130), sz = z0 - rnd(40, len); sh.position.set(sx, -1.2, sz); sh.rotation.y = rnd(0, PI * 2); sh.userData.dynamic = true; g.add(sh); anims.push(t => { sh.position.y = -1.2 + Math.sin(t * 0.8 + i) * 0.3; sh.rotation.z = Math.sin(t * 0.6 + i) * 0.04; }); }
+  for (let i = 0; i < 5; i++) { const gl = gull(), cx = rnd(-30, 30), cz = z0 - rnd(20, len), r = rnd(8, 18), y = rnd(10, 18), sp = rnd(0.3, 0.6), ph = rnd(0, 6); gl.userData.dynamic = true; g.add(gl); anims.push(t => { const a = t * sp + ph; gl.position.set(cx + Math.cos(a) * r, y + Math.sin(t * 1.3 + i) * 0.6, cz + Math.sin(a) * r); gl.rotation.y = -a; gl.userData.wings.forEach((w, k) => { w.rotation.z = (k ? -1 : 1) * Math.sin(t * 9 + i) * 0.5; }); }); }
   // scenery down both sides
   const P = KIT ? KPROPS[T.props] : PROPS[T.props];
   for (let z = 10; z > zEnd + 20; z -= rnd(6, 11)) for (const s of [-1, 1]) {
@@ -118,10 +145,14 @@ export function buildWorld(lv, scene) {
   // big mountains far away
   for (let i = 0; i < 26; i++) { const s = i % 2 ? 1 : -1, m = mountain(T); m.position.set(s * rnd(70, 140), -2, rnd(zEnd, 40)); m.scale.setScalar(rnd(1, 2.2)); g.add(m); }
   // the sky (not bent) and fog
-  const skyT = canvasTex(4, 256, (c, w, h) => { const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, T.sky[0]); gr.addColorStop(0.6, T.sky[1]); gr.addColorStop(1, T.sky[1]); c.fillStyle = gr; c.fillRect(0, 0, w, h); });
-  const skyM = new THREE.MeshBasicMaterial({ map: skyT, side: THREE.BackSide, fog: false, depthWrite: false }); skyM.userData.flat = true;
-  const sky = new THREE.Mesh(new THREE.SphereGeometry(300, 24, 12), skyM); sky.userData.dynamic = true; g.add(sky);
-  for (let i = 0; i < 14; i++) { const c = cloud(T); c.position.set(rnd(-200, 200), rnd(50, 110), rnd(-250, 50)); c.userData.flatSky = true; sky.add(c); }
+  // a gradient in the sphere's vertex colours (no texture to read: the cheapest possible sky)
+  const skyG = new THREE.SphereGeometry(300, 24, 12), top = new THREE.Color(T.sky[0]), low = new THREE.Color(T.sky[1]), sp = skyG.attributes.position, sc = new Float32Array(sp.count * 3), _sc = new THREE.Color();
+  for (let i = 0; i < sp.count; i++) { const v = 1 - (Math.asin(Math.max(-1, Math.min(1, sp.getY(i) / 300))) / PI + 0.5), k = Math.min(1, v / 0.6); _sc.copy(top).lerp(low, k); sc.set([_sc.r, _sc.g, _sc.b], i * 3); }
+  skyG.setAttribute('color', new THREE.BufferAttribute(sc, 3));
+  const skyM = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false }); skyM.userData.flat = true;
+  const sky = new THREE.Mesh(skyG, skyM); sky.renderOrder = 2; sky.userData.dynamic = true; g.add(sky);   // drawn last: only fills what is left
+  { const parts = []; for (let i = 0; i < 14; i++) { const cx = rnd(-200, 200), cy = rnd(50, 110), cz = rnd(-250, 50); for (let j = 0; j < 5; j++) { const q = new THREE.IcosahedronGeometry(rnd(5, 9), 1); q.translate(cx + j * 6 - 12, cy + rnd(-2, 2), cz + rnd(-3, 3)); parts.push(q); } }
+    const cm = new THREE.MeshBasicMaterial({ color: T.night ? 0x5a5a8a : 0xffffff, fog: false }); cm.userData.flat = true; sky.add(new THREE.Mesh(mergeGeometries(parts), cm)); }   // all clouds: one draw call
   if (T.night) {   // fireflies
     const n = 160, pos = new Float32Array(n * 3); for (let i = 0; i < n; i++) { pos[i * 3] = rnd(-25, 25); pos[i * 3 + 1] = rnd(0.5, 5); pos[i * 3 + 2] = rnd(zEnd, 20); }
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -217,6 +248,25 @@ const PROPS = {
 // Phones slow down with many separate objects, so every still object of the world is merged into a few big meshes:
 // one per material for each 60 m stretch of the path. Moving things (ships, gulls, the sky) are left alone.
 const CHUNK = 60;
+// a whole (moving) object as one mesh: its plain coloured parts merged with their colours in the vertices
+function oneMesh(o) {
+  o.updateMatrixWorld(true); const inv = new THREE.Matrix4().copy(o.matrixWorld).invert(), geos = [], rest = [];
+  o.traverse(q => { if (!q.isMesh) return; const M = q.material; if (Array.isArray(M) || M.map || M.transparent || (M.emissive && M.emissive.getHex()) || !LIT[M.type]) { rest.push(q); return; } let g = q.geometry.index ? q.geometry.toNonIndexed() : q.geometry.clone(); g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, q.matrixWorld)); toVC(g, M); for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'color'].includes(k)) g.deleteAttribute(k); geos.push(g); });
+  if (geos.length < 2) return o;
+  const out = new THREE.Group(); out.position.copy(o.position); out.rotation.copy(o.rotation); out.scale.copy(o.scale);
+  out.add(new THREE.Mesh(mergeGeometries(geos), vcMat(THREE.FrontSide)));
+  for (const q of rest) { const c = new THREE.Mesh(q.geometry, q.material); c.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, q.matrixWorld)); out.add(c); }
+  return out;
+}
+const vcMats = {};
+function vcMat(side) { return vcMats[side] || (vcMats[side] = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, side })); }
+// bake a plain material's colour into the vertices (times any vertex colours it had); faceted materials get face normals
+function toVC(g, m) {
+  const n = g.attributes.position.count, c = new Float32Array(n * 3), old = m.vertexColors && g.attributes.color, col = m.color || new THREE.Color(1, 1, 1);
+  for (let i = 0; i < n; i++) { c[i * 3] = col.r * (old ? old.getX(i) : 1); c[i * 3 + 1] = col.g * (old ? old.getY(i) : 1); c[i * 3 + 2] = col.b * (old ? old.getZ(i) : 1); }
+  g.setAttribute('color', new THREE.BufferAttribute(c, 3)); if (g.attributes.uv) g.deleteAttribute('uv');
+  if (m.flatShading || !g.attributes.normal) g.computeVertexNormals();   // not indexed here, so these are face normals
+}
 export function mergeStatic(root) {
   root.updateMatrixWorld(true);
   const groups = new Map(), drop = [];
@@ -225,19 +275,24 @@ export function mergeStatic(root) {
     for (let q = o; q && q !== root; q = q.parent) if (q.userData.dynamic) return;
     if (o.geometry.attributes.position.count > 20000) return;   // big ground pieces stay as they are
     if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
-    const bb = o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld); if (bb.max.z - bb.min.z > 25 || bb.max.x - bb.min.x > 60) return;   // long pieces (the path, the ground, the sea) are never hidden
-    const g = o.geometry, sig = ['normal', 'uv', 'color'].filter(k => g.attributes[k]).join('');
-    const z = new THREE.Vector3().setFromMatrixPosition(o.matrixWorld).z, ck = Math.floor(-z / CHUNK);
-    const key = o.material.uuid + '|' + sig + '|' + ck + '|' + o.castShadow + o.receiveShadow;
-    if (!groups.has(key)) groups.set(key, { mat: o.material, list: [], ck, cast: o.castShadow, recv: o.receiveShadow });
+    const bb = o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld), long = bb.max.z - bb.min.z > 25 || bb.max.x - bb.min.x > 60;   // long pieces (the path, the ground, the sea, mountains) are never hidden
+    const g = o.geometry, M = o.material, z = new THREE.Vector3().setFromMatrixPosition(o.matrixWorld).z, ck = long ? 'all' : Math.floor(-z / CHUNK);
+    // plain coloured pieces (no texture, not see-through, not glowing) all share one material: their colour goes into
+    // the vertices, so a whole chunk of them is a single draw call
+    const vc = !Array.isArray(M) && !M.map && !M.transparent && !M.alphaTest && (!M.emissive || M.emissive.getHex() === 0) && LIT[M.type];
+    if (long && !vc) return;
+    const sig = vc ? 'vc' + M.side : ['normal', 'uv', 'color'].filter(k => g.attributes[k]).join('');
+    const key = (vc ? 'VC' : M.uuid) + '|' + sig + '|' + ck;
+    if (!groups.has(key)) groups.set(key, { mat: vc ? vcMat(M.side) : M, vc, list: [], ck, cast: false, recv: o.receiveShadow });
     groups.get(key).list.push(o); drop.push(o);
   });
   const chunks = new Map();
   for (const G of groups.values()) {
-    const geos = G.list.map(o => { let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); g.applyMatrix4(o.matrixWorld); for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv', 'color'].includes(k)) g.deleteAttribute(k); return g; });
+    const geos = G.list.map(o => { let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); g.applyMatrix4(o.matrixWorld); if (G.vc) toVC(g, o.material); for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv', 'color'].includes(k)) g.deleteAttribute(k); return g; });
     const m = mergeGeometries(geos, false); geos.forEach(g => g.dispose());
     if (!m) continue;
     const mesh = new THREE.Mesh(m, G.mat); mesh.castShadow = false; mesh.receiveShadow = G.recv; mesh.frustumCulled = false;   // scenery casts no real-time shadow (much faster)
+    if (G.ck === 'all') { root.add(mesh); continue; }
     if (!chunks.has(G.ck)) { const c = new THREE.Group(); c.userData.z0 = -G.ck * CHUNK; c.userData.z1 = -(G.ck + 1) * CHUNK; chunks.set(G.ck, c); root.add(c); }
     chunks.get(G.ck).add(mesh);
   }

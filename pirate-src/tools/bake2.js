@@ -54,10 +54,13 @@ async function loadPart(P, S) {
     let [simp] = MeshoptSimplifier.simplify(new Uint32Array(tri), new Float32Array(pos.array), 3, target, 0.5, []);
     const lo = S.id.endsWith('_lo'), feet = /Feet|Boots/.test(m.name);
     if (simp.length > target * 1.6 && (/Boots|Bracer|Belt|Pauldron/.test(m.name) || (lo && !feet))) {   // small pieces that resist (boots, straps, hair): a rougher pass, minus any stretched triangles it makes
-      let [sl] = MeshoptSimplifier.simplifySloppy(new Uint32Array(tri), new Float32Array(pos.array), 3, null, target, 0.5);
-      const P3 = i => [pos.getX(i), pos.getY(i), pos.getZ(i)], el = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]), keep = [];
-      for (let t = 0; t < sl.length; t += 3) { const a = P3(sl[t]), b = P3(sl[t + 1]), c = P3(sl[t + 2]); if (lo || Math.max(el(a, b), el(b, c), el(a, c)) < 0.12) keep.push(sl[t], sl[t + 1], sl[t + 2]); }
-      if (keep.length > target * 0.4) simp = new Uint32Array(keep);
+      const P3 = i => [pos.getX(i), pos.getY(i), pos.getZ(i)], el = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+      // the rough pass can overshoot to almost nothing: then ask it again for more triangles
+      for (let tt = target, k = 0; k < 5; k++, tt *= 2) {
+        const [sl] = MeshoptSimplifier.simplifySloppy(new Uint32Array(tri), new Float32Array(pos.array), 3, null, tt, 0.5), keep = [];
+        for (let t = 0; t < sl.length; t += 3) { const a = P3(sl[t]), b = P3(sl[t + 1]), c = P3(sl[t + 2]); if (lo || Math.max(el(a, b), el(b, c), el(a, c)) < 0.12) keep.push(sl[t], sl[t + 1], sl[t + 2]); }
+        if (keep.length > target * 0.4) { if (keep.length < simp.length) simp = new Uint32Array(keep); break; }
+      }
     }
     if (window.DEBUG) console.log('simp', m.name, tri.length / 3, '->', simp.length / 3);
     // back from welded points to real vertices: each corner takes the copy whose texture coordinate fits its triangle

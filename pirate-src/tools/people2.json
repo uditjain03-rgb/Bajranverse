@@ -962,21 +962,21 @@
     "meshes": {
      "Male_Peasant_Arms_1": {
       "mask": 1,
-      "keep": 0.078
+      "keep": 0.043
      },
      "Male_Peasant_Arms_2": {
       "mask": 2,
-      "keep": 0.047
+      "keep": 0.026
      },
      "Male_Peasant_Body": {
       "mask": 1,
-      "keep": 0.059
+      "keep": 0.032
      },
      "Male_Peasant_Feet": {
-      "keep": 0.062
+      "keep": 0.034
      },
      "Male_Peasant_Legs": {
-      "keep": 0.078
+      "keep": 0.043
      }
     }
    },
@@ -986,10 +986,10 @@
     "meshes": {
      "SuperHero_Male": {
       "mask": 2,
-      "keep": 0.078
+      "keep": 0.043
      },
      "Eyes": {
-      "keep": 0.098
+      "keep": 0.054
      },
      "Eyebrows": {
       "skip": true
@@ -1002,10 +1002,10 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.078
+      "keep": 0.043
      }
     },
-    "keep": 0.078
+    "keep": 0.043
    },
    {
     "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_Beard.gltf",
@@ -1013,10 +1013,10 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.078
+      "keep": 0.043
      }
     },
-    "keep": 0.078
+    "keep": 0.043
    },
    {
     "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Regular.gltf",
@@ -1024,10 +1024,10 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.078
+      "keep": 0.043
      }
     },
-    "keep": 0.06
+    "keep": 0.033
    }
   ],
   "clips": [
@@ -1079,21 +1079,21 @@
     "meshes": {
      "Male_Peasant_Arms_1": {
       "mask": 1,
-      "keep": 0.078
+      "keep": 0.043
      },
      "Male_Peasant_Arms_2": {
       "mask": 2,
-      "keep": 0.047
+      "keep": 0.026
      },
      "Male_Peasant_Body": {
       "mask": 1,
-      "keep": 0.059
+      "keep": 0.032
      },
      "Male_Peasant_Feet": {
-      "keep": 0.062
+      "keep": 0.034
      },
      "Male_Peasant_Legs": {
-      "keep": 0.078
+      "keep": 0.043
      }
     }
    },
@@ -1103,10 +1103,10 @@
     "meshes": {
      "SuperHero_Male": {
       "mask": 2,
-      "keep": 0.078
+      "keep": 0.043
      },
      "Eyes": {
-      "keep": 0.098
+      "keep": 0.054
      },
      "Eyebrows": {
       "skip": true
@@ -1119,10 +1119,10 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.078
+      "keep": 0.043
      }
     },
-    "keep": 0.078
+    "keep": 0.043
    },
    {
     "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Regular.gltf",
@@ -1130,10 +1130,10 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.078
+      "keep": 0.043
      }
     },
-    "keep": 0.06
+    "keep": 0.033
    }
   ],
   "clips": [
@@ -1196,21 +1196,21 @@
     "meshes": {
      "Male_Peasant_Arms_1": {
       "mask": 1,
-      "keep": 0.078
+      "keep": 0.043
      },
      "Male_Peasant_Arms_2": {
       "mask": 2,
-      "keep": 0.047
+      "keep": 0.026
      },
      "Male_Peasant_Body": {
       "mask": 1,
-      "keep": 0.059
+      "keep": 0.032
      },
      "Male_Peasant_Feet": {
-      "keep": 0.062
+      "keep": 0.034
      },
      "Male_Peasant_Legs": {
-      "keep": 0.078
+      "keep": 0.043
      }
     }
    },
@@ -1220,10 +1220,10 @@
     "meshes": {
      "SuperHero_Male": {
       "mask": 2,
-      "keep": 0.078
+      "keep": 0.043
      },
      "Eyes": {
-      "keep": 0.098
+      "keep": 0.054
      },
      "Eyebrows": {
       "skip": true
@@ -1236,10 +1236,10 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.078
+      "keep": 0.043
      }
     },
-    "keep": 0.078
+    "keep": 0.043
    },
    {
     "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_Beard.gltf",
@@ -1247,10 +1247,10 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.078
+      "keep": 0.043
      }
     },
-    "keep": 0.078
+    "keep": 0.043
    },
    {
     "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Regular.gltf",
@@ -1258,10 +1258,10 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.078
+      "keep": 0.043
      }
     },
-    "keep": 0.06
+    "keep": 0.033
    }
   ],
   "clips": [
@@ -1312,17 +1312,17 @@
     "file": "Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/Female_Peasant.gltf",
     "meshes": {
      "Female_Peasant_Arms": {
-      "keep": 0.047
+      "keep": 0.026
      },
      "Female_Peasant_Body": {
       "mask": 1,
-      "keep": 0.059
+      "keep": 0.032
      },
      "Female_Peasant_Feet": {
-      "keep": 0.062
+      "keep": 0.034
      },
      "Female_Peasant_Legs": {
-      "keep": 0.078
+      "keep": 0.043
      }
     }
    },
@@ -1332,10 +1332,10 @@
     "meshes": {
      "Superhero_Female": {
       "mask": 2,
-      "keep": 0.078
+      "keep": 0.043
      },
      "Eyes": {
-      "keep": 0.098
+      "keep": 0.054
      },
      "Eyebrows": {
       "skip": true
@@ -1348,10 +1348,10 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.078
+      "keep": 0.043
      }
     },
-    "keep": 0.078
+    "keep": 0.043
    },
    {
     "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Female.gltf",
@@ -1359,10 +1359,10 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.078
+      "keep": 0.043
      }
     },
-    "keep": 0.06
+    "keep": 0.033
    }
   ],
   "clips": [
@@ -1413,17 +1413,17 @@
     "file": "Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/Female_Peasant.gltf",
     "meshes": {
      "Female_Peasant_Arms": {
-      "keep": 0.047
+      "keep": 0.026
      },
      "Female_Peasant_Body": {
       "mask": 1,
-      "keep": 0.059
+      "keep": 0.032
      },
      "Female_Peasant_Feet": {
-      "keep": 0.062
+      "keep": 0.034
      },
      "Female_Peasant_Legs": {
-      "keep": 0.078
+      "keep": 0.043
      }
     }
    },
@@ -1433,10 +1433,10 @@
     "meshes": {
      "Superhero_Female": {
       "mask": 2,
-      "keep": 0.078
+      "keep": 0.043
      },
      "Eyes": {
-      "keep": 0.098
+      "keep": 0.054
      },
      "Eyebrows": {
       "skip": true
@@ -1449,10 +1449,10 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.078
+      "keep": 0.043
      }
     },
-    "keep": 0.078
+    "keep": 0.043
    },
    {
     "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Female.gltf",
@@ -1460,10 +1460,10 @@
      "*": {
       "mask": 3,
       "bright": 1.15,
-      "keep": 0.078
+      "keep": 0.043
      }
     },
-    "keep": 0.06
+    "keep": 0.033
    }
   ],
   "clips": [
@@ -1502,6 +1502,130 @@
     "frames": 2,
     "loop": true,
     "inPlace": true
+   }
+  ]
+ },
+ {
+  "id": "guard_lo",
+  "scale": 0.98,
+  "keep": 0.2,
+  "parts": [
+   {
+    "file": "Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/Male_Ranger.gltf",
+    "meshes": {
+     "Male_Ranger_Body": {
+      "mask": 1,
+      "keep": 0.041
+     },
+     "Male_Ranger_Head_Hood": {
+      "mask": 1,
+      "keep": 0.049
+     },
+     "Male_Ranger_Arms_1": {
+      "mask": 1,
+      "keep": 0.055
+     },
+     "Male_Ranger_Arms_2": {
+      "mask": 2,
+      "keep": 0.033
+     },
+     "Male_Ranger_Arms_Bracer": {
+      "keep": 0.027
+     },
+     "Male_Ranger_Feet_Boots": {
+      "keep": 0.044
+     },
+     "Male_Ranger_Acc_Pauldron": {
+      "keep": 0.055
+     },
+     "Male_Ranger_Body_Belt_1": {
+      "keep": 0.055
+     },
+     "Male_Ranger_Body_Belt_2": {
+      "keep": 0.055
+     },
+     "Male_Ranger_Legs": {
+      "keep": 0.055
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Base Characters/Godot - UE/Superhero_Male_FullBody.gltf",
+    "headOnly": 1.45,
+    "meshes": {
+     "SuperHero_Male": {
+      "mask": 2,
+      "keep": 0.055
+     },
+     "Eyes": {
+      "keep": 0.068
+     },
+     "Eyebrows": {
+      "skip": true
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Regular.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.055
+     }
+    },
+    "keep": 0.041
+   }
+  ],
+  "weapon": {
+   "file": "pp/Gun.fbx",
+   "palette": {
+    "Material": 8014374,
+    "Material.001": 3815999,
+    "Material.002": 14266444,
+    "Material.003": 4860950,
+    "Material.004": 3815999
+   },
+   "len": 1.0,
+   "grip": [
+    0.5,
+    0.3,
+    0.35
+   ],
+   "rot": [
+    0,
+    3.1416,
+    0
+   ]
+  },
+  "clips": [
+   {
+    "name": "run",
+    "src": "Jog_Fwd_Loop",
+    "frames": 6,
+    "loop": true,
+    "inPlace": true
+   },
+   {
+    "name": "shoot",
+    "src": "Pistol_Shoot",
+    "frames": 3
+   },
+   {
+    "name": "idle",
+    "src": "Pistol_Idle_Loop",
+    "frames": 2,
+    "loop": true
+   },
+   {
+    "name": "hit",
+    "src": "Hit_Chest",
+    "frames": 2
+   },
+   {
+    "name": "defeat",
+    "src": "Death01",
+    "frames": 6
    }
   ]
  }

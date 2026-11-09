@@ -31,7 +31,7 @@ class Person {
     const blob = new Blob([this.jpg], { type: 'image/jpeg' }); let img;
     try { img = await createImageBitmap(blob, { imageOrientation: 'none' }); }
     catch (e) { img = await new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = URL.createObjectURL(blob); }); }
-    const t = new THREE.Texture(img); t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; t.generateMipmaps = true; t.needsUpdate = true; this.tex = t;
+    const t = new THREE.Texture(img); t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 2; t.generateMipmaps = true; t.needsUpdate = true; this.tex = t;
   }
   positions(f) {
     if (this.cache[f]) return this.cache[f];
@@ -98,6 +98,8 @@ export class Crowd {
   }
   // make every pose's mesh up front (while loading) so nothing is built in the middle of the game
   prewarm(cap = 16) { for (let f = 0; f < this.p.nf; f++) { const b = this.bucket(f); if (!b.mesh) this.grow(b, cap); b.mesh.visible = false; } }
+  // show every pose once (far under the ground) so the phone uploads them all while loading, not mid-game
+  gpuWarm(on) { for (const b of this.buckets.values()) if (b.mesh) { b.mesh.visible = on; b.mesh.count = on ? 1 : 0; if (on) { b.mesh.setMatrixAt(0, _m.makeTranslation(0, -500, 0)); b.mesh.instanceMatrix.needsUpdate = true; } } }
   draw(list) {
     for (const b of this.used) b.n = 0;
     const used = new Set();
