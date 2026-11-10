@@ -2,19 +2,24 @@
 
 Two driving games built on one shared engine (three.js in an Android WebView, like Rocky's Pirate Army).
 
-**Splash Racer** (`src/splash`, app `../splashapp`, `com.bajrangverse.splashracer`): a kart race where the road ends
-in a river — the karts fly off a ramp, splash down as speedboats, and turn back into karts on the far bank. Five funny
-rivals with live faces and speech bubbles (Speedy Sonu, Aunty Rocket, Turbo Tinku, Dizzy Dolly, Professor Pappu), a boss
-race every 5th race (Mr. Moneybags), cows on the road, mud, oil, fruit carts, big-air ramps with flips, buoys, a podium,
-and a garage of karts, boats and helmet colours. Drag to steer, NITRO button, swipe up to hop (and flip in the air).
+**Splash Racer** (`src/splash`, app `../splashapp`, `com.bajrangverse.splashracer`): a speedboat race across eight
+water worlds (`src/common/course.js`): Tropical Lagoon, Jungle River (waterfalls), Red Canyon Rapids, Frozen Fjord,
+Ghats at Sunset, Neon Harbour (night, fireworks), Stormy Sea (lightning, pirate cannon) and Volcano Island (falling lava).
+Real moving waves (a water shader; the boats float on the same waves on the CPU), foam wakes, waterfalls that drop the
+race to a lower level, wave ramps with tricks (swipe up = backflip, left/right = barrel roll), whirlpools, dolphins,
+crocodiles, icebergs with penguins, ferries, and mystery bubbles: water balloon, duck mines, bubble shield, rocket, octopus
+ink, mega wave. Five funny rivals who use items too, a boss every 4th race, a floating podium, a boatyard (5 boats,
+colours). Races are 3–4.6 km. Ocean-blue look; music: Fluffing a Duck, Happy Happy Game Show, Wallpaper, Sneaky Snitch.
 
-**Mad Taxi Masti** (`src/taxi`, app `../taxiapp`, `com.bajrangverse.madtaxi`): drive a city taxi (India drives on the
-left; the other side has oncoming traffic). Each ride is a crazy passenger with a goal of their own: Dulha Raju (late
-for his wedding: timer), Dadi Ji (12 eggs: drive smooth), Sleepy Sharma Uncle (no horn, no bumps, 3 wake-ups and he
-walks), Insta Pinky (stunts for likes), Detective Aunty (chase the thief's car), Cricket Bunty (hit the 4 and 6 signs),
-Boss Khanna (quiet during calls) and Little Chintu (balloons and honking). A mood meter, a live back-seat camera of the
-passenger (real 3D faces and expressions), cows that move only when you honk, speed breakers, potholes, dogs, ramps,
-tips and funny reviews, a garage of taxis and horns. Drag to steer, hold BRAKE, tap HORN, TURBO.
+**Mad Taxi Masti** (`src/taxi`, app `../taxiapp`, `com.bajrangverse.madtaxi`): drive a real kaali-peeli taxi through eight
+Indian places (`src/common/street.js`), each matched to its passenger: Shaadi Street at night (groom late for his
+wedding), Old Bazaar (Dadi Ji's 12 eggs), Mountain Ghat Road (sleeping uncle), Marine Drive by the sea (influencer),
+Monsoon City (detective chase), Stadium Road (cricket fan), Cyber City (boss on calls), Holi Festival (kid). Smash fruit
+carts, pots and colour carts for MASTI combos, ramps with 360° spins, power-ups (magnet, mega horn, bumper shield), a
+police chase when you smash too much, baraat processions and fans crossing, puddles to splash, sea waves over the road,
+mid-ride stop requests for tips, a live 3D back-seat camera with the passenger's real expressions. All vehicles are made
+in code with real proportions and glossy paint (`src/common/cars.js`): Padmini taxi, sedans, hatchbacks, SUVs,
+auto-rickshaws, the red double-decker bus, the painted Horn-OK-Please truck, the police Gypsy, and the boats.
 
 ## Build
     # node_modules: npm install (three, esbuild, javascript-obfuscator, playwright, @fontsource/fredoka)
@@ -44,8 +49,8 @@ Vehicles, boats and the city (Kenney, CC0) and the animals (Quaternius, CC0): `n
 - `src/splash/main.js`, `src/taxi/main.js` the two games; `html/` their pages (`base.css` shared)
 
 ## Credits
-Characters and animals: Quaternius (CC0). Cars, boats, city: Kenney Car Kit, Watercraft Kit, City Kits (CC0).
+Characters and animals: Quaternius (CC0). Road signs, cones, buoys, containers: Kenney (CC0). Cars, boats, streets: made in code.
 Nature: Quaternius Stylized Nature MegaKit (CC0).
 Music: title and victory tunes by BajrangVerse Studios; "Funkorama", "Fuzzball Parade", "Monkeys Spinning Monkeys",
-"Merry Go", "Hyperfun", "Life of Riley", "Pixel Peeker Polka - faster" by Kevin MacLeod (incompetech.com), CC-BY 4.0.
+"Merry Go", "Hyperfun", "Life of Riley", "Pixel Peeker Polka - faster", "Fluffing a Duck", "Happy Happy Game Show", "Wallpaper", "Sneaky Snitch", "Carefree" by Kevin MacLeod (incompetech.com), CC-BY 4.0.
 Ads: Google AdMob — the IDs in the apps are Google's TEST IDs; replace them with your own before publishing.

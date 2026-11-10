@@ -51,7 +51,17 @@ function vertexLit(sh) {
 	}
 	#endif
 	vLit = lit * RECIPROCAL_PI;
+	${sh.shaderType === 'MeshPhysicalMaterial' ? `{   // glossy paint, glass and chrome: the sky (and the ground) reflected, stronger at grazing angles (per vertex)
+		vec3 Vv = normalize( -mvPosition.xyz ), Rv = reflect( -Vv, N ), Rw = ( vec4( Rv, 0.0 ) * viewMatrix ).xyz;
+		float fr = 0.06 + 0.94 * pow( 1.0 - max( dot( N, Vv ), 0.0 ), 4.0 );
+		vec3 env = mix( vec3( 0.16, 0.15, 0.14 ), vec3( 0.72, 0.84, 1.0 ), smoothstep( -0.15, 0.25, Rw.y ) ) + vec3( 0.5 ) * smoothstep( 0.55, 0.9, Rw.y );
+		#if NUM_HEMI_LIGHTS > 0
+		env *= 0.45 + 0.4 * hemisphereLights[ 0 ].skyColor;
+		#endif
+		vSpec += env * fr * gloss * 0.9;
+	}` : ''}
 }`);
+  if (sh.shaderType === 'MeshPhysicalMaterial') sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float gloss;');
   sh.fragmentShader = THREE.ShaderLib.basic.fragmentShader
     .replace('#include <common>', '#include <common>\nvarying vec3 vLit; varying vec3 vSpec; uniform vec3 emissive;\n#include <emissivemap_pars_fragment>')
     .replace('reflectedLight.indirectDiffuse *= diffuseColor.rgb;', 'reflectedLight.indirectDiffuse *= diffuseColor.rgb * vLit;\n\tvec3 totalEmissiveRadiance = emissive;\n\t#include <emissivemap_fragment>\n\treflectedLight.indirectDiffuse += totalEmissiveRadiance + vSpec;');

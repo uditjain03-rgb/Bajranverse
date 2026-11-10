@@ -19,7 +19,7 @@ export const kitModel = n => KIT[n];
 // a copy of a kit model (Kenney city pieces are 1 unit per tile: s scales them up)
 export function kit(n, s = 1) { const src = KIT[n] || NAT[n]; const o = src.clone(true); o.scale.multiplyScalar(s); return o; }
 const asphalt = {};
-function roadTex(lanes, night) {
+export function roadTex(lanes, night) {
   const k = lanes + (night ? 'n' : ''); if (asphalt[k]) return asphalt[k];
   const t = canvasTex(256, 512, (c, w, h) => {
     c.fillStyle = night ? '#3a3a44' : '#5a5a62'; c.fillRect(0, 0, w, h);
@@ -29,9 +29,9 @@ function roadTex(lanes, night) {
   });
   t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; return (asphalt[k] = t);
 }
-const tiles = canvasTex(128, 128, (c, w) => { c.fillStyle = '#c8c0b0'; c.fillRect(0, 0, w, w); c.strokeStyle = '#a89e8c'; c.lineWidth = 3; for (let i = 0; i <= w; i += 32) { c.beginPath(); c.moveTo(i, 0); c.lineTo(i, w); c.stroke(); c.beginPath(); c.moveTo(0, i); c.lineTo(w, i); c.stroke(); } });
+export const tiles = canvasTex(128, 128, (c, w) => { c.fillStyle = '#c8c0b0'; c.fillRect(0, 0, w, w); c.strokeStyle = '#a89e8c'; c.lineWidth = 3; for (let i = 0; i <= w; i += 32) { c.beginPath(); c.moveTo(i, 0); c.lineTo(i, w); c.stroke(); c.beginPath(); c.moveTo(0, i); c.lineTo(w, i); c.stroke(); } });
 tiles.wrapS = tiles.wrapT = THREE.RepeatWrapping; tiles.anisotropy = 4;
-function groundTex(T) {
+export function groundTex(T) {
   const base = new THREE.Color(T.ground), dark = new THREE.Color(T.ground2), hex = c => '#' + c.getHexString();
   const t = canvasTex(256, 256, (c, w, h) => { c.fillStyle = hex(base); c.fillRect(0, 0, w, h); for (let i = 0; i < 60; i++) { c.fillStyle = hex(dark) + '55'; c.beginPath(); c.arc(Math.random() * w, Math.random() * h, 8 + Math.random() * 26, 0, 7); c.fill(); } for (let i = 0; i < 2200; i++) { const l = Math.random(); c.fillStyle = l < 0.5 ? `rgba(255,255,220,${0.08 + l * 0.15})` : `rgba(0,30,0,${0.06 + l * 0.1})`; c.fillRect(Math.random() * w, Math.random() * h, 1 + l * 2, 1 + l * 2); } });
   t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; return t;
@@ -100,9 +100,9 @@ export function buildTrack(T, scene) {
 }
 // ---------------- what grows / stands beside the road ----------------
 const B = 9;   // Kenney city tiles → metres
-const NT = ['CommonTree_1', 'CommonTree_2', 'CommonTree_3'], PINE = ['Pine_1', 'Pine_2', 'Pine_3'], BUSH = ['Bush_Common', 'Bush_Common_Flowers'], ROCK = ['Rock_Medium_1', 'Rock_Medium_2', 'Rock_Medium_3'], FLOW = ['Flower_3_Group', 'Flower_4_Group', 'Grass_Common_Tall', 'Fern_1'];
-const nat = (names, s0 = 1, s1 = 1.4) => { const n = pick(names); if (!NAT[n]) return null; const o = kit(n, rnd(s0, s1)); o.rotation.y = rnd(0, PI * 2); return o; };
-function palm() { const o = new THREE.Group(), h = rnd(5, 7); for (let i = 0; i < 7; i++) mesh(new THREE.CylinderGeometry(0.2, 0.25, h / 7 + 0.05, 6), flat(0x8a6a4a), i * 0.07, (i + 0.5) * h / 7, 0, o); for (let i = 0; i < 7; i++) { const l = mesh(new THREE.BoxGeometry(0.5, 0.06, 2.6), flat(0x3faa4a), 0.5, h, 0, o); l.geometry.translate(0, 0, 1.2); l.rotation.set(0.5, i / 7 * PI * 2, 0); } return o; }
+export const NT = ['CommonTree_1', 'CommonTree_2', 'CommonTree_3'], PINE = ['Pine_1', 'Pine_2', 'Pine_3'], BUSH = ['Bush_Common', 'Bush_Common_Flowers'], ROCK = ['Rock_Medium_1', 'Rock_Medium_2', 'Rock_Medium_3'], FLOW = ['Flower_3_Group', 'Flower_4_Group', 'Grass_Common_Tall', 'Fern_1'];
+export const nat = (names, s0 = 1, s1 = 1.4) => { const n = pick(names); if (!NAT[n]) return null; const o = kit(n, rnd(s0, s1)); o.rotation.y = rnd(0, PI * 2); return o; };
+export function palm() { const o = new THREE.Group(), h = rnd(5, 7); for (let i = 0; i < 7; i++) mesh(new THREE.CylinderGeometry(0.2, 0.25, h / 7 + 0.05, 6), flat(0x8a6a4a), i * 0.07, (i + 0.5) * h / 7, 0, o); for (let i = 0; i < 7; i++) { const l = mesh(new THREE.BoxGeometry(0.5, 0.06, 2.6), flat(0x3faa4a), 0.5, h, 0, o); l.geometry.translate(0, 0, 1.2); l.rotation.set(0.5, i / 7 * PI * 2, 0); } return o; }
 function building(names, s = B) { const o = kit(pick(names), s * rnd(0.95, 1.1)); o.rotation.y = rnd(0, 1) < 0.5 ? 0 : PI; o.userData.gap = rnd(3, 6); return o; }
 const CITY = ['building-a', 'building-b', 'building-c', 'building-d', 'building-e', 'building-f', 'building-g', 'building-h', 'building-i', 'building-j', 'building-k', 'building-l', 'building-skyscraper-a', 'building-skyscraper-b', 'building-skyscraper-c', 'building-skyscraper-d'];
 const HOUSES = ['building-type-a', 'building-type-b', 'building-type-c', 'building-type-d', 'building-type-e', 'building-type-f', 'building-type-g', 'building-type-h', 'building-type-k', 'building-type-m', 'building-type-p', 'building-type-s'];

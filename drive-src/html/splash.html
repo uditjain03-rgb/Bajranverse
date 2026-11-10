@@ -5,36 +5,53 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Splash Racer</title>
 <style>/*BASE*/
-html, body { background: #1a6ab0; }
-#logo .a { font-size: min(60px, 14vw); } #logo .b { background: linear-gradient(#7ae8ff, #2a9ae8); }
-#home { background: linear-gradient(rgba(10,40,80,0), rgba(10,40,80,0) 55%, rgba(10,30,60,.55)); }
+/* ocean theme: deep navy outlines, aqua buttons, coral accents, white-foam panels */
+:root { --dark: #062a52; --b1: #5ae8ff; --wood: #18a8e8; --wood2: #0a62b8; --cream: #eefcff; --cream2: #c8f2ff; --pill: rgba(6,42,82,.72); --shade: rgba(6,42,82,.55); }
+html, body { background: #0a6ab0; }
+.btn.green { background: linear-gradient(#ffb08a, #ff6a5a 55%, #d8384a); }
+#logo .a { font-size: min(64px, 15vw); color: #fff; } #logo .b { background: linear-gradient(#ff8a7a, #ff4a6a); }
+#logo .s { font-size: 40px; }
+#home { background: linear-gradient(rgba(4,40,90,0), rgba(4,40,90,0) 55%, rgba(4,40,90,.6)); }
+#loading { background: #0a6ab0; }
+#strip .dot.me { border-color: #ff6a5a; }
+#stripLine { overflow: hidden; } #progFill { height: 100%; width: 0; background: linear-gradient(90deg, #5ae8ff, #ffffff); }
+#itemB { left: 12px; right: auto; background: radial-gradient(#ffb8f0, #c84ab8); }
+#itemB span:first-child { font-size: 36px; line-height: 1; }
+#nitroB span:first-child { font-size: 30px; line-height: 1; }
+.row.wrap { flex-wrap: wrap; gap: 6px; }
+#splashO, #inkO { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity .5s; }
+#splashO { background: radial-gradient(circle at 30% 40%, rgba(200,240,255,.75) 0 9%, transparent 10%), radial-gradient(circle at 70% 30%, rgba(200,240,255,.7) 0 7%, transparent 8%), radial-gradient(circle at 55% 70%, rgba(200,240,255,.7) 0 11%, transparent 12%), radial-gradient(circle at 20% 80%, rgba(200,240,255,.6) 0 6%, transparent 7%), rgba(140,210,255,.25); }
+#inkO { background: radial-gradient(circle at 40% 45%, rgba(30,10,50,.92) 0 14%, transparent 15%), radial-gradient(circle at 70% 60%, rgba(30,10,50,.9) 0 11%, transparent 12%), radial-gradient(circle at 25% 70%, rgba(30,10,50,.85) 0 9%, transparent 10%), radial-gradient(circle at 60% 25%, rgba(30,10,50,.85) 0 8%, transparent 9%); }
+#splashO.show, #inkO.show { opacity: 1; transition: opacity .05s; }
 </style>
 </head>
 <body>
 <canvas id="gl"></canvas>
+<div id="splashO"></div><div id="inkO"></div>
 <div id="hud" class="hidden">
   <div id="top"><button class="btn" id="pauseB">❚❚</button><div class="pill out" id="placeN">6<small>th</small></div><div class="pill out">🪙 <span id="coinN">0</span></div></div>
   <div id="strip"></div>
   <div id="bubble" class="hidden"><canvas id="bubbleFace" width="64" height="64"></canvas><div><b id="bubbleName"></b><span id="bubbleText"></span></div></div>
-  <div class="pill out" id="lvl" style="position:absolute;left:12px;top:calc(112px + var(--sat));font-size:14px">RACE 1</div>
+  <div class="pill out" id="lvl" style="position:absolute;left:12px;top:calc(112px + var(--sat));font-size:13px">LAGOON</div>
   <div id="pops"></div>
   <div id="banner"></div>
+  <button class="roundB" id="itemB"><span id="itemI">❔</span><b>ITEM</b></button>
   <button class="roundB" id="nitroB"><span>⚡</span><b>NITRO</b><span class="n" id="nitroN">1</span></button>
   <div id="hint" class="hidden"></div>
 </div>
 <div id="home" class="screen hidden">
   <div id="homeTop"><div class="pill out">🪙 <span id="homeCoins">0</span></div><button class="btn small" id="setB">⚙️</button></div>
-  <div id="logo"><div class="s">🚗 → 🚤</div><div class="a">SPLASH<br>RACER</div><div class="b">ROAD + RIVER RACING!</div></div>
+  <div id="logo"><div class="s">🌊🚤💦</div><div class="a">SPLASH<br>RACER</div><div class="b">WILD WATER RACING!</div></div>
   <div id="homeBottom">
     <div id="homeLevel">RACE 1</div>
     <button class="btn big green" id="playB">RACE!</button>
-    <div id="homeRow"><button class="btn" id="garageB">🔧 GARAGE</button><button class="btn" id="giftB">🎁 GIFT</button></div>
+    <div id="homeRow"><button class="btn" id="garageB">🛥️ BOATS</button><button class="btn" id="giftB">🎁 GIFT</button></div>
     <div id="credit">BajrangVerse Studios</div>
   </div>
 </div>
 <div id="modal" class="screen modal hidden"><div class="panel" id="modalBody"></div></div>
 <div id="flash"></div>
-<div id="loading">🏁 Loading…</div>
+<div id="loading">🌊 Loading…</div>
 <div id="studio"><img src="logo.jpg" alt="BajrangVerse Studios"><div class="presents">PRESENTS</div></div>
 <script src="game.js"></script>
 </body>
