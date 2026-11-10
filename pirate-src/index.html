@@ -51,6 +51,17 @@ button { font-family: inherit; font-weight: 700; color: inherit; cursor: pointer
 #hint { position: absolute; left: 0; right: 0; bottom: calc(100px + var(--sab)); text-align: center; font-size: 24px; -webkit-text-stroke: 3px var(--dark); paint-order: stroke fill; }
 #hint .hand { font-size: 50px; display: inline-block; animation: swipe 1.3s ease-in-out infinite; -webkit-text-stroke: 0; }
 @keyframes swipe { 0%,100% { transform: translateX(-60px); } 50% { transform: translateX(60px); } }
+#stormB { position: absolute; right: 12px; bottom: calc(22px + var(--sab)); width: 88px; height: 88px; border-radius: 50%; border: 5px solid var(--dark); background: conic-gradient(#ffb03a calc(var(--p, 0) * 1%), rgba(58,36,16,.78) 0); pointer-events: auto; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 5px 0 var(--dark); font-size: 32px; line-height: 1; -webkit-text-stroke: 0; color: #fff; }
+#stormB b { font-size: 12px; margin-top: 2px; -webkit-text-stroke: 3px var(--dark); paint-order: stroke fill; letter-spacing: 1px; }
+#stormB.ready { background: radial-gradient(#fff3a0, #ffb03a 60%, #ff6a1a); animation: glow .55s ease-in-out infinite alternate; }
+@keyframes glow { from { transform: scale(1); box-shadow: 0 5px 0 var(--dark), 0 0 0 0 rgba(255,200,60,.8); } to { transform: scale(1.12); box-shadow: 0 5px 0 var(--dark), 0 0 28px 12px rgba(255,200,60,.85); } }
+#hint .hand.up { animation: swipeUp 1s ease-in-out infinite; }
+#hint .hand.down { animation: swipeDown 1s ease-in-out infinite; }
+#hint .hand.tap { animation: tapIt .5s ease-in-out infinite alternate; }
+@keyframes swipeUp { 0% { transform: translateY(40px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-50px); opacity: 0; } }
+@keyframes swipeDown { 0% { transform: translateY(-50px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(40px); opacity: 0; } }
+@keyframes tapIt { from { transform: scale(1); } to { transform: scale(.75); } }
+#hint.big { font-size: 32px; bottom: calc(118px + var(--sab)); }
 #flash { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity .1s; }
 /* screens */
 .screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: calc(14px + var(--sat)) 14px calc(14px + var(--sab)); }
@@ -91,6 +102,14 @@ button { font-family: inherit; font-weight: 700; color: inherit; cursor: pointer
 .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: left .15s; }
 .toggle.on { background: var(--grass); }
 .toggle.on::after { left: 31px; }
+.card { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; width: min(76vw, 280px); margin: 8px auto 0; padding: 10px 12px 12px; border: 6px solid var(--rc); border-radius: 22px; background: radial-gradient(#ffffff 40%, #fff3d0); box-shadow: 0 0 0 4px var(--dark), 0 0 30px 6px var(--rc); animation: cardIn .7s cubic-bezier(.2,1.6,.4,1); }
+.card .rar { background: var(--rc); color: #fff; border-radius: 10px; padding: 2px 14px; font-size: 14px; letter-spacing: 2px; }
+.card .hico { font-size: 76px; line-height: 1.1; animation: wobble 1.4s ease-in-out infinite; }
+.card b { font-size: 22px; } .card span { font-size: 14px; font-weight: 600; } .card small { font-size: 13px; color: #2f8a1a; }
+@keyframes cardIn { from { transform: scale(.2) rotate(-20deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
+.chestBtn { animation: wobble 1s ease-in-out infinite; }
+.chestBtn.shake { animation: shakeIt .08s linear infinite; }
+@keyframes shakeIt { 0% { transform: translateX(-5px) rotate(-3deg); } 50% { transform: translateX(5px) rotate(3deg); } 100% { transform: translateX(-5px) rotate(-3deg); } }
 #loading { position: fixed; inset: 0; display: grid; place-items: center; background: #0f3a5a; font-size: 30px; z-index: 9; }
 #logo .s { font-size: 26px; color: #ffe066; -webkit-text-stroke: 4px var(--dark); paint-order: stroke fill; letter-spacing: 6px; }
 #credit { font-size: 15px; color: #fff6e0; -webkit-text-stroke: 3px var(--dark); paint-order: stroke fill; letter-spacing: 1px; opacity: .95; }
@@ -113,6 +132,7 @@ button { font-family: inherit; font-weight: 700; color: inherit; cursor: pointer
   <div id="castleHP" class="hidden"><div class="lab out">🏰 LORD LALCHI'S GOLD FORT</div><div id="hpBar"><div id="hpFill"></div><div id="hpN" class="out">0</div></div></div>
   <div id="pops"></div>
   <div id="banner"></div>
+  <button id="stormB" class="hidden"><span>💥</span><b>STORM</b></button>
   <div id="hint" class="hidden"><span class="hand">👆</span><br>DRAG TO STEER THE CREW<br>PICK THE BLUE GATES!</div>
 </div>
 <div id="home" class="screen hidden">

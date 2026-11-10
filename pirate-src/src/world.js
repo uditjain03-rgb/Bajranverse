@@ -134,14 +134,16 @@ export function buildWorld(lv, scene) {
   for (let i = 0; i < 5; i++) { const gl = gull(), cx = rnd(-30, 30), cz = z0 - rnd(20, len), r = rnd(8, 18), y = rnd(10, 18), sp = rnd(0.3, 0.6), ph = rnd(0, 6); gl.userData.dynamic = true; g.add(gl); anims.push(t => { const a = t * sp + ph; gl.position.set(cx + Math.cos(a) * r, y + Math.sin(t * 1.3 + i) * 0.6, cz + Math.sin(a) * r); gl.rotation.y = -a; gl.userData.wings.forEach((w, k) => { w.rotation.z = (k ? -1 : 1) * Math.sin(t * 9 + i) * 0.5; }); }); }
   // scenery down both sides
   const P = KIT ? KPROPS[T.props] : PROPS[T.props];
+  // no trees or rocks in the river where the army sails the ship
+  const wet = (z, x = 0) => (lv.ev || []).some(e => e.t === 'ship' && z < e.z + 10 && z > e.z - e.len - 12) && Math.abs(x) < 21;
   for (let z = 10; z > zEnd + 20; z -= rnd(6, 11)) for (const s of [-1, 1]) {
-    if (Math.random() < 0.75) { const o = P.near(); o.position.set(s * rnd(PATH_W / 2 + 2, PATH_W / 2 + 9), 0, z + rnd(-3, 3)); o.rotation.y = rnd(0, PI * 2); g.add(o); }
-    if (Math.random() < 0.42) { const o = P.far(); o.position.set(s * rnd(PATH_W / 2 + 12, PATH_W / 2 + 40), 0, z + rnd(-4, 4)); o.rotation.y = rnd(0, PI * 2); o.scale.multiplyScalar(rnd(1, 1.8)); g.add(o); }
+    if (Math.random() < 0.75 && !wet(z)) { const o = P.near(); o.position.set(s * rnd(PATH_W / 2 + 2, PATH_W / 2 + 9), 0, z + rnd(-3, 3)); o.rotation.y = rnd(0, PI * 2); g.add(o); }
+    if (Math.random() < 0.42) { const o = P.far(); o.position.set(s * rnd(wet(z) ? 22 : PATH_W / 2 + 12, PATH_W / 2 + 40), 0, z + rnd(-4, 4)); o.rotation.y = rnd(0, PI * 2); o.scale.multiplyScalar(rnd(1, 1.8)); g.add(o); }
   }
   // grass, flowers and stones right along the edges of the path
-  if (P.edge) for (let z = 10; z > zEnd + 20; z -= rnd(3.5, 6.5)) for (const s of [-1, 1]) if (Math.random() < 0.6) { const o = P.edge(); o.position.set(s * rnd(PATH_W / 2 + 0.6, PATH_W / 2 + 2.2), 0, z); o.rotation.y = rnd(0, PI * 2); g.add(o); }
+  if (P.edge) for (let z = 10; z > zEnd + 20; z -= rnd(3.5, 6.5)) for (const s of [-1, 1]) if (Math.random() < 0.6 && !wet(z)) { const o = P.edge(); o.position.set(s * rnd(PATH_W / 2 + 0.6, PATH_W / 2 + 2.2), 0, z); o.rotation.y = rnd(0, PI * 2); g.add(o); }
   // fences along parts of the path
-  for (let z = -20; z > zEnd + 40; z -= rnd(40, 90)) { const n = Math.floor(rnd(4, 9)); for (const s of [-1, 1]) g.add(fence(s * (PATH_W / 2 + 0.6), z, n, T)); z -= n * 2.5; }
+  for (let z = -20; z > zEnd + 40; z -= rnd(40, 90)) { const n = Math.floor(rnd(4, 9)); if (!wet(z) && !wet(z - n * 2.5)) for (const s of [-1, 1]) g.add(fence(s * (PATH_W / 2 + 0.6), z, n, T)); z -= n * 2.5; }
   // big mountains far away
   for (let i = 0; i < 26; i++) { const s = i % 2 ? 1 : -1, m = mountain(T); m.position.set(s * rnd(70, 140), -2, rnd(zEnd, 40)); m.scale.setScalar(rnd(1, 2.2)); g.add(m); }
   // the sky (not bent) and fog
@@ -249,7 +251,7 @@ const PROPS = {
 // one per material for each 60 m stretch of the path. Moving things (ships, gulls, the sky) are left alone.
 const CHUNK = 60;
 // a whole (moving) object as one mesh: its plain coloured parts merged with their colours in the vertices
-function oneMesh(o) {
+export function oneMesh(o) {
   o.updateMatrixWorld(true); const inv = new THREE.Matrix4().copy(o.matrixWorld).invert(), geos = [], rest = [];
   o.traverse(q => { if (!q.isMesh) return; const M = q.material; if (Array.isArray(M) || M.map || M.transparent || (M.emissive && M.emissive.getHex()) || !LIT[M.type]) { rest.push(q); return; } let g = q.geometry.index ? q.geometry.toNonIndexed() : q.geometry.clone(); g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, q.matrixWorld)); toVC(g, M); for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'color'].includes(k)) g.deleteAttribute(k); geos.push(g); });
   if (geos.length < 2) return o;
