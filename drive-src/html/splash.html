@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Splash Racer</title>
+<style>/*BASE*/
+html, body { background: #1a6ab0; }
+#logo .a { font-size: min(60px, 14vw); } #logo .b { background: linear-gradient(#7ae8ff, #2a9ae8); }
+#home { background: linear-gradient(rgba(10,40,80,0), rgba(10,40,80,0) 55%, rgba(10,30,60,.55)); }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="hud" class="hidden">
+  <div id="top"><button class="btn" id="pauseB">❚❚</button><div class="pill out" id="placeN">6<small>th</small></div><div class="pill out">🪙 <span id="coinN">0</span></div></div>
+  <div id="strip"></div>
+  <div id="bubble" class="hidden"><canvas id="bubbleFace" width="64" height="64"></canvas><div><b id="bubbleName"></b><span id="bubbleText"></span></div></div>
+  <div class="pill out" id="lvl" style="position:absolute;left:12px;top:calc(112px + var(--sat));font-size:14px">RACE 1</div>
+  <div id="pops"></div>
+  <div id="banner"></div>
+  <button class="roundB" id="nitroB"><span>⚡</span><b>NITRO</b><span class="n" id="nitroN">1</span></button>
+  <div id="hint" class="hidden"></div>
+</div>
+<div id="home" class="screen hidden">
+  <div id="homeTop"><div class="pill out">🪙 <span id="homeCoins">0</span></div><button class="btn small" id="setB">⚙️</button></div>
+  <div id="logo"><div class="s">🚗 → 🚤</div><div class="a">SPLASH<br>RACER</div><div class="b">ROAD + RIVER RACING!</div></div>
+  <div id="homeBottom">
+    <div id="homeLevel">RACE 1</div>
+    <button class="btn big green" id="playB">RACE!</button>
+    <div id="homeRow"><button class="btn" id="garageB">🔧 GARAGE</button><button class="btn" id="giftB">🎁 GIFT</button></div>
+    <div id="credit">BajrangVerse Studios</div>
+  </div>
+</div>
+<div id="modal" class="screen modal hidden"><div class="panel" id="modalBody"></div></div>
+<div id="flash"></div>
+<div id="loading">🏁 Loading…</div>
+<div id="studio"><img src="logo.jpg" alt="BajrangVerse Studios"><div class="presents">PRESENTS</div></div>
+<script src="game.js"></script>
+</body>
+</html>

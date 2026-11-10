@@ -1,0 +1,7 @@
+<resources>
+  <style name="Game" parent="android:Theme.Material.NoActionBar.Fullscreen">
+    <item name="android:windowBackground">@color/bg</item>
+    <item name="android:statusBarColor">@android:color/transparent</item>
+  </style>
+  <color name="bg">#FF2A1A08</color>
+</resources>

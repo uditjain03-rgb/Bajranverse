@@ -1,0 +1,1675 @@
+[
+ {
+  "id": "groom",
+  "scale": 1,
+  "keep": 0.25,
+  "parts": [
+   {
+    "file": "Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/Male_Peasant.gltf",
+    "meshes": {
+     "Male_Peasant_Arms_1": {
+      "mask": 1,
+      "keep": 0.3
+     },
+     "Male_Peasant_Arms_2": {
+      "mask": 2,
+      "keep": 0.2
+     },
+     "Male_Peasant_Body": {
+      "mask": 1,
+      "keep": 0.25
+     },
+     "Male_Peasant_Feet": {
+      "keep": 0.22
+     },
+     "Male_Peasant_Legs": {
+      "keep": 0.3
+     }
+    },
+    "keep": 0.2
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Base Characters/Godot - UE/Superhero_Male_FullBody.gltf",
+    "headOnly": 1.45,
+    "meshes": {
+     "SuperHero_Male": {
+      "mask": 2,
+      "keep": 0.55
+     },
+     "Eyes": {
+      "keep": 0.7
+     },
+     "Eyebrows": {
+      "skip": true
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_SimpleParted.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.35
+     }
+    },
+    "keep": 0.35
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Regular.gltf",
+    "meshes": {
+     "*": {
+      "mask": 4,
+      "bright": 1.1,
+      "keep": 0.5
+     }
+    },
+    "keep": 0.5
+   }
+  ],
+  "clips": [
+   {
+    "name": "idle",
+    "src": "Idle_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "wave",
+    "src": "Idle_Rail_Call",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "walk",
+    "src": "Walk_Loop",
+    "frames": 8,
+    "loop": true,
+    "inPlace": true
+   },
+   {
+    "name": "sit",
+    "src": "Sitting_Idle_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "sittalk",
+    "src": "Sitting_Talking_Loop",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "phone",
+    "src": "Idle_TalkingPhone_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "cheer",
+    "src": "Dance_Loop",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "yes",
+    "src": "Yes",
+    "frames": 6
+   },
+   {
+    "name": "no",
+    "src": "Idle_No_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "angry",
+    "src": "Idle_FoldArms_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "hit",
+    "src": "Hit_Knockback",
+    "frames": 6
+   },
+   {
+    "name": "scared",
+    "src": "Crouch_Idle_Loop",
+    "frames": 4,
+    "loop": true
+   }
+  ],
+  "acc": [
+   {
+    "type": "turban",
+    "color": 14170666
+   },
+   {
+    "type": "garland"
+   }
+  ]
+ },
+ {
+  "id": "granny",
+  "scale": 0.92,
+  "keep": 0.25,
+  "parts": [
+   {
+    "file": "Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/Female_Peasant.gltf",
+    "meshes": {
+     "Female_Peasant_Arms": {
+      "keep": 0.2
+     },
+     "Female_Peasant_Body": {
+      "mask": 1,
+      "keep": 0.25
+     },
+     "Female_Peasant_Feet": {
+      "keep": 0.22
+     },
+     "Female_Peasant_Legs": {
+      "keep": 0.3
+     }
+    },
+    "keep": 0.2
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Base Characters/Godot - UE/Superhero_Female_FullBody.gltf",
+    "headOnly": 1.4,
+    "meshes": {
+     "Superhero_Female": {
+      "mask": 2,
+      "keep": 0.55
+     },
+     "Eyes": {
+      "keep": 0.7
+     },
+     "Eyebrows": {
+      "skip": true
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_Buns.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.35
+     }
+    },
+    "keep": 0.35
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Female.gltf",
+    "meshes": {
+     "*": {
+      "mask": 4,
+      "bright": 1.1,
+      "keep": 0.5
+     }
+    },
+    "keep": 0.5
+   }
+  ],
+  "clips": [
+   {
+    "name": "idle",
+    "src": "Idle_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "wave",
+    "src": "Idle_Rail_Call",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "walk",
+    "src": "Walk_Loop",
+    "frames": 8,
+    "loop": true,
+    "inPlace": true
+   },
+   {
+    "name": "sit",
+    "src": "Sitting_Idle_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "sittalk",
+    "src": "Sitting_Talking_Loop",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "phone",
+    "src": "Idle_TalkingPhone_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "cheer",
+    "src": "Dance_Loop",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "yes",
+    "src": "Yes",
+    "frames": 6
+   },
+   {
+    "name": "no",
+    "src": "Idle_No_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "angry",
+    "src": "Idle_FoldArms_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "hit",
+    "src": "Hit_Knockback",
+    "frames": 6
+   },
+   {
+    "name": "scared",
+    "src": "Crouch_Idle_Loop",
+    "frames": 4,
+    "loop": true
+   }
+  ],
+  "acc": [
+   {
+    "type": "glasses"
+   },
+   {
+    "type": "bindi"
+   }
+  ]
+ },
+ {
+  "id": "uncle",
+  "scale": 1,
+  "bulk": 1.25,
+  "keep": 0.25,
+  "parts": [
+   {
+    "file": "Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/Male_Peasant.gltf",
+    "meshes": {
+     "Male_Peasant_Arms_1": {
+      "mask": 1,
+      "keep": 0.3
+     },
+     "Male_Peasant_Arms_2": {
+      "mask": 2,
+      "keep": 0.2
+     },
+     "Male_Peasant_Body": {
+      "mask": 1,
+      "keep": 0.25
+     },
+     "Male_Peasant_Feet": {
+      "keep": 0.22
+     },
+     "Male_Peasant_Legs": {
+      "keep": 0.3
+     }
+    },
+    "keep": 0.2
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Base Characters/Godot - UE/Superhero_Male_FullBody.gltf",
+    "headOnly": 1.45,
+    "meshes": {
+     "SuperHero_Male": {
+      "mask": 2,
+      "keep": 0.55
+     },
+     "Eyes": {
+      "keep": 0.7
+     },
+     "Eyebrows": {
+      "skip": true
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_Buzzed.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.35
+     }
+    },
+    "keep": 0.35
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Regular.gltf",
+    "meshes": {
+     "*": {
+      "mask": 4,
+      "bright": 1.1,
+      "keep": 0.5
+     }
+    },
+    "keep": 0.5
+   }
+  ],
+  "clips": [
+   {
+    "name": "idle",
+    "src": "Idle_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "wave",
+    "src": "Idle_Rail_Call",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "walk",
+    "src": "Walk_Loop",
+    "frames": 8,
+    "loop": true,
+    "inPlace": true
+   },
+   {
+    "name": "sit",
+    "src": "Sitting_Idle_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "sittalk",
+    "src": "Sitting_Talking_Loop",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "phone",
+    "src": "Idle_TalkingPhone_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "cheer",
+    "src": "Dance_Loop",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "yes",
+    "src": "Yes",
+    "frames": 6
+   },
+   {
+    "name": "no",
+    "src": "Idle_No_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "angry",
+    "src": "Idle_FoldArms_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "hit",
+    "src": "Hit_Knockback",
+    "frames": 6
+   },
+   {
+    "name": "scared",
+    "src": "Crouch_Idle_Loop",
+    "frames": 4,
+    "loop": true
+   }
+  ],
+  "acc": [
+   {
+    "type": "moustache"
+   }
+  ]
+ },
+ {
+  "id": "influencer",
+  "scale": 0.97,
+  "keep": 0.25,
+  "parts": [
+   {
+    "file": "Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/Female_Peasant.gltf",
+    "meshes": {
+     "Female_Peasant_Arms": {
+      "keep": 0.2
+     },
+     "Female_Peasant_Body": {
+      "mask": 1,
+      "keep": 0.25
+     },
+     "Female_Peasant_Feet": {
+      "keep": 0.22
+     },
+     "Female_Peasant_Legs": {
+      "keep": 0.3
+     }
+    },
+    "keep": 0.2
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Base Characters/Godot - UE/Superhero_Female_FullBody.gltf",
+    "headOnly": 1.4,
+    "meshes": {
+     "Superhero_Female": {
+      "mask": 2,
+      "keep": 0.55
+     },
+     "Eyes": {
+      "keep": 0.7
+     },
+     "Eyebrows": {
+      "skip": true
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_Long.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.35
+     }
+    },
+    "keep": 0.35
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Female.gltf",
+    "meshes": {
+     "*": {
+      "mask": 4,
+      "bright": 1.1,
+      "keep": 0.5
+     }
+    },
+    "keep": 0.5
+   }
+  ],
+  "clips": [
+   {
+    "name": "idle",
+    "src": "Idle_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "wave",
+    "src": "Idle_Rail_Call",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "walk",
+    "src": "Walk_Loop",
+    "frames": 8,
+    "loop": true,
+    "inPlace": true
+   },
+   {
+    "name": "sit",
+    "src": "Sitting_Idle_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "sittalk",
+    "src": "Sitting_Talking_Loop",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "phone",
+    "src": "Idle_TalkingPhone_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "cheer",
+    "src": "Dance_Loop",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "yes",
+    "src": "Yes",
+    "frames": 6
+   },
+   {
+    "name": "no",
+    "src": "Idle_No_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "angry",
+    "src": "Idle_FoldArms_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "hit",
+    "src": "Hit_Knockback",
+    "frames": 6
+   },
+   {
+    "name": "scared",
+    "src": "Crouch_Idle_Loop",
+    "frames": 4,
+    "loop": true
+   }
+  ],
+  "weapon": {
+   "box": [
+    0.07,
+    0.13,
+    0.012
+   ],
+   "color": 1710628,
+   "out": 0.02
+  }
+ },
+ {
+  "id": "detective",
+  "scale": 0.97,
+  "keep": 0.25,
+  "parts": [
+   {
+    "file": "Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/Female_Ranger.gltf",
+    "meshes": {
+     "Female_Ranger_Body": {
+      "mask": 1,
+      "keep": 0.22
+     },
+     "Female_Ranger_Head_Hood": {
+      "skip": true
+     },
+     "Female_Ranger_Arms": {
+      "mask": 1,
+      "keep": 0.25
+     },
+     "Female_Ranger_Arms_Bracer": {
+      "keep": 0.1
+     },
+     "Female_Ranger_Feet_Boots": {
+      "keep": 0.14
+     },
+     "Female_Ranger_Acc_Pauldron": {
+      "skip": true
+     },
+     "Female_Ranger_Body_Belt": {
+      "keep": 0.2
+     },
+     "Female_Ranger_Legs": {
+      "keep": 0.3
+     }
+    },
+    "keep": 0.2
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Base Characters/Godot - UE/Superhero_Female_FullBody.gltf",
+    "headOnly": 1.4,
+    "meshes": {
+     "Superhero_Female": {
+      "mask": 2,
+      "keep": 0.55
+     },
+     "Eyes": {
+      "keep": 0.7
+     },
+     "Eyebrows": {
+      "skip": true
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_Buns.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.35
+     }
+    },
+    "keep": 0.35
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Female.gltf",
+    "meshes": {
+     "*": {
+      "mask": 4,
+      "bright": 1.1,
+      "keep": 0.5
+     }
+    },
+    "keep": 0.5
+   }
+  ],
+  "clips": [
+   {
+    "name": "idle",
+    "src": "Idle_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "wave",
+    "src": "Idle_Rail_Call",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "walk",
+    "src": "Walk_Loop",
+    "frames": 8,
+    "loop": true,
+    "inPlace": true
+   },
+   {
+    "name": "sit",
+    "src": "Sitting_Idle_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "sittalk",
+    "src": "Sitting_Talking_Loop",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "phone",
+    "src": "Idle_TalkingPhone_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "cheer",
+    "src": "Dance_Loop",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "yes",
+    "src": "Yes",
+    "frames": 6
+   },
+   {
+    "name": "no",
+    "src": "Idle_No_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "angry",
+    "src": "Idle_FoldArms_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "hit",
+    "src": "Hit_Knockback",
+    "frames": 6
+   },
+   {
+    "name": "scared",
+    "src": "Crouch_Idle_Loop",
+    "frames": 4,
+    "loop": true
+   }
+  ],
+  "acc": [
+   {
+    "type": "glasses"
+   }
+  ],
+  "hats": [
+   {
+    "file": "uacp/OldClassy_Male.fbx",
+    "mats": {
+     "Hat": 1842208
+    },
+    "depth": 0.2,
+    "width": 0.2,
+    "sink": 0.035
+   }
+  ]
+ },
+ {
+  "id": "fan",
+  "scale": 1,
+  "keep": 0.25,
+  "parts": [
+   {
+    "file": "Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/Male_Peasant.gltf",
+    "meshes": {
+     "Male_Peasant_Arms_1": {
+      "mask": 1,
+      "keep": 0.3
+     },
+     "Male_Peasant_Arms_2": {
+      "mask": 2,
+      "keep": 0.2
+     },
+     "Male_Peasant_Body": {
+      "mask": 1,
+      "keep": 0.25
+     },
+     "Male_Peasant_Feet": {
+      "keep": 0.22
+     },
+     "Male_Peasant_Legs": {
+      "keep": 0.3
+     }
+    },
+    "keep": 0.2
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Base Characters/Godot - UE/Superhero_Male_FullBody.gltf",
+    "headOnly": 1.45,
+    "meshes": {
+     "SuperHero_Male": {
+      "mask": 2,
+      "keep": 0.55
+     },
+     "Eyes": {
+      "keep": 0.7
+     },
+     "Eyebrows": {
+      "skip": true
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_Buzzed.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.35
+     }
+    },
+    "keep": 0.35
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Regular.gltf",
+    "meshes": {
+     "*": {
+      "mask": 4,
+      "bright": 1.1,
+      "keep": 0.5
+     }
+    },
+    "keep": 0.5
+   }
+  ],
+  "clips": [
+   {
+    "name": "idle",
+    "src": "Idle_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "wave",
+    "src": "Idle_Rail_Call",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "walk",
+    "src": "Walk_Loop",
+    "frames": 8,
+    "loop": true,
+    "inPlace": true
+   },
+   {
+    "name": "sit",
+    "src": "Sitting_Idle_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "sittalk",
+    "src": "Sitting_Talking_Loop",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "phone",
+    "src": "Idle_TalkingPhone_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "cheer",
+    "src": "Dance_Loop",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "yes",
+    "src": "Yes",
+    "frames": 6
+   },
+   {
+    "name": "no",
+    "src": "Idle_No_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "angry",
+    "src": "Idle_FoldArms_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "hit",
+    "src": "Hit_Knockback",
+    "frames": 6
+   },
+   {
+    "name": "scared",
+    "src": "Crouch_Idle_Loop",
+    "frames": 4,
+    "loop": true
+   }
+  ],
+  "acc": [
+   {
+    "type": "cap",
+    "color": 2775768
+   }
+  ]
+ },
+ {
+  "id": "boss",
+  "scale": 1,
+  "keep": 0.25,
+  "parts": [
+   {
+    "file": "Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/Male_Ranger.gltf",
+    "meshes": {
+     "Male_Ranger_Body": {
+      "mask": 1,
+      "keep": 0.22
+     },
+     "Male_Ranger_Head_Hood": {
+      "skip": true
+     },
+     "Male_Ranger_Arms_1": {
+      "mask": 1,
+      "keep": 0.25
+     },
+     "Male_Ranger_Arms_2": {
+      "mask": 2,
+      "keep": 0.18
+     },
+     "Male_Ranger_Arms_Bracer": {
+      "keep": 0.1
+     },
+     "Male_Ranger_Feet_Boots": {
+      "keep": 0.14
+     },
+     "Male_Ranger_Acc_Pauldron": {
+      "skip": true
+     },
+     "Male_Ranger_Body_Belt_1": {
+      "keep": 0.2
+     },
+     "Male_Ranger_Body_Belt_2": {
+      "keep": 0.2
+     },
+     "Male_Ranger_Legs": {
+      "keep": 0.3
+     }
+    },
+    "keep": 0.2
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Base Characters/Godot - UE/Superhero_Male_FullBody.gltf",
+    "headOnly": 1.45,
+    "meshes": {
+     "SuperHero_Male": {
+      "mask": 2,
+      "keep": 0.55
+     },
+     "Eyes": {
+      "keep": 0.7
+     },
+     "Eyebrows": {
+      "skip": true
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_SimpleParted.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.35
+     }
+    },
+    "keep": 0.35
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_Beard.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.35
+     }
+    },
+    "keep": 0.35
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Regular.gltf",
+    "meshes": {
+     "*": {
+      "mask": 4,
+      "bright": 1.1,
+      "keep": 0.5
+     }
+    },
+    "keep": 0.5
+   }
+  ],
+  "clips": [
+   {
+    "name": "idle",
+    "src": "Idle_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "wave",
+    "src": "Idle_Rail_Call",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "walk",
+    "src": "Walk_Loop",
+    "frames": 8,
+    "loop": true,
+    "inPlace": true
+   },
+   {
+    "name": "sit",
+    "src": "Sitting_Idle_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "sittalk",
+    "src": "Sitting_Talking_Loop",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "phone",
+    "src": "Idle_TalkingPhone_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "cheer",
+    "src": "Dance_Loop",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "yes",
+    "src": "Yes",
+    "frames": 6
+   },
+   {
+    "name": "no",
+    "src": "Idle_No_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "angry",
+    "src": "Idle_FoldArms_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "hit",
+    "src": "Hit_Knockback",
+    "frames": 6
+   },
+   {
+    "name": "scared",
+    "src": "Crouch_Idle_Loop",
+    "frames": 4,
+    "loop": true
+   }
+  ],
+  "weapon": {
+   "box": [
+    0.07,
+    0.13,
+    0.012
+   ],
+   "color": 1710628,
+   "out": 0.02
+  }
+ },
+ {
+  "id": "kid",
+  "scale": 0.68,
+  "keep": 0.25,
+  "parts": [
+   {
+    "file": "Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/Male_Peasant.gltf",
+    "meshes": {
+     "Male_Peasant_Arms_1": {
+      "mask": 1,
+      "keep": 0.3
+     },
+     "Male_Peasant_Arms_2": {
+      "mask": 2,
+      "keep": 0.2
+     },
+     "Male_Peasant_Body": {
+      "mask": 1,
+      "keep": 0.25
+     },
+     "Male_Peasant_Feet": {
+      "keep": 0.22
+     },
+     "Male_Peasant_Legs": {
+      "keep": 0.3
+     }
+    },
+    "keep": 0.2
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Base Characters/Godot - UE/Superhero_Male_FullBody.gltf",
+    "headOnly": 1.45,
+    "meshes": {
+     "SuperHero_Male": {
+      "mask": 2,
+      "keep": 0.55
+     },
+     "Eyes": {
+      "keep": 0.7
+     },
+     "Eyebrows": {
+      "skip": true
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_Buzzed.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.35
+     }
+    },
+    "keep": 0.35
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Regular.gltf",
+    "meshes": {
+     "*": {
+      "mask": 4,
+      "bright": 1.1,
+      "keep": 0.5
+     }
+    },
+    "keep": 0.5
+   }
+  ],
+  "clips": [
+   {
+    "name": "idle",
+    "src": "Idle_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "wave",
+    "src": "Idle_Rail_Call",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "walk",
+    "src": "Walk_Loop",
+    "frames": 8,
+    "loop": true,
+    "inPlace": true
+   },
+   {
+    "name": "sit",
+    "src": "Sitting_Idle_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "sittalk",
+    "src": "Sitting_Talking_Loop",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "phone",
+    "src": "Idle_TalkingPhone_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "cheer",
+    "src": "Dance_Loop",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "yes",
+    "src": "Yes",
+    "frames": 6
+   },
+   {
+    "name": "no",
+    "src": "Idle_No_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "angry",
+    "src": "Idle_FoldArms_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "hit",
+    "src": "Hit_Knockback",
+    "frames": 6
+   },
+   {
+    "name": "scared",
+    "src": "Crouch_Idle_Loop",
+    "frames": 4,
+    "loop": true
+   }
+  ],
+  "acc": [
+   {
+    "type": "cap",
+    "color": 15220778
+   }
+  ]
+ },
+ {
+  "id": "pedM",
+  "scale": 1,
+  "keep": 0.113,
+  "parts": [
+   {
+    "file": "Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/Male_Peasant.gltf",
+    "meshes": {
+     "Male_Peasant_Arms_1": {
+      "mask": 1,
+      "keep": 0.135
+     },
+     "Male_Peasant_Arms_2": {
+      "mask": 2,
+      "keep": 0.09
+     },
+     "Male_Peasant_Body": {
+      "mask": 1,
+      "keep": 0.113
+     },
+     "Male_Peasant_Feet": {
+      "keep": 0.099
+     },
+     "Male_Peasant_Legs": {
+      "keep": 0.135
+     }
+    },
+    "keep": 0.09
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Base Characters/Godot - UE/Superhero_Male_FullBody.gltf",
+    "headOnly": 1.45,
+    "meshes": {
+     "SuperHero_Male": {
+      "mask": 2,
+      "keep": 0.248
+     },
+     "Eyes": {
+      "keep": 0.315
+     },
+     "Eyebrows": {
+      "skip": true
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_SimpleParted.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.158
+     }
+    },
+    "keep": 0.158
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Regular.gltf",
+    "meshes": {
+     "*": {
+      "mask": 4,
+      "bright": 1.1,
+      "keep": 0.225
+     }
+    },
+    "keep": 0.225
+   }
+  ],
+  "clips": [
+   {
+    "name": "walk",
+    "src": "Walk_Loop",
+    "frames": 6,
+    "loop": true,
+    "inPlace": true
+   },
+   {
+    "name": "idle",
+    "src": "Idle_Loop",
+    "frames": 2,
+    "loop": true
+   },
+   {
+    "name": "wave",
+    "src": "Idle_Rail_Call",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "cheer",
+    "src": "Dance_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "hit",
+    "src": "Hit_Knockback",
+    "frames": 4
+   },
+   {
+    "name": "run",
+    "src": "Sprint_Loop",
+    "frames": 6,
+    "loop": true,
+    "inPlace": true
+   }
+  ]
+ },
+ {
+  "id": "pedF",
+  "scale": 0.97,
+  "keep": 0.113,
+  "parts": [
+   {
+    "file": "Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/Female_Peasant.gltf",
+    "meshes": {
+     "Female_Peasant_Arms": {
+      "keep": 0.09
+     },
+     "Female_Peasant_Body": {
+      "mask": 1,
+      "keep": 0.113
+     },
+     "Female_Peasant_Feet": {
+      "keep": 0.099
+     },
+     "Female_Peasant_Legs": {
+      "keep": 0.135
+     }
+    },
+    "keep": 0.09
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Base Characters/Godot - UE/Superhero_Female_FullBody.gltf",
+    "headOnly": 1.4,
+    "meshes": {
+     "Superhero_Female": {
+      "mask": 2,
+      "keep": 0.248
+     },
+     "Eyes": {
+      "keep": 0.315
+     },
+     "Eyebrows": {
+      "skip": true
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Hair_Long.gltf",
+    "meshes": {
+     "*": {
+      "mask": 3,
+      "bright": 1.15,
+      "keep": 0.158
+     }
+    },
+    "keep": 0.158
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Female.gltf",
+    "meshes": {
+     "*": {
+      "mask": 4,
+      "bright": 1.1,
+      "keep": 0.225
+     }
+    },
+    "keep": 0.225
+   }
+  ],
+  "clips": [
+   {
+    "name": "walk",
+    "src": "Walk_Loop",
+    "frames": 6,
+    "loop": true,
+    "inPlace": true
+   },
+   {
+    "name": "idle",
+    "src": "Idle_Loop",
+    "frames": 2,
+    "loop": true
+   },
+   {
+    "name": "wave",
+    "src": "Idle_Rail_Call",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "cheer",
+    "src": "Dance_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "hit",
+    "src": "Hit_Knockback",
+    "frames": 4
+   },
+   {
+    "name": "run",
+    "src": "Sprint_Loop",
+    "frames": 6,
+    "loop": true,
+    "inPlace": true
+   }
+  ]
+ },
+ {
+  "id": "racerM",
+  "scale": 1,
+  "keep": 0.2,
+  "parts": [
+   {
+    "file": "Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/Male_Ranger.gltf",
+    "meshes": {
+     "Male_Ranger_Body": {
+      "mask": 1,
+      "keep": 0.176
+     },
+     "Male_Ranger_Head_Hood": {
+      "skip": true
+     },
+     "Male_Ranger_Arms_1": {
+      "mask": 1,
+      "keep": 0.2
+     },
+     "Male_Ranger_Arms_2": {
+      "mask": 2,
+      "keep": 0.144
+     },
+     "Male_Ranger_Arms_Bracer": {
+      "keep": 0.08
+     },
+     "Male_Ranger_Feet_Boots": {
+      "keep": 0.112
+     },
+     "Male_Ranger_Acc_Pauldron": {
+      "skip": true
+     },
+     "Male_Ranger_Body_Belt_1": {
+      "keep": 0.16
+     },
+     "Male_Ranger_Body_Belt_2": {
+      "keep": 0.16
+     },
+     "Male_Ranger_Legs": {
+      "keep": 0.24
+     }
+    },
+    "keep": 0.16
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Base Characters/Godot - UE/Superhero_Male_FullBody.gltf",
+    "headOnly": 1.45,
+    "meshes": {
+     "SuperHero_Male": {
+      "mask": 2,
+      "keep": 0.44
+     },
+     "Eyes": {
+      "keep": 0.56
+     },
+     "Eyebrows": {
+      "skip": true
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Regular.gltf",
+    "meshes": {
+     "*": {
+      "mask": 4,
+      "bright": 1.1,
+      "keep": 0.4
+     }
+    },
+    "keep": 0.4
+   }
+  ],
+  "clips": [
+   {
+    "name": "drive",
+    "src": "Driving_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "cheer",
+    "src": "Dance_Loop",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "idle",
+    "src": "Idle_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "no",
+    "src": "Idle_No_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "yes",
+    "src": "Yes",
+    "frames": 6
+   },
+   {
+    "name": "wave",
+    "src": "Idle_Rail_Call",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "hit",
+    "src": "Hit_Knockback",
+    "frames": 5
+   }
+  ],
+  "acc": [
+   {
+    "type": "helmet"
+   }
+  ]
+ },
+ {
+  "id": "racerF",
+  "scale": 0.97,
+  "keep": 0.2,
+  "parts": [
+   {
+    "file": "Modular Character Outfits - Fantasy[Standard]/Exports/glTF (Godot-Unreal)/Outfits/Female_Ranger.gltf",
+    "meshes": {
+     "Female_Ranger_Body": {
+      "mask": 1,
+      "keep": 0.176
+     },
+     "Female_Ranger_Head_Hood": {
+      "skip": true
+     },
+     "Female_Ranger_Arms": {
+      "mask": 1,
+      "keep": 0.2
+     },
+     "Female_Ranger_Arms_Bracer": {
+      "keep": 0.08
+     },
+     "Female_Ranger_Feet_Boots": {
+      "keep": 0.112
+     },
+     "Female_Ranger_Acc_Pauldron": {
+      "skip": true
+     },
+     "Female_Ranger_Body_Belt": {
+      "keep": 0.16
+     },
+     "Female_Ranger_Legs": {
+      "keep": 0.24
+     }
+    },
+    "keep": 0.16
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Base Characters/Godot - UE/Superhero_Female_FullBody.gltf",
+    "headOnly": 1.4,
+    "meshes": {
+     "Superhero_Female": {
+      "mask": 2,
+      "keep": 0.44
+     },
+     "Eyes": {
+      "keep": 0.56
+     },
+     "Eyebrows": {
+      "skip": true
+     }
+    }
+   },
+   {
+    "file": "Universal Base Characters[Standard]/Hairstyles/Rigged to Head Bone/glTF (Godot -Unreal)/Eyebrows_Female.gltf",
+    "meshes": {
+     "*": {
+      "mask": 4,
+      "bright": 1.1,
+      "keep": 0.4
+     }
+    },
+    "keep": 0.4
+   }
+  ],
+  "clips": [
+   {
+    "name": "drive",
+    "src": "Driving_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "cheer",
+    "src": "Dance_Loop",
+    "frames": 8,
+    "loop": true
+   },
+   {
+    "name": "idle",
+    "src": "Idle_Loop",
+    "frames": 4,
+    "loop": true
+   },
+   {
+    "name": "no",
+    "src": "Idle_No_Loop",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "yes",
+    "src": "Yes",
+    "frames": 6
+   },
+   {
+    "name": "wave",
+    "src": "Idle_Rail_Call",
+    "frames": 6,
+    "loop": true
+   },
+   {
+    "name": "hit",
+    "src": "Hit_Knockback",
+    "frames": 5
+   }
+  ],
+  "acc": [
+   {
+    "type": "helmet"
+   }
+  ]
+ }
+]
