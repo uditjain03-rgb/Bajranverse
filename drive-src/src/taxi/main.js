@@ -22,9 +22,12 @@ import { Engine } from '../common/sfx.js';
 import { makePrefs, openModal, closeModal, modalOpen, onAdDone, adReady, rewardAd, betweenLevels, vibrate, settingsPanel, giftPanel, giftState } from '../common/ui.js';
 
 const PF = makePrefs('madtaxi_v2', { level: 1, coins: 0, cars: ['kaalipeeli'], car: 'kaalipeeli', horns: [0], horn: 0, rides: 0, stars: 0, gift: null, set: { sound: true, music: true, vib: true, hi: true },
-  v3: 0, mode: 1, cust: {}, own: ['p0', 'p1', 'r0'], eng: {}, may: {}, adT: 0 });
+  v3: 0, v4: 0, cust: {}, own: ['p0', 'p1', 'r0', 'r1', 's0', 'd0', 'o0', 'o1', 't0'], eng: {}, may: {}, adT: 0 });
 // v2 players who bought a taxi get the new Super Taxi free (their old cabs are replaced by the four new cars)
 if (!PF.v3) { PF.v3 = 1; if (PF.cars.some(c => c !== 'kaalipeeli' && !['super', 'muscle', 'monster'].includes(c))) PF.cars = ['kaalipeeli', 'super']; PF.cars = PF.cars.filter(c => ['kaalipeeli', 'super', 'muscle', 'monster'].includes(c)); if (!PF.cars.includes(PF.car)) PF.car = 'kaalipeeli'; PF.save(); }
+// v4: the Super Taxi is now 'supercar'; horns are named; new style items are owned by everyone in their free versions
+if (!PF.v4) { PF.v4 = 1; PF.cars = PF.cars.map(c => c === 'super' ? 'supercar' : c); if (PF.car === 'super') PF.car = 'supercar'; if (PF.cust.super) { PF.cust.supercar = PF.cust.super; delete PF.cust.super; } if (PF.eng.super) { PF.eng.supercar = PF.eng.super; delete PF.eng.super; }
+  PF.horn = 'own'; PF.horns = ['own']; for (const k of ['r1', 's0', 'd0', 'o0', 'o1', 't0']) if (!PF.own.includes(k)) PF.own.push(k); delete PF.mode; PF.save(); }
 setQuality(PF.set.hi ? 2 : 0); Audio.setMuted(!PF.set.sound);
 Music.config({ title: 'bv_title', drive: 'riley', drive2: 'polka', drive3: 'monkeys', chase: 'fuzzball', win: 'bv_win', happy: 'merry_go' }, { bv_title: 0.95, bv_win: 1, riley: 0.7, polka: 0.7, monkeys: 0.7, fuzzball: 0.75, merry_go: 0.75 });
 const music = n => { if (!PF.set.music || !n) { Music.stop(); return; } Audio.resume(); Music.play(n); };
@@ -42,40 +45,78 @@ const _p = new THREE.Vector3(), _q = new THREE.Vector3();
   wheee(t) { const o = H.osc('sine', 500, t, 0.7, 0.16); o.frequency.exponentialRampToValueAtTime(1900, t + 0.6); const v = H.osc('sine', 506, t, 0.7, 0.06); v.frequency.exponentialRampToValueAtTime(1920, t + 0.6); },
   splat(t) { H.noise(t, 0.22, 0.6, 'lowpass', 900, 120, 2); const o = H.osc('sine', 300, t, 0.16, 0.3); o.frequency.exponentialRampToValueAtTime(70, t + 0.15); },
   scrape(t) { H.noise(t, 0.45, 0.25, 'bandpass', 3800, 2400, 6); H.noise(t, 0.45, 0.12, 'highpass', 5000); },
+  glug(t) { for (let i = 0; i < 3; i++) { const o = H.osc('sine', 180 + i * 40, t + i * 0.09, 0.08, 0.25); o.frequency.exponentialRampToValueAtTime(420, t + i * 0.09 + 0.07); } },
+  sputter(t) { for (let i = 0; i < 6; i++) { H.noise(t + i * 0.16 + Math.random() * 0.05, 0.07, 0.5 - i * 0.06, 'lowpass', 900, 200, 1); const o = H.osc('square', 70 - i * 6, t + i * 0.16, 0.08, 0.2); o.frequency.exponentialRampToValueAtTime(35, t + i * 0.16 + 0.07); } },
   backfire(t) { H.noise(t, 0.09, 0.6, 'lowpass', 1400, 200, 1); const o = H.osc('sine', 90, t, 0.1, 0.5); o.frequency.exponentialRampToValueAtTime(40, t + 0.09); } }); }
+// some shared sounds are too soft on a phone speaker: play them through a louder bus
+{ const H = Audio.H, BOOST = { whoosh: 6, woof: 3, coin: 2.5, gateBad: 2.5, skid: 2.5, moo: 2.5, siren: 2.5, nitro: 2.5, scrape: 2, gateGood: 1.8, crowd: 1.8 }, nodes = {};
+  for (const [n, k] of Object.entries(BOOST)) { const f = Audio.get(n); if (!f) continue; Audio.extend({ [n](t, a) { const ctx = H.ctx, bus = H.bus; if (!nodes[k]) { nodes[k] = ctx.createGain(); nodes[k].gain.value = k; nodes[k].connect(bus); } H.bus = nodes[k]; try { f(t, a); } finally { H.bus = bus; } } }); } }
 // cartoon voices: a scream, an "oof", a "wheee"
 const scream = (f0 = rnd(280, 420)) => sfx('talk', 0, { w: pick(['aaah', 'nooo', 'mama', 'whoa']), f0, c: [1.2, 1.6, 0.9], vib: 0.18, vol: 0.4 });
 
 // ---------------- taxis and horns ----------------
+// Prices are in game coins (🪙, earned by driving). Cars and coin packs can also be bought for real money through
+// Google Play in the app (see store() below and BILLING in ADS_AND_EARNING_GUIDE.md).
 const CARS = [
-  { id: 'kaalipeeli', type: 'padmini', livery: 'kaalipeeli', ico: '🚕', name: 'Kaali-Peeli Classic', price: 0, sp: 1, acc: 1, soft: 1, grip: 1, crash: 1, col: 0xffd21a, rim: 'steel', about: 'The good old Mumbai taxi' },
-  { id: 'super', type: 'super', ico: '🏎️', name: 'Super Taxi GT', price: 2500, sp: 1.13, acc: 1.3, soft: 0.85, grip: 1.25, crash: 1.1, col: 0x7ad81a, rim: 'sport', about: 'Mid-engine rocket. Fastest on the road' },
-  { id: 'muscle', type: 'muscle', ico: '🚗', name: 'Muscle Masti V8', price: 4500, sp: 1.08, acc: 1.45, soft: 0.8, grip: 1.05, crash: 1.35, col: 0xd81a2a, rim: 'alloy', about: 'Huge V8. Launches cars higher' },
-  { id: 'monster', type: 'monster', ico: '🚙', name: 'Monster Bully 4x4', price: 7000, sp: 1.03, acc: 1.15, soft: 0.45, grip: 0.95, crash: 1.7, col: 0x2a6ad8, rim: 'offroad', about: 'Big tyres. Bumps? What bumps?' }];
-const PAINTS = [{ c: null, n: 'Factory', p: 0 }, { c: 0xffd21a, n: 'Taxi Yellow', p: 0 }, { c: 0xf4f4f4, n: 'Pearl White', p: 150 }, { c: 0x1a1a1e, n: 'Midnight Black', p: 200 }, { c: 0xd81a2a, n: 'Racing Red', p: 200 }, { c: 0x2a6ad8, n: 'Royal Blue', p: 250 }, { c: 0xff7a1a, n: 'Sunset Orange', p: 300 },
-  { c: 0x2ad8c8, n: 'Aqua Mint', p: 350 }, { c: 0x8a2ad8, n: 'Purple Rain', p: 350 }, { c: 0x7ad81a, n: 'Neon Lime', p: 450 }, { c: 0xff3ab0, n: 'Hot Pink', p: 450 }, { c: 0x4a4e54, n: 'Matte Grey', p: 600 }, { c: 0xffc21a, n: '24K Gold', p: 1500 }];
-const RIMS = [{ k: null, n: 'Factory', p: 0 }, { k: 'steel', n: 'Steel', p: 0 }, { k: 'alloy', n: 'Alloy 5-spoke', p: 300 }, { k: 'chrome', n: 'Chrome Disc', p: 600 }, { k: 'offroad', n: 'Off-Road Tyres', p: 700 }, { k: 'sport', n: 'Sport Red-Line', p: 900 }, { k: 'gold', n: 'Gold Rims', p: 1500 }];
-const ENG = [{ n: 'Stock', sp: 0, acc: 0, p: 0, ico: '⚙️' }, { n: 'Sport', sp: 0.07, acc: 0.15, p: 800, ico: '🔧' }, { n: 'Turbo', sp: 0.14, acc: 0.3, p: 2000, ico: '🌀' }, { n: 'Rocket', sp: 0.23, acc: 0.5, p: 4500, ico: '🚀' }];
-const EXTRAS = [{ k: 'w', n: 'Racing Spoiler', ico: '🪽', p: 600, d: 'Looks fast. Is fast.' }, { k: 'n', n: 'Neon Underglow', ico: '💡', p: 900, d: 'Tap again to change colour' }, { k: 'f', n: 'Nitro Flames', ico: '🔥', p: 1200, d: 'Fire from the exhaust, +30% turbo time' }, { k: 'b', n: 'Steel Bull-Bar', ico: '🛡️', p: 1500, d: 'Smash harder, lose no speed' }];
+  { id: 'kaalipeeli', type: 'padmini', livery: 'kaalipeeli', ico: '🚕', name: 'Kaali-Peeli Classic', price: 0, sp: 1, acc: 1, soft: 1, grip: 1, crash: 1, col: 0xffd21a, rim: 'chrome', horn: 'taxi', about: 'The good old Mumbai taxi' },
+  { id: 'auto', type: 'auto', ico: '🛺', name: 'Auto Rickshaw', price: 6000, sp: 0.86, acc: 1.3, soft: 0.9, grip: 1.35, crash: 0.8, col: 0x2a9a3a, rim: 'black', horn: 'auto', about: 'Tiny and nippy. Squeezes through anything' },
+  { id: 'creta', type: 'creta', ico: '🚙', name: 'City Cruiser SUV', price: 18000, sp: 1.06, acc: 1.12, soft: 0.7, grip: 1.1, crash: 1.25, col: 0xf4f4f4, rim: 'alloy', horn: 'modern', about: 'Smooth, comfy, made for Indian roads' },
+  { id: 'tractor', type: 'tractor', ico: '🚜', name: 'Kisan Tractor + Trolley', price: 25000, sp: 0.8, acc: 0.85, soft: 0.5, grip: 0.9, crash: 2.2, col: 0xc8202a, rim: 'offroad', horn: 'tractor', about: 'Slow. Unstoppable. Hay everywhere!' },
+  { id: 'thar', type: 'thar', ico: '🛻', name: 'Jungle King 4x4', price: 32000, sp: 1.04, acc: 1.2, soft: 0.55, grip: 1.0, crash: 1.6, col: 0x3a5a2a, rim: 'offroad', horn: 'jeep', about: 'Hard-top 4x4. Bumps? What bumps?' },
+  { id: 'muscle', type: 'muscle', ico: '🚗', name: 'Muscle Masti V8', price: 45000, sp: 1.1, acc: 1.45, soft: 0.8, grip: 1.05, crash: 1.4, col: 0xd81a2a, rim: 'alloy', horn: 'cuca', about: 'Huge V8. Launches cars higher' },
+  { id: 'supercar', type: 'supercar', ico: '🏎️', name: 'Super Taxi GT', price: 70000, sp: 1.16, acc: 1.35, soft: 0.85, grip: 1.3, crash: 1.1, col: 0x7ad81a, rim: 'sport', horn: 'sport', about: 'The fastest thing on the road' },
+  { id: 'monster', type: 'monster', ico: '🦖', name: 'Monster Bully 4x4', price: 100000, sp: 1.05, acc: 1.15, soft: 0.35, grip: 0.95, crash: 2.0, col: 0x2a6ad8, rim: 'offroad', horn: 'air', about: 'Giant tyres. Drives OVER trouble' }];
+const PAINTS = [{ c: null, n: 'Factory', p: 0 }, { c: 0xffd21a, n: 'Taxi Yellow', p: 0 }, { c: 0xf4f4f4, n: 'Pearl White', p: 800 }, { c: 0x1a1a1e, n: 'Midnight Black', p: 1000 }, { c: 0xd81a2a, n: 'Racing Red', p: 1000 }, { c: 0x2a6ad8, n: 'Royal Blue', p: 1200 }, { c: 0xff7a1a, n: 'Sunset Orange', p: 1500 },
+  { c: 0x2ad8c8, n: 'Aqua Mint', p: 1800 }, { c: 0x8a2ad8, n: 'Purple Rain', p: 1800 }, { c: 0x7ad81a, n: 'Neon Lime', p: 2500 }, { c: 0xff3ab0, n: 'Hot Pink', p: 2500 }, { c: 0x4a4e54, n: 'Matte Grey', p: 3500 }, { c: 0x3a5a2a, n: 'Army Green', p: 3000 }, { c: 0xffc21a, n: '24K Gold', p: 8000 }];
+const RIMS = [{ k: null, n: 'Factory', p: 0 }, { k: 'steel', n: 'Steel', p: 0 }, { k: 'alloy', n: 'Alloy 5-spoke', p: 1500 }, { k: 'chrome', n: 'Chrome Disc', p: 3000 }, { k: 'offroad', n: 'Off-Road Tyres', p: 3500 }, { k: 'sport', n: 'Sport Red-Line', p: 4500 }, { k: 'black', n: 'Stealth Black', p: 2500 }, { k: 'gold', n: 'Gold Rims', p: 8000 }];
+const ENG = [{ n: 'Stock', sp: 0, acc: 0, p: 0, ico: '⚙️' }, { n: 'Sport', sp: 0.07, acc: 0.15, p: 4000, ico: '🔧' }, { n: 'Turbo', sp: 0.14, acc: 0.3, p: 10000, ico: '🌀' }, { n: 'Rocket', sp: 0.23, acc: 0.5, p: 22000, ico: '🚀' }];
+const EXTRAS = [{ k: 'w', n: 'Racing Spoiler', ico: '🪽', p: 3000, d: 'Looks fast. Is fast.' }, { k: 'n', n: 'Neon Underglow', ico: '💡', p: 4500, d: 'Tap COLOUR to change the glow' }, { k: 'f', n: 'Nitro Flames', ico: '🔥', p: 6000, d: 'Fire from the exhaust, +30% turbo time' }, { k: 'b', n: 'Steel Bull-Bar', ico: '🛡️', p: 7000, d: 'Smash harder, lose no speed' }];
+const STRIPES = [{ c: null, n: 'No stripes', p: 0 }, { c: 0xffffff, n: 'White', p: 2000 }, { c: 0x111114, n: 'Black', p: 2000 }, { c: 0xe8202a, n: 'Red', p: 2500 }, { c: 0x2a6ad8, n: 'Blue', p: 2500 }, { c: 0xffc21a, n: 'Gold', p: 4000 }];
+const DECALS = [{ k: null, n: 'No decal', p: 0, ico: '⬜' }, { k: 'flames', n: 'Hot Flames', p: 3000, ico: '🔥' }, { k: 'checker', n: 'Race Checker', p: 2500, ico: '🏁' }, { k: 'tiger', n: 'Tiger Stripes', p: 3000, ico: '🐯' }, { k: 'bolt', n: 'Lightning Bolt', p: 2500, ico: '⚡' }, { k: 'num', n: 'Lucky Number 7', p: 2000, ico: '7️⃣' }];
+const ROOFS = [{ k: 'sign', n: 'Taxi Sign', p: 0, ico: '🚕' }, { k: 'none', n: 'Nothing on top', p: 0, ico: '⬜' }, { k: 'rack', n: 'Roof Rack + Luggage', p: 2500, ico: '🧳' }, { k: 'lightbar', n: 'LED Light Bar', p: 3500, ico: '💡' }];
+const TINTS = [{ c: null, n: 'Normal glass', p: 0 }, { c: 0x030406, n: 'Dark Limo', p: 1500 }, { c: 0x1a3a7a, n: 'Blue Mirror', p: 2500 }, { c: 0x6a5010, n: 'Gold Mirror', p: 4000 }];
 const NEONS = [0xff2ad8, 0x2ae8ff, 0x7aff2a, 0xffe02a, 0xff3a2a];
-const MODES = [{ n: '🐢 CHILL', k: 0.82, c: 0.9 }, { n: '🚕 NORMAL', k: 1, c: 1 }, { n: '🔥 CRAZY', k: 1.22, c: 1.3 }];
+// horns: every vehicle has its own; funny horns can be bought and used on any of them
+const HORNS = [{ k: 'own', n: 'The car\'s own horn', p: 0, ico: '📯' }, { k: 'tiny', n: 'Tiny Toot', p: 1500, ico: '🐭' }, { k: 'party', n: 'Party Tune', p: 3000, ico: '🎉' }, { k: 'goat', n: 'Goat Horn', p: 3500, ico: '🐐' }, { k: 'cuca', n: 'La Cucaracha', p: 4000, ico: '🌮' }, { k: 'air', n: 'Truck Air Horn', p: 5000, ico: '🚛' }, { k: 'train', n: 'Train Horn', p: 6000, ico: '🚂' }];
 let TRIAL = null;   // an add-on tried for one ride after watching an ad
-function cust(id = PF.car) { const C = { p: 0, r: 0, w: 0, n: 0, f: 0, b: 0, ...(PF.cust[id] || {}) }; if (TRIAL && TRIAL.car === id) C[TRIAL.k] = TRIAL.v; return C; }
-const engLv = (id = PF.car) => PF.eng[id] || 0;const HORNS = [{ k: 0, name: 'Classic Peep-Peep', price: 0 }, { k: 2, name: 'Tiny Toot', price: 250 }, { k: 3, name: 'Truck POM-POM', price: 500 }, { k: 1, name: 'Party Tune', price: 900 }];
-const carSpec = () => { const C = CARS.find(c => c.id === PF.car) || CARS[0], E2 = ENG[engLv(C.id)], M2 = MODES[PF.mode] || MODES[1]; return { ...C, sp: C.sp * (1 + E2.sp) * M2.k, acc: C.acc * (1 + E2.acc) * (0.85 + M2.k * 0.15) }; };
+function cust(id = PF.car) { const C = { p: 0, r: 0, w: 0, n: 0, f: 0, b: 0, s: 0, d: 0, o: 0, t: 0, ...(PF.cust[id] || {}) }; if (TRIAL && TRIAL.car === id) C[TRIAL.k] = TRIAL.v; return C; }
+const engLv = (id = PF.car) => PF.eng[id] || 0;
+const carSpec = () => { const C = CARS.find(c => c.id === PF.car) || CARS[0], E2 = ENG[engLv(C.id)]; return { ...C, sp: C.sp * (1 + E2.sp), acc: C.acc * (1 + E2.acc) }; };
+const hornKind = () => PF.horn === 'own' || !HORNS.some(h => h.k === PF.horn) ? carSpec().horn : PF.horn;
 function buildCarModel(id, U) {   // the player's car with its paint, wheels and add-ons
   const C = CARS.find(c => c.id === id) || CARS[0], paint = PAINTS[U.p] || PAINTS[0], rims = (RIMS[U.r] || RIMS[0]).k || C.rim;
-  const col = paint.c ?? C.col, V = makeCar(C.type, col, { livery: paint.c == null ? C.livery : undefined, taxi: true, spin: true, rims, wing: !!U.w, neon: U.n ? NEONS[(U.n - 1) % NEONS.length] : 0 });
-  if (C.type === 'padmini') {   // the classic body is not lofted: add the spoiler and the neon here
-    if (U.w) { const w = new THREE.Group(); mesh(new THREE.BoxGeometry(1.5, 0.05, 0.3), flat(0x111114), 0, 1.28, V.size.z / 2 - 0.35, w); for (const sx of [-1, 1]) mesh(new THREE.BoxGeometry(0.04, 0.3, 0.1), flat(0x111114), sx * 0.5, 1.12, V.size.z / 2 - 0.35, w); V.model.add(w); }
-    if (U.n) { const m = new THREE.Mesh(new THREE.PlaneGeometry(V.size.x * 1.5, V.size.z * 1.15), new THREE.MeshBasicMaterial({ map: dotTex, color: NEONS[(U.n - 1) % NEONS.length], transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); m.rotation.x = -PI / 2; m.position.y = 0.04; V.obj.add(m); }
-  }
-  if (U.b) { const b = new THREE.Group(), z = -V.size.z / 2 - 0.12; mesh(new THREE.BoxGeometry(V.size.x * 0.85, 0.08, 0.08), flat(0xb8bec6), 0, 0.45, z, b); mesh(new THREE.BoxGeometry(V.size.x * 0.75, 0.08, 0.08), flat(0xb8bec6), 0, 0.75, z, b); for (const sx of [-1, 1]) mesh(new THREE.BoxGeometry(0.08, 0.5, 0.08), flat(0xb8bec6), sx * V.size.x * 0.3, 0.6, z, b); V.model.add(oneMesh(b)); }
-  // exhaust flames (shown on TURBO; bigger with the Nitro Flames add-on)
-  const ex = V.exhaust || [[0.4, 0.3, V.size.z / 2 + 0.1]], fl = [];
-  for (const e of ex) { const f = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.9, 10, 1, true), new THREE.MeshBasicMaterial({ color: 0xff8a2a, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false })); f.geometry.rotateX(PI / 2); f.geometry.translate(0, 0, 0.45); f.position.set(...e); f.visible = false; const c = f.clone(); c.material = f.material.clone(); c.material.color.set(0x7ad8ff); c.scale.set(0.55, 0.55, 0.6); f.add(c); V.obj.add(f); fl.push(f); }
+  const V = makeCar(C.type, paint.c ?? C.col, { livery: paint.c == null ? C.livery : undefined, spin: true, rims, wing: !!U.w, neon: U.n ? NEONS[(U.n - 1) % NEONS.length] : 0,
+    stripe: (STRIPES[U.s] || STRIPES[0]).c ?? undefined, decal: (DECALS[U.d] || DECALS[0]).k ?? undefined, roofItem: (ROOFS[U.o] || ROOFS[0]).k, tint: (TINTS[U.t] || TINTS[0]).c ?? undefined });
+  if (U.b) { const b = new THREE.Group(), z = -V.size.z / 2 - 0.12, w = Math.min(2.2, V.size.x); mesh(new THREE.BoxGeometry(w * 0.85, 0.08, 0.08), flat(0xb8bec6), 0, 0.45, z, b); mesh(new THREE.BoxGeometry(w * 0.75, 0.08, 0.08), flat(0xb8bec6), 0, 0.75, z, b); for (const sx of [-1, 1]) mesh(new THREE.BoxGeometry(0.08, 0.5, 0.08), flat(0xb8bec6), sx * w * 0.3, 0.6, z, b); V.obj.add(oneMesh(b)); }
+  // exhaust flames (shown on TURBO; bigger with the Nitro Flames add-on). The tractor's stack points up.
+  const fl = [];
+  for (const e of V.exhaust || [[0.4, 0.3, V.size.z / 2 + 0.1]]) { const f = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.9, 10, 1, true), new THREE.MeshBasicMaterial({ color: 0xff8a2a, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false })); f.geometry.rotateX(PI / 2); f.geometry.translate(0, 0, 0.45); f.position.set(e[0], e[1], e[2]); if (e[3]) f.rotation.x = -PI / 2; f.visible = false; const c = f.clone(); c.material = f.material.clone(); c.material.color.set(0x7ad8ff); c.scale.set(0.55, 0.55, 0.6); f.add(c); V.obj.add(f); fl.push(f); }
   V.flames = fl; return V;
 }
+// ---------------- horns (they sound for as long as the button is held) ----------------
+const HORNSND = {
+  taxi: { f: [430, 540], w: 'square', v: 0.16, lp: 2400 }, modern: { f: [500, 625], w: 'sawtooth', v: 0.14, lp: 3200 }, jeep: { f: [390, 495], w: 'square', v: 0.18, lp: 2000 },
+  sport: { f: [660, 830], w: 'sawtooth', v: 0.12, lp: 4200 }, air: { f: [185, 233, 277], w: 'sawtooth', v: 0.17, lp: 1600 }, tractor: { f: [235, 296], w: 'square', v: 0.2, lp: 1200, wob: 7 },
+  auto: { f: [980, 1240], w: 'square', v: 0.09, lp: 5000 }, train: { f: [311, 370, 466], w: 'sawtooth', v: 0.15, lp: 2200 }, tiny: { f: [1400, 1760], w: 'square', v: 0.08, lp: 6000 },
+  party: { tune: [523, 659, 784, 659, 1047], d: 0.12, w: 'square', v: 0.13 }, cuca: { tune: [392, 392, 392, 523, 659, 0, 392, 392, 392, 523, 659], d: 0.11, w: 'square', v: 0.13 }, goat: { goat: 1 } };
+function hornVoice(kind, t, dur, vol = 1) {   // returns a function that ends the horn
+  const S = HORNSND[kind] || HORNSND.taxi, H = Audio.H, ctx = H.ctx; if (!ctx) return () => {};
+  if (S.goat) { Audio.sfx('talk', t - ctx.currentTime, { w: 'aaah', f0: 430, c: [1, 1.1, 0.95], vib: 0.35, vol: 0.55 * vol }); return () => {}; }
+  if (S.tune) { S.tune.forEach((f, i) => { if (!f) return; const a = t + i * S.d, o = ctx.createOscillator(), gg = ctx.createGain(); o.type = S.w; o.frequency.value = f; gg.gain.setValueAtTime(0.0001, a); gg.gain.exponentialRampToValueAtTime(S.v * vol, a + 0.012); gg.gain.setValueAtTime(S.v * vol, a + S.d * 0.8); gg.gain.exponentialRampToValueAtTime(0.0001, a + S.d * 0.98); o.connect(gg); gg.connect(H.bus); o.start(a); o.stop(a + S.d); }); return () => {}; }
+  const g = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = S.lp; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(S.v * vol, t + 0.025); lp.connect(g); g.connect(H.bus);
+  const os = S.f.map(f => { const o = ctx.createOscillator(); o.type = S.w; o.frequency.setValueAtTime(f, t); if (S.wob) { const l = ctx.createOscillator(), lg = ctx.createGain(); l.frequency.value = S.wob; lg.gain.value = f * 0.02; l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(t + 4); } o.connect(lp); o.start(t); return o; });
+  let done = false; const stop = (at = ctx.currentTime) => { if (done) return; done = true; const e = Math.max(at, t + 0.15); g.gain.setValueAtTime(S.v * vol, e); g.gain.exponentialRampToValueAtTime(0.0001, e + 0.08); os.forEach(o => o.stop(e + 0.1)); };
+  if (dur) stop(t + dur); else setTimeout(() => stop(), 3000);   // a held horn stops after 3 s anyway
+  return stop;
+}
+// traffic horns use the same voices (short honks)
+{ const KMAP = ['taxi', 'party', 'tiny', 'air']; Audio.extend({ horn(t, k = 0) { hornVoice(typeof k === 'string' ? k : KMAP[k] || 'taxi', t, 0.32, 0.7); } }); }
+let hornStop = null;
+function hornDown() {
+  if (!PF.set.sound) return; Audio.resume(); const ctx = Audio.H.ctx; if (!ctx || ctx.state !== 'running') return;
+  if (hornStop) hornStop(); const k = hornKind(); hornStop = hornVoice(k, ctx.currentTime + 0.005, HORNSND[k] && (HORNSND[k].tune || HORNSND[k].goat) ? 1 : 0);
+}
+function hornUp() { if (hornStop) { hornStop(); hornStop = null; } }
 
 // ---------------- the passengers ----------------
 // look: the cartoon face in the HUD; tint/skin/hair: the 3D person; f0/fk: voice. Each has a mission (see MISSIONS).
@@ -125,18 +166,20 @@ const PAINT = [0xf4f4f4, 0xf4f4f4, 0xc0c4c8, 0x8a8e94, 0x1a1a1e, 0xb8202a, 0x1a4
 function makeLevel(n, mayhem) {
   let seed = n * 4241 + 7; const R = () => ((seed = (seed * 16807) % 2147483647) / 2147483647), r = (a, b) => a + R() * (b - a), pk = a => a[Math.floor(R() * a.length)];
   const P = PASS[(n - 1) % PASS.length], stage = STAGE_OF[P.id], d = Math.min(1, (n - 1) / 24), loop = Math.floor((n - 1) / PASS.length);
-  const m = mayhem ? 'mayhem' : P.m, L = mayhem ? 3900 : Math.round(Math.min(3400, (P.m === 'chase' ? 2300 : 1900) + n * 45));
-  const ev = []; const our = [LANES[0], LANES[1]]; let lastRamp = 0, lastPow = 0, lastMega = -200, lastJay = 0;
+  const m = mayhem ? 'mayhem' : P.m, L = mayhem ? 5200 : Math.round(Math.min(3400, (P.m === 'chase' ? 2300 : 1900) + n * 45));
+  const ev = []; const our = [LANES[0], LANES[1]]; let lastRamp = 0, lastPow = 0, lastMega = -200, lastJay = 0, lastFuel = -60, lastPump = -250;
   for (let z = -110; z > -L + 110; z -= mayhem ? r(18, 26) : r(26, 38) - d * 6) {
     const pool = ['coins', 'smash', 'smash', 'smash', 'breaker', 'pothole', 'cows', 'turbo', 'cones'];
     if (n >= 2) pool.push('smash', 'dog'); if (stage === 'monsoon') pool.push('puddle', 'puddle'); if (stage === 'shaadi') pool.push('baraat'); if (stage === 'holi') pool.push('colour', 'colour'); if (stage === 'stadium') pool.push('fans'); if (stage === 'marine') pool.push('seawave'); if (stage === 'ghat') pool.push('cows');
     if (m === 'runs') pool.push('runs', 'runs', 'runs', 'runs'); if (m === 'fun') pool.push('balloon', 'balloon', 'balloon'); if (m === 'likes') pool.push('ramp', 'heart'); if (mayhem) pool.push('smash', 'smash', 'smash', 'coins', 'cows', 'cones', 'turbo');
     let t = pk(pool); const wild = m !== 'eggs' && m !== 'sleep';
-    if (wild && lastMega - z > (mayhem ? 420 : 620)) { t = 'mega'; lastMega = z; lastRamp = z; }
+    if (mayhem && lastPump - z > 820) { t = 'pump'; lastPump = z; }
+    else if (mayhem && lastFuel - z > 150) { t = 'fuel'; lastFuel = z; }
+    else if (wild && lastMega - z > (mayhem ? 420 : 620)) { t = 'mega'; lastMega = z; lastRamp = z; }
     else if (wild && lastRamp - z > (mayhem ? 150 : 230)) { t = 'ramp'; lastRamp = z; }
     else if (n >= 2 && wild && lastJay - z > (mayhem ? 120 : 260)) { t = 'jay'; lastJay = z; }
     else if (lastPow - z > 280) { t = 'power'; lastPow = z; }
-    ev.push({ t, z, x: t === 'mega' ? -3.5 : ['cows', 'cones', 'pothole', 'puddle', 'ramp'].includes(t) ? pk(our) : t === 'smash' ? pk([-6.2, 6.2, ...LANES]) : pk(LANES), n: 1 + Math.floor(R() * 2), kind: pk(SMASH[stage]), pow: pk(['magnet', 'mega', 'shield']) });
+    ev.push({ t, z, x: t === 'mega' ? -3.5 : t === 'pump' ? LANES[0] : ['cows', 'cones', 'pothole', 'puddle', 'ramp'].includes(t) ? pk(our) : t === 'smash' ? pk([-6.2, 6.2, ...LANES]) : pk(LANES), n: 1 + Math.floor(R() * 2), kind: pk(SMASH[stage]), pow: pk(['magnet', 'mega', 'shield']) });
   }
   if (STOPS[P.id] && !mayhem) ev.push({ t: 'stop', z: Math.round(-L * 0.48), x: LANES[0] });
   const traffic = Math.round(6 + d * 5 + loop + (mayhem ? 6 : 0)), oncoming = Math.round(5 + d * 4 + loop + (mayhem ? 3 : 0));
@@ -148,7 +191,7 @@ let PEOPLE = null, COW = null, PUG = null, HORSE = null, blobs = null, crowdM = 
 // ---------------- the player's taxi ----------------
 function makeMe() {
   const V = buildCarModel(PF.car, cust()); scene.add(V.obj);
-  return { V, x: LANES[1], z: 0, y: 0, vy: 0, speed: 0, air: false, turbo: 0, stun: 0, steer: 0, brake: false, crashT: 0, spinA: 0, len: V.size.z, wide: V.size.x };
+  return { V, gas: false, x: LANES[1], z: 0, y: 0, vy: 0, speed: 0, air: false, turbo: 0, stun: 0, steer: 0, brake: false, crashT: 0, spinA: 0, len: V.size.z, wide: V.size.x };
 }
 
 // ---------------- the passenger in the back seat (a small 3D scene of its own) ----------------
@@ -190,7 +233,7 @@ function seatPassenger(P) {
   $('cabName').textContent = P.name;
 }
 function renderCab() {
-  if (!G.lv || !CAB.actor || $('hud').classList.contains('hidden')) return;
+  if (!G.lv || G.lv.mayhem || !CAB.actor || $('hud').classList.contains('hidden')) return;
   const r = cabRect(), H = innerHeight; renderer.setScissorTest(true); renderer.setScissor(r.x, H - r.top - r.h, r.w, r.h); renderer.setViewport(r.x, H - r.top - r.h, r.w, r.h);
   renderer.render(cab, cabCam); renderer.setScissorTest(false); renderer.setViewport(0, 0, innerWidth, innerHeight);
 }
@@ -224,14 +267,17 @@ const MISSIONS = {
   call: { setup(M) { M.callT = 4; M.on = false; M.slowT = 0; }, tick(M, dt) { M.callT -= dt; if (M.callT <= 0) { M.on = !M.on; M.callT = M.on ? 7 : rnd(6, 9); if (M.on) { say('Hello? Yes, Khanna here…', 'calm'); CAB.actor.play('sittalk'); cabFx('📞'); } else { say(pick(['Deal! Okay, bye.', 'Call you back.']), 'happy'); CAB.actor.play('sit'); cabFx(''); } }
       if (G.me.speed < 12) { M.slowT += dt; if (M.slowT > 3) { mood(-3 * dt); moan(M, 'sad'); } } else { M.slowT = 0; mood(0.8 * dt); } },
     goal(M) { return { t: M.on ? '📞 ON CALL — QUIET! ' + Math.ceil(M.callT) : '🤫 Next call in ' + Math.ceil(M.callT), warn: M.on }; }, honk(M) { if (M.on) { mood(-12); say('I\'M ON A CALL!', 'angry'); } }, bump(k, M) { if (M.on && k > 0.2) { mood(-8); say('The line is breaking!', 'angry'); } }, crash() { mood(-10); }, near() { } },
-  mayhem: { setup(M) { M.time = 80; M.mood = 85; }, tick(M, dt) { M.time -= dt; mood(0.5 * dt); if (M.time <= 0) arrive(true); },
-    goal(M) { const t = Math.max(0, Math.ceil(M.time)); return { t: '💥 SCORE ' + G.coins + '   ⏱ ' + t + 's', warn: t <= 10 }; }, crash(M) { mood(3); }, bump() { mood(1); }, near() { mood(2); }, air() { mood(4); say(pick(['WHEEEE!', 'Again! AGAIN!', 'We are FLYING!']), 'laugh'); }, honk() { } },
+  mayhem: { setup(M) { M.fuel = 100; M.mood = 100; M.lowT = 0; M.out = false; },
+    tick(M, dt) { const R = G.me; M.fuel = Math.max(0, M.fuel - dt * (1.0 + (R.gas ? 0.7 : 0) + (R.turbo > 0 ? 2.5 : 0)));
+      if (M.fuel < 22 && M.fuel > 0) { M.lowT -= dt; if (M.lowT <= 0) { M.lowT = 1.5; sfx('beep'); showHint('⛽ LOW FUEL! Grab red cans or stop at a PETROL PUMP!'); } }
+      if (M.fuel <= 0 && !M.out) { M.out = true; M.outT = 0; sfx('sputter'); banner('⛽ OUT OF FUEL!', 'Rolling…', 1.2); } if (M.out) { M.outT += dt; if (M.fuel > 0) M.out = false; else if (R.speed < 0.6 || M.outT > 5) arrive(true); } },
+    goal() { return { t: '💥 SCORE ' + G.coins + '   🚗 ' + G.launched + ' launched', warn: false }; } },
   fun: { setup(M) { M.honkT = 0; }, tick(M, dt) { M.honkT -= dt; mood(-1.7 * dt); if (G.M.mood < 40) moan(M, 'sad'); },
     goal(M) { return { t: '🎈 Keep Chintu happy!', warn: G.M.mood < 30 }; }, honk(M) { if (M.honkT <= 0) { M.honkT = 2.5; mood(6); react('laugh', 'happy'); if (Math.random() < 0.5) say('HONK HONK! Hehehe!', 'laugh'); } }, balloon() { mood(10); say(pick(['BALLOON!', 'Weee! Another one!', 'Red balloon!']), 'laugh'); }, bump(k) { mood(2); react('laugh', 'happy'); }, crash() { mood(-6); }, air() { mood(15); say('Again! AGAIN!', 'laugh'); }, near() { mood(2); } },
 };
 const fmtK = n => n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(Math.round(n));
 const PASSR = () => G.lv.P;
-function mood(d) { const M = G.M; if (!M || M.done) return; M.mood = clamp(M.mood + d, 0, 100); if (M.mood <= 0) fail(PASSR().lose); }
+function mood(d) { const M = G.M; if (!M || M.done || G.lv.mayhem) return; M.mood = clamp(M.mood + d, 0, 100); if (M.mood <= 0) fail(PASSR().lose); }
 function moan(M, e) { M.moanT = (M.moanT || 0) - 0.016; if (M.moanT > 0) return; M.moanT = rnd(5, 8); say(pick(PASSR().sad), e === 'sad' ? (G.M.mood < 40 ? 'angry' : 'sad') : e); }
 function like(M, n, txt) { M.likes += n; M.boredT = 0; mood(n / 60); if (txt) popText(txt, _p.set(G.me.x, 3, G.me.z - 3), '#ff7ac8', 26, 0.9); cabFx('❤️'); if (Math.random() < 0.4) say(pick(PASSR().happy), 'laugh'); }
 function breakEggs(M, n) { M.eggs = Math.max(0, M.eggs - n); CAB.eggs.forEach((e, i) => { e.visible = i < M.eggs; }); popText('CRACK! -' + n + ' 🥚', _p.set(G.me.x, 3, G.me.z - 3), '#fff4a0', 28, 0.9); sfx('crash'); say(pick(PASSR().hurt), 'scared'); cabFx('🍳'); if (M.eggs <= 0) fail('All the eggs are broken!'); }
@@ -244,7 +290,7 @@ function react(e, after) { setExpr(e, 1.6); void after; }
 let cabFxT = 0;
 function cabFx(s) { $('cabFx').textContent = s; $('cabFx').style.opacity = 1; cabFxT = 2; }
 let bubbleT = 0;
-function say(text, e, quiet) { const P = PASSR(); if (!P) return; const b = $('bubble'); $('bubbleName').textContent = P.name; $('bubbleText').textContent = text; b.classList.remove('hidden'); b.classList.remove('in'); void b.offsetWidth; b.classList.add('in'); bubbleT = 2.8; if (e) setExpr(e, 2.2); if (!quiet) sfx('talk', 0, { w: pick(['hey', 'wow', 'haha', 'hurry', 'faster', 'slow', 'nice']), f0: P.f0, fk: P.fk }); }
+function say(text, e, quiet, who) { const P = PASSR(); if (!P || (G.lv && G.lv.mayhem)) return; if (G.lv.m === 'sleep' && G.M && G.M.awake <= 0 && who !== 'P') { if (!who) return; } const b = $('bubble'); $('bubbleName').textContent = who && who !== 'P' ? who : P.name; $('bubbleText').textContent = text; b.classList.remove('hidden'); b.classList.remove('in'); void b.offsetWidth; b.classList.add('in'); bubbleT = 2.8; if (e) setExpr(e, 2.2); if (!quiet) sfx('talk', 0, { w: pick(['hey', 'wow', 'haha', 'hurry', 'faster', 'slow', 'nice']), f0: P.f0, fk: P.fk }); }
 const faceCv = document.createElement('canvas'); faceCv.width = faceCv.height = 64;
 
 
@@ -265,12 +311,14 @@ function startLevel(n, playNow, mayhem) {
   for (let i = 0; i < lv.traffic; i++) addCar(1, -40 - i * (210 / lv.traffic) - rnd(0, 15));
   for (let i = 0; i < lv.oncoming; i++) addCar(-1, -30 - i * (250 / lv.oncoming) - rnd(0, 20));
   buildDest();
-  seatPassenger(P); const w = G.walker = new Actor(PEOPLE[P.id], { tint: P.tint, skin: P.skin, hair: P.hair, expr: EXPR.happy }); w.position.set(-RW / 2 - 1.1, 0.25, -1.5); w.rotation.y = PI / 2; w.play('wave'); scene.add(w);
+  if (!mayhem) { seatPassenger(P); const w = G.walker = new Actor(PEOPLE[P.id], { tint: P.tint, skin: P.skin, hair: P.hair, expr: EXPR.happy }); w.position.set(-RW / 2 - 1.1, 0.25, -1.5); w.rotation.y = PI / 2; w.play('wave'); scene.add(w); } else G.walker = null;
   G.M = { mood: 70, expr: 'happy', done: false };
-  MISSIONS[lv.m].setup(G.M); setExpr(baseExpr(), 0);
-  G.pristine = n + (mayhem ? 'm' : ''); Object.assign(G, { t: 0, coins: 0, turbo: 0.34, tx: G.me.x, introT: 0, state: 'home', arriveT: 0, missedN: 0, result: null, combo: 0, comboT: 0, best: 0, wanted: 0, power: null, powerT: 0, fines: 0, smashed: 0, escapes: 0, launched: 0 }); makeTasks();
+  MISSIONS[lv.m].setup(G.M); if (!mayhem) setExpr(baseExpr(), 0);
+  $('hud').classList.toggle('mayhem', !!mayhem); $('moodName').textContent = mayhem ? '⛽ FUEL' : P.name.toUpperCase();
+  G.pristine = n + (mayhem ? 'm' : ''); Object.assign(G, { t: 0, coins: 0, turbo: 0.34, tx: G.me.x, introT: 0, state: 'home', arriveT: 0, missedN: 0, result: null, combo: 0, comboT: 0, best: 0, wanted: 0, power: null, powerT: 0, fines: 0, smashed: 0, escapes: 0, launched: 0, lastLaunch: -9, honks: 0 }); if (mayhem) makeGoals(); else resetDares();
   $('lvl').textContent = (mayhem ? '💥 ' : '') + S.name.toUpperCase(); $('cabFx').textContent = ''; setPower(null); updateWanted();
-  try { G.track.cullAll(); const done = warmRing(); renderer.compile(scene, cam); renderer.render(scene, cam); renderer.compile(cab, cabCam); done(); } catch (e) { /* not needed */ }
+  // shaders: ready before a ride starts; for the home screen they are prepared in the background (no frozen start)
+  try { G.track.cullAll(); const done = warmRing(); if (playNow || !renderer.compileAsync) { renderer.compile(scene, cam); renderer.render(scene, cam); if (!mayhem) renderer.compile(cab, cabCam); done(); } else renderer.compileAsync(scene, cam).then(() => { if (!mayhem) renderer.compile(cab, cabCam); }).catch(() => {}).finally(done); } catch (e) { /* not needed */ }
   if (playNow) beginRide();
 }
 function beginRide() { G.pristine = 0; G.state = 'intro'; G.introT = 0; music(G.lv.music); placeCabFrame(); }
@@ -383,22 +431,86 @@ function updatePolice(dt) {
   if (Math.random() < dt * 0.6 && !C.leaving) sfxT('siren', 1.3);
   if (C.leaving) { if (gap > 120) { scene.remove(C.V.obj); G.police = null; updateWanted(); music(G.lv.music); } return; }
   if (gap < (me.len + C.len) / 2 + 1.2 && Math.abs(C.x - me.x) < 2.4 && G.state === 'drive') {   // caught: a fine
-    const fine = 40 + G.lv.n * 5; G.fines += fine; G.wanted = 0; C.leaving = true; me.speed *= 0.3; E.shake = 0.4; vib(100); sfx('crash'); banner('🚓 CAUGHT!', 'Fine: ₹' + fine, 1.6); popText('CHALLAN ₹' + fine, _p.set(me.x, 4, me.z), '#ff6a6a', 30, 1.2); mood(-10); say(pick(['Arre bhaiya, police ka challan!', 'We got caught!', 'Shame shame!']), 'angry'); updateWanted();
-  } else if (gap > 110 || C.T > 26) { C.leaving = true; G.wanted = 0; G.escapes++; const b = 60 + G.lv.n * 4; G.coins += b; addCombo(3, 'ESCAPED!'); banner('😎 ESCAPED!', '+' + b + ' coins', 1.4); sfx('fanfare'); say(pick(['Hahaha! We lost them!', 'Bye bye police!', 'What a driver!']), 'laugh'); updateWanted(); }
+    const fine = 40 + G.lv.n * 5; G.fines += fine; G.wanted = 0; C.leaving = true; me.speed *= 0.3; E.shake = 0.4; vib(100); sfx('crash'); banner('🚓 CAUGHT!', 'Fine: 🪙' + fine, 1.6); popText('CHALLAN 🪙' + fine, _p.set(me.x, 4, me.z), '#ff6a6a', 30, 1.2); mood(-10); say(pick(['Arre bhaiya, police ka challan!', 'We got caught!', 'Shame shame!']), 'angry'); updateWanted();
+  } else if (gap > 110 || C.T > 26) { C.leaving = true; G.wanted = 0; G.escapes++; task('cop'); const b = 60 + G.lv.n * 4; G.coins += b; addCombo(3, 'ESCAPED!'); banner('😎 ESCAPED!', '+' + b + ' coins', 1.4); sfx('fanfare'); say(pick(['Hahaha! We lost them!', 'Bye bye police!', 'What a driver!']), 'laugh'); updateWanted(); }
 }
-// ---------------- bonus tasks: three random crazy jobs on every ride ----------------
-const TASKS = [
-  { k: 'smash', ico: '💥', t: n => `Smash ${n} stalls`, n: [5, 8, 12] }, { k: 'launch', ico: '🚗', t: n => `Launch ${n} cars flying`, n: [2, 3, 5], wild: 1 },
-  { k: 'bounce', ico: '🤸', t: n => `Bounce ${n} people (they're OK!)`, n: [2, 3, 5], wild: 1 }, { k: 'air', ico: '🚀', t: n => `Fly off ${n} ramps`, n: [2, 3, 5], wild: 1 },
-  { k: 'coin', ico: '🪙', t: n => `Grab ${n} coins`, n: [30, 50, 80] }, { k: 'near', ico: '😱', t: n => `${n} near misses`, n: [3, 5, 8] },
-  { k: 'cow', ico: '🐄', t: n => `Flip ${n} cows`, n: [1, 2, 3], wild: 1 }, { k: 'combo', ico: '🔥', t: n => `Reach a MASTI x${n}`, n: [5, 8, 12] }, { k: 'turbo', ico: '⚡', t: n => `Use TURBO ${n} times`, n: [2, 4, 6] }];
-function makeTasks() {
-  const wild = G.lv.m !== 'eggs' && G.lv.m !== 'sleep', tier = G.lv.mayhem ? 2 : G.lv.n < 6 ? 0 : G.lv.n < 14 ? 1 : 2;
-  const pool = TASKS.filter(t => wild || !t.wild).sort(() => Math.random() - 0.5).slice(0, 3);
-  G.tasks = pool.map(t => ({ ...t, need: t.n[tier], have: 0, pay: [60, 100, 160][tier], done: false })); drawTasks();
+// ---------------- MAYHEM goals: crash jobs, a new one as soon as one is done ----------------
+const GOALS = [
+  { k: 'launch', ico: '🚗', t: n => `Launch ${n} cars flying`, n: [2, 4, 7, 10] }, { k: 'cow', ico: '🐄', t: n => `Flip ${n} cow${n > 1 ? 's' : ''}`, n: [1, 2, 4] },
+  { k: 'bounce', ico: '🤸', t: n => `Bounce ${n} people (they're OK!)`, n: [2, 4, 6] }, { k: 'smash', ico: '💥', t: n => `Smash ${n} stalls`, n: [3, 6, 10] },
+  { k: 'air', ico: '🚀', t: n => `Fly off ${n} ramp${n > 1 ? 's' : ''}`, n: [1, 2, 4] }, { k: 'combo', ico: '🔥', t: n => `Reach MASTI x${n}`, n: [6, 12, 20], max: 1 },
+  { k: 'head', ico: '💢', t: n => `${n} head-on launch${n > 1 ? 'es' : ''}`, n: [1, 2, 3] }, { k: 'bus', ico: '🚌', t: n => `Launch ${n} bus${n > 1 ? 'es' : ''} or truck${n > 1 ? 's' : ''}`, n: [1, 2, 3] },
+  { k: 'double', ico: '⚡', t: () => 'Launch 2 cars within 2 seconds', n: [1, 2, 3] }, { k: 'spin', ico: '🌀', t: n => `Land ${n} 360° spin${n > 1 ? 's' : ''} (swipe UP in the air)`, n: [1, 2] },
+  { k: 'cop', ico: '🚓', t: () => 'Get chased by the police… and ESCAPE', n: [1] }, { k: 'near', ico: '😱', t: n => `${n} near misses`, n: [3, 6] }];
+function newGoal() {
+  const busy = G.goals.map(g => g.k), pool = GOALS.filter(g => !busy.includes(g.k)), D = pick(pool), tier = Math.min(D.n.length - 1, Math.floor(G.goalN / 3));
+  return { ...D, need: D.n[tier], have: 0, pay: 80 + G.goalN * 30, done: false, flash: 0 };
 }
-function task(k, v = 1, max) { if (!G.tasks || G.state !== 'drive') return; for (const T of G.tasks) if (T.k === k && !T.done) { T.have = max ? Math.max(T.have, v) : T.have + v; if (T.have >= T.need) { T.done = true; T.have = T.need; sfx('kaching'); banner('✅ TASK DONE!', T.t(T.need) + '  +₹' + T.pay, 1.3); } drawTasks(); } }
-function drawTasks() { const el = $('tasks'); if (el) el.innerHTML = (G.tasks || []).map(T => `<div class="${T.done ? 'ok' : ''}">${T.done ? '✅' : T.ico} ${T.t(T.need)} <b>${T.done ? '+₹' + T.pay : T.have + '/' + T.need}</b></div>`).join(''); }
+function makeGoals() { G.goals = []; G.goalN = 0; G.goalPay = 0; G.goalsDone = 0; for (let i = 0; i < 3; i++) G.goals.push(newGoal()); drawGoals(); }
+function updateGoals(dt) { let ch = false; G.goals = G.goals.map(g => { if (g.done) { g.flash -= dt; if (g.flash <= 0) { ch = true; return newGoal(); } } return g; }); if (ch) drawGoals(); }
+function drawGoals() { const el = $('tasks'); if (el) el.innerHTML = '<div class="th">💥 CRASH GOALS</div>' + G.goals.map(T => `<div class="${T.done ? 'ok' : ''}">${T.done ? '✅' : T.ico} ${T.t(T.need)} <b>${T.done ? '+' + T.pay : T.have + '/' + T.need}</b></div>`).join(''); }
+// ---------------- passenger DARES: every ride, the passenger keeps asking for something crazy ----------------
+// Each dare has a few seconds; some put a target on the road (a stall, a ramp, a cow…) or mark a car with an arrow.
+const DARES = [
+  { k: 'smash', ico: '💥', say: ['Smash that stall! I am HUNGRY!', 'Hit that cart! Free snacks for everyone!'], need: 1, time: 11, spawn: 'smash', wild: 1 },
+  { k: 'air', ico: '🚀', say: ['JUMP that ramp! Photo time!', 'Fly, bhaiya, FLY!'], need: 1, time: 11, spawn: 'ramp', wild: 1 },
+  { k: 'overtake', ico: '🏁', say: ['Overtake that slowpoke!', 'Beat that car! GO GO GO!'], need: 1, time: 12, mark: 1 },
+  { k: 'launch', ico: '🚗', say: ['Bump that car off the road! Hehe!', 'Send that car FLYING!'], need: 1, time: 12, mark: 1, wild: 1 },
+  { k: 'coin', ico: '🪙', say: ['Grab those coins for my tip!', 'Coins! Get them all!'], need: 5, time: 11, spawn: 'coins' },
+  { k: 'honk', ico: '📯', say: ['Honk 3 times for the band!', 'HONK HONK HONK! Do it!'], need: 3, time: 7, noSleep: 1, noCall: 1 },
+  { k: 'speed', ico: '⚡', say: ['Hit {v} km/h! I want to feel the WIND!', 'FASTER! {v} km/h, now!'], need: 1, time: 9, noEggs: 1 },
+  { k: 'nohit', ico: '🧘', say: ['Don\'t touch ANYTHING for 10 seconds!', 'Smooth for 10 seconds… I am drinking chai!'], need: 1, time: 10 },
+  { k: 'lane', ico: '〰️', say: ['Zig-zag! Change lanes 4 times!', 'Wiggle wiggle! 4 lane changes!'], need: 4, time: 8, noEggs: 1 },
+  { k: 'cow', ico: '🐄', say: ['A cow on the road! Make it FLY! (cartoon cow, it\'s fine)', 'That cow stole my samosa! Flip it!'], need: 1, time: 12, spawn: 'cows', wild: 1 },
+  { k: 'bounce', ico: '🤸', say: ['Bounce that guy! He owes me money!', 'Boing that uncle! Hehe!'], need: 1, time: 12, spawn: 'jay', wild: 1 },
+  { k: 'near', ico: '😱', say: ['Near miss! Scare me a little!', 'Squeeze past a car, CLOSE!'], need: 1, time: 11, noEggs: 1 },
+  { k: 'turbo', ico: '🔥', say: ['TURBO! Now now NOW!', 'Press the TURBO button!'], need: 1, time: 7, noEggs: 1 },
+  { k: 'stop', ico: '🛑', say: ['STOP! Selfie with that view!', 'Ruko ruko! Stop the car right now!'], need: 1, time: 6 },
+  { k: 'splash', ico: '💦', say: ['Splash that puddle! Soak everybody!'], need: 1, time: 11, spawn: 'puddle', wild: 1 }];
+function resetDares() { G.dare = null; G.dareT = 8; G.dareDone = 0; G.dareFail = 0; G.darePay = 0; G.lane = 1; if ($('tasks')) $('tasks').innerHTML = ''; clearDareMark(); }
+function clearDareMark() { if (G.dareMark) { scene.remove(G.dareMark); G.dareMark = null; } }
+const markGeo = new THREE.ConeGeometry(0.6, 1.2, 4); markGeo.rotateX(PI);
+function dareMark(target) { clearDareMark(); const m = G.dareMark = new THREE.Mesh(markGeo, new THREE.MeshBasicMaterial({ color: 0xff2ad8 })); m.userData.t = target; m.frustumCulled = false; scene.add(m); }
+function startDare() {
+  const R = G.me, m = G.lv.m, ahead = G.cars.filter(c => c.dir > 0 && c.fly <= 0 && c.z < R.z - 25 && c.z > R.z - 100).sort((a, b) => b.z - a.z);
+  const pool = DARES.filter(d => !(d.wild && (m === 'eggs' || m === 'sleep' || m === 'call')) && !(d.noSleep && m === 'sleep') && !(d.noCall && m === 'call') && !(d.noEggs && m === 'eggs') && !(d.mark && !ahead.length) && d.k !== G.lastDare);
+  const D = pick(pool); G.lastDare = D.k; const d = G.dare = { ...D, have: 0, left: D.time, v: Math.round(26 * carSpec().sp * 3.6 * 0.92 / 5) * 5 };
+  const lane = R.x < -3.5 ? LANES[0] : R.x < 0 ? LANES[1] : R.x < 3.5 ? LANES[2] : LANES[3], z = R.z - 70 - R.speed * 1.2;
+  if (D.spawn) { const e = { t: D.spawn, z, x: D.spawn === 'smash' ? (Math.abs(lane) > 4 ? lane : LANES[0]) : D.spawn === 'jay' ? 0 : lane, n: 1, kind: pick(SMASH[G.lv.stage]), pow: 'magnet' }; const o = spawn(e); if (D.spawn === 'jay') o.go = true; dareMark(o); d.o = o; }
+  if (D.mark) { d.car = ahead[0]; dareMark(d.car); }
+  const line = pick(D.say).replace('{v}', d.v); say(line, 'laugh', false, m === 'sleep' ? '📻 RJ Masti' : null); sfx('pop'); drawDare();
+}
+function drawDare() { const d = G.dare, el = $('tasks'); if (!el) return; el.innerHTML = d ? `<div class="dare"><b>${d.ico} DARE</b> ${d.txt || dareText(d)}<span>${d.k === 'speed' ? d.v + ' km/h' : d.need > 1 ? d.have + ' / ' + d.need : ''}</span><i style="width:${Math.max(0, d.left / d.time * 100)}%"></i></div>` : `<div class="dnext">🎯 Dares done: ${G.dareDone}</div>`; }
+function dareText(d) { return { smash: 'Smash the stall!', air: 'Jump the ramp!', overtake: 'Overtake the marked car!', launch: 'Launch the marked car!', coin: 'Grab 5 coins!', honk: 'Honk 3 times!', speed: 'Hit ' + d.v + ' km/h!', nohit: 'Touch NOTHING!', lane: 'Change lanes 4 times!', cow: 'Flip the cow!', bounce: 'Bounce the guy!', near: 'Get a near miss!', turbo: 'Use TURBO!', stop: 'STOP the car!', splash: 'Splash the puddle!' }[d.k]; }
+function updateDare(dt) {
+  const R = G.me, ln = R.x < -3.5 ? 0 : R.x < 0 ? 1 : R.x < 3.5 ? 2 : 3;
+  if (G.dareMark) { const t = G.dareMark.userData.t, tz = t.z, tx = t.V ? t.x : (t.cows ? t.x : t.t === 'jay' ? 0 : t.x); G.dareMark.position.set(tx, (t.V ? t.V.size.y : 1.6) + 2 + Math.sin(G.t * 6) * 0.3, tz); G.dareMark.rotation.y += dt * 3; if (tz > R.z + 15) clearDareMark(); }
+  const d = G.dare;
+  if (!d) { G.dareT -= dt; if (G.dareT <= 0 && !G.M.done && R.z > -G.lv.L + 260) startDare(); G.lane = ln; return; }
+  d.txt = dareText(d); d.left -= dt;
+  if (d.k === 'lane' && ln !== G.lane) { d.have++; sfx('pop'); }
+  if (d.k === 'speed' && R.speed * 3.6 >= d.v) d.have = 1;
+  if (d.k === 'stop' && R.speed < 0.8) d.have = 1;
+  if (d.k === 'overtake' && d.car && (R.z < d.car.z - d.car.len / 2 - 1 || d.car.fly > 0)) d.have = 1;
+  G.lane = ln;
+  if (d.k === 'nohit' ? d.left <= 0 && !d.broke : d.have >= d.need) dareDone(true);
+  else if (d.left <= 0 || d.broke) dareDone(false);
+  else if ((G.hudD = (G.hudD || 0) + 1) % 4 === 0) drawDare();
+}
+function dareDone(ok) {
+  const d = G.dare; G.dare = null; G.dareT = rnd(9, 14); clearDareMark(); const wh = G.lv.m === 'sleep' ? '📻 RJ Masti' : null;
+  if (ok) { const pay = 50 + G.lv.n * 3; G.dareDone++; G.darePay += pay; G.coins += pay; mood(12); sfx('kaching'); sfx('gateGood', 0.1); banner('🎯 DARE DONE!', '+' + pay + ' 🪙', 1.2); puff(_p.set(G.me.x, 4, G.me.z - 4), 22, 0xffffff, { star: true, add: true, cols: [0xff4f6a, 0xffd23f, 0x3fcf6e, 0x2f8cf0], speed: 6, life: 1.1, size: 0.45 }); say(pick(['YESSS! Legend!', 'You are CRAZY! I love it!', 'Hahaha! Best driver EVER!', 'Woohoo! Again!']), 'laugh', false, wh); }
+  else { G.dareFail++; mood(-6); sfx('gateBad'); say(pick(['Arre… chicken!', 'Booooring!', 'Next time, OK?', 'Tch. So close!']), 'sad', false, wh); }
+  drawDare();
+}
+// every good (or crazy) thing the player does is counted here, for the goals or the dare
+function task(k, v = 1, max) {
+  if (G.state !== 'drive' || !G.lv) return;
+  if (G.lv.mayhem) { for (const T of G.goals) if (T.k === k && !T.done) { T.have = max || T.max ? Math.max(T.have, v) : T.have + v; if (T.have >= T.need) { T.done = true; T.have = T.need; T.flash = 1.4; G.goalN++; G.goalsDone++; G.goalPay += T.pay; G.coins += T.pay; sfx('kaching'); banner('✅ GOAL!', T.t(T.need) + '  +' + T.pay + ' 🪙', 1.2); } drawGoals(); } return; }
+  const d = G.dare; if (!d) return;
+  if (d.k === 'nohit' && ['smash', 'launch', 'cow', 'bounce', 'hit'].includes(k)) { d.broke = true; return; }
+  if (d.k === k && !max) { d.have += v; drawDare(); }
+}
 // ---------------- MASTI combos ----------------
 function addCombo(k, label) {
   G.combo += k; G.comboT = 3.2; G.best = Math.max(G.best, G.combo); task('combo', G.combo, true); const el = $('combo'); el.innerHTML = `MASTI <b>x${G.combo}</b>${label ? `<small>${label}</small>` : ''}`; el.classList.remove('hidden'); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
@@ -465,6 +577,13 @@ function spawn(e) {
   else if (e.t === 'ramp') { const w = 4, r = new THREE.Group(); const rp = mesh(new THREE.BoxGeometry(w, 0.3, 6), flat(0xff8a3a), 0, 0.75, 0, r); rp.rotation.x = 0.26; for (let i = 0; i < 4; i++) mesh(new THREE.BoxGeometry(w + 0.05, 0.05, 0.3), flat(0xffffff), 0, 0.2 + i * 0.38, 2.5 - i * 1.4, r).rotation.x = 0.26; for (const s of [-1, 1]) mesh(new THREE.BoxGeometry(0.2, 1.7, 6), flat(0x7a4a20), s * w / 2, 0.7, 0, r).rotation.x = 0.26; r.position.set(e.x, 0, 0); g.add(oneMesh(r)); o.w = w; o.items = []; for (let i = 0; i < 8; i++) o.items.push(coinAt(e.x, 3.5 + Math.sin(i / 7 * PI) * 3.5, -6 - i * 3, g)); }
   else if (e.t === 'mega') { const w = 7, r = new THREE.Group(), ang = 0.36; const rp = mesh(new THREE.BoxGeometry(w, 0.35, 11), flat(0xff4fa8), 0, 1.95, 0, r); rp.rotation.x = ang; for (let i = 0; i < 7; i++) mesh(new THREE.BoxGeometry(w + 0.05, 0.06, 0.45), flat(i % 2 ? 0xffe04a : 0xffffff), 0, 0.25 + i * 0.6, 4.6 - i * 1.55, r).rotation.x = ang; for (const sx of [-1, 1]) { mesh(new THREE.BoxGeometry(0.3, 4, 11), flat(0x3a0a4a), sx * w / 2, 1.6, 0, r).rotation.x = ang; mesh(new THREE.CylinderGeometry(0.06, 0.06, 3, 6), flat(0xdddddd), sx * (w / 2 + 0.3), 5.2, -4.8, r); mesh(new THREE.BoxGeometry(0.05, 0.8, 1.2), flat(sx < 0 ? 0xff3a3a : 0x2ae8ff), sx * (w / 2 + 0.3), 6.2, -4.3, r); }
     r.position.set(e.x, 0, 0); g.add(oneMesh(r)); const s = billboard('MEGA JUMP!', '#ff4fa8', '#3a0a4a'); s.scale.setScalar(0.55); s.position.set(-RW / 2 - 3, 0, 18); s.rotation.y = PI / 2; g.add(s); o.w = w; o.items = []; for (let i = 0; i < 14; i++) o.items.push(coinAt(e.x + Math.sin(i * 0.7) * 1.5, 6 + Math.sin(i / 13 * PI) * 7, -8 - i * 3.2, g)); }
+  else if (e.t === 'fuel') { const b = new THREE.Group(); mesh(new THREE.BoxGeometry(0.55, 0.7, 0.3), flat(0xe8202a), 0, 0, 0, b); mesh(new THREE.BoxGeometry(0.12, 0.22, 0.12), flat(0x1a1a1a), 0.15, 0.45, 0, b); mesh(new THREE.BoxGeometry(0.3, 0.06, 0.08), flat(0x1a1a1a), -0.08, 0.38, 0, b); const c = oneMesh(b); c.position.set(e.x, 1.1, 0); g.add(c); const halo = new THREE.Mesh(new THREE.CircleGeometry(0.75, 20), new THREE.MeshBasicMaterial({ map: dotTex, color: 0xffd23f, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); halo.position.set(e.x, 1.1, -0.2); g.add(halo); o.items = [c, halo]; }
+  else if (e.t === 'pump') {   // a petrol pump on our side of the road: drive into the bay SLOWLY to fill up
+    const st = new THREE.Group(), cz = 0; mesh(new THREE.BoxGeometry(6.2, 0.35, 16), flat(0xf4f4f4), -RW / 2 - 0.6, 5.2, cz, st); mesh(new THREE.BoxGeometry(6.3, 0.5, 16.1), flat(0xe8202a), -RW / 2 - 0.6, 4.85, cz, st);
+    for (const z of [-6.5, 6.5]) for (const x of [-RW / 2 - 3.2, -RW / 2 + 1.8]) mesh(new THREE.BoxGeometry(0.35, 5, 0.35), flat(0xf4f4f4), x, 2.5, cz + z, st);
+    for (const z of [-3, 3]) { mesh(new THREE.BoxGeometry(0.7, 1.7, 0.5), flat(0xe8202a), -RW / 2 - 1.6, 0.85, cz + z, st); mesh(new THREE.BoxGeometry(0.55, 0.4, 0.52), flat(0x1a1a1a), -RW / 2 - 1.6, 1.3, cz + z, st); mesh(new THREE.BoxGeometry(0.4, 0.25, 0.53), flat(0x7affb0), -RW / 2 - 1.6, 1.32, cz + z, st); }
+    g.add(oneMesh(st)); const sg = billboard('⛽ MASTI PETROL', '#e8202a', '#1a1a1a'); sg.scale.setScalar(0.55); sg.position.set(-RW / 2 - 5, 0, cz + 10); sg.rotation.y = PI / 2; g.add(sg);
+    const zone = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 15), new THREE.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0.35, depthWrite: false })); zone.rotation.x = -PI / 2; zone.position.set(LANES[0], 0.07, cz); g.add(zone); o.zone = zone; o.x = LANES[0]; }
   else if (e.t === 'jay') { o.people = []; const k = 2 + Math.floor(Math.random() * 2); for (let i = 0; i < k; i++) o.people.push({ x: -RW / 2 - 1 - i * 1.3, dz: rnd(-1.5, 1.5), f: i % 2, t: rnd(0, 3), sp: rnd(1.6, 2.3), tint: pick([0xd83a2a, 0x2a8ad8, 0xffc21a, 0x3fcf6e, 0xe84a9a, 0x8a5ad8]), skin: pick([0xc68642, 0xe0ac69, 0x8d5524]), hair: pick([0x1a1210, 0x3a2010, 0xd8d8d8]) }); o.go = false; }
   else if (e.t === 'runs') { o.k = Math.random() < 0.4 ? 6 : 4; const s = new THREE.Mesh(new THREE.CircleGeometry(1.1, 24), new THREE.MeshBasicMaterial({ map: RUNT[o.k], transparent: true, side: THREE.DoubleSide })); s.position.set(e.x, 1.8, 0); g.add(s); o.items = [s]; }
   else if (e.t === 'balloon' || e.t === 'heart') { o.items = []; for (let i = 0; i < 3; i++) { const b = new THREE.Group(); if (e.t === 'balloon') { mesh(new THREE.SphereGeometry(0.5, 14, 10), flat(pick([0xff4f6a, 0x3fcf6e, 0x2f8cf0, 0xffd23f, 0xe84aff])), 0, 0, 0, b).scale.y = 1.2; } else { const hm = flat(0xff3a7a); mesh(new THREE.SphereGeometry(0.3, 10, 8), hm, -0.2, 0.1, 0, b); mesh(new THREE.SphereGeometry(0.3, 10, 8), hm, 0.2, 0.1, 0, b); const c = mesh(new THREE.ConeGeometry(0.42, 0.6, 12), hm, 0, -0.25, 0, b); c.rotation.x = PI; } const bb = oneMesh(b); bb.position.set(e.x + (i - 1) * (e.t === 'heart' ? 0 : 0.9), 2, -i * (e.t === 'heart' ? 5 : 0.6)); g.add(bb); o.items.push(bb); } }
@@ -498,8 +617,10 @@ function updateMe(dt) {
   if (R.turbo > 0) { R.turbo -= dt; top += 13 * Math.min(1.25, cs.sp); }
   if (R.stun > 0) { R.stun -= dt; top *= 0.4; }
   if (!driving) top = 0;
-  const brake = driving && R.brake;
-  if (brake) R.speed = Math.max(0, R.speed - 20 * dt); else R.speed = damp(R.speed, top, R.turbo > 0 ? 2.6 : R.speed < top ? 0.9 * cs.acc : 2.2, dt);
+  const brake = driving && R.brake, gas = driving && R.gas && !(G.M && G.M.out);
+  if (brake) R.speed = Math.max(0, R.speed - 22 * dt);
+  else if (gas || R.turbo > 0) R.speed = damp(R.speed, top, R.turbo > 0 ? 2.6 : R.speed < top ? 1.0 * cs.acc : 2.2, dt);
+  else R.speed = Math.max(0, R.speed - (R.speed > top ? 6 : 2.4 + R.speed * 0.06) * dt);   // off the gas: the car rolls and slows down
   if (G.state === 'arrive' || G.state === 'fail') R.speed = Math.max(0, R.speed - 14 * dt);
   const pz = R.z; R.z -= R.speed * dt;
   const px = R.x; G.tx = clamp(G.tx, -HALF, HALF); R.x = damp(R.x, G.tx, R.speed > 2 ? 7 * cs.grip : 2, dt); R.x = clamp(R.x, -HALF, HALF);
@@ -519,7 +640,7 @@ function updateMe(dt) {
 }
 function land(R) {
   R.y = 0; R.vy = 0; R.air = false; puff(_p.set(R.x, 0.3, R.z), 6, 0xd8d0c0, { size: 0.8, speed: 2, life: 0.5 }); sfx('thud'); E.shake = 0.3; vib(30);
-  if (R.spinA > 0) { const ok = R.spinA >= PI * 2 - 0.01; R.spinA = 0; if (ok) { addCombo(2, '360° SPIN!'); G.coins += 10; popText('360° SPIN! +10', _p.set(R.x, 3.5, R.z), '#ffe066', 30, 1); sfx('gateGood'); } }
+  if (R.spinA > 0) { const ok = R.spinA >= PI * 2 - 0.01; R.spinA = 0; if (ok) { task('spin'); addCombo(2, '360° SPIN!'); G.coins += 10; popText('360° SPIN! +10', _p.set(R.x, 3.5, R.z), '#ffe066', 30, 1); sfx('gateGood'); } }
   bumpPassenger(0.9 * carSpec().soft, 'land');
 }
 function stunt() { const R = G.me; if (!R.air || R.spinA > 0 || R.y < 1.2) return; R.spinA = 0.01; sfx('swoosh'); }
@@ -537,7 +658,7 @@ function useTurbo() {
   const H = MISSIONS[G.lv.m]; if (H.turbo) H.turbo(G.M);
 }
 function honk() {
-  if (G.state !== 'drive' && G.state !== 'intro') return; const h = HORNS.find(q => q.k === PF.horn) || HORNS[0]; sfxT('horn', 0.25, 0, h.k); vib(15);
+  if (G.state !== 'drive' && G.state !== 'intro') return; hornDown(); vib(15); if (G.state === 'drive') { G.honks++; task('honk'); }
   $('hornB').classList.remove('ready'); void $('hornB').offsetWidth; $('hornB').classList.add('ready'); setTimeout(() => $('hornB').classList.remove('ready'), 250);
   if (G.state !== 'drive') return;
   const R = G.me;
@@ -552,19 +673,24 @@ function interact(dt) {
     const dz = R.z - o.z; if (dz > 12 || dz < -45) continue;
     if (o.items && (o.t === 'coins' || o.t === 'ramp' || o.t === 'mega')) for (const c of o.items) { if (!c.visible) continue; const cz = o.z + c.position.z; if (mag && Math.abs(cz - R.z) < 12 && Math.abs(c.position.x - R.x) < 9) { c.position.x = damp(c.position.x, R.x, 6, dt); c.position.z = damp(c.position.z, R.z - o.z, 6, dt); c.position.y = damp(c.position.y, R.y + 1, 6, dt); } if (Math.abs(cz - R.z) < 1.6 && Math.abs(c.position.x - R.x) < 1.6 && Math.abs(c.position.y - R.y - 0.8) < 1.8) { c.visible = false; G.coins++; sfxT('coin', 0.03); G.turbo = Math.min(1, G.turbo + 0.02); task('coin'); } }
     if (o.t === 'turbo') for (const b of o.items) { if (b.visible && Math.abs(o.z - R.z) < 1.8 && Math.abs(b.position.x - R.x) < 1.7) { b.visible = false; G.turbo = Math.min(1, G.turbo + 0.34); sfx('kaching'); popText('+TURBO', _p.set(R.x, 2.5, R.z), '#7ae8ff', 26, 0.7); } }
+    if (o.t === 'fuel' && o.items[0].visible && Math.abs(dz) < 1.8 && Math.abs(o.x - R.x) < 1.8) { o.items[0].visible = o.items[1].visible = false; G.M.fuel = Math.min(100, G.M.fuel + 18); G.M.out = false; sfx('glug'); popText('+⛽ FUEL', _p.set(R.x, 3, R.z), '#ffd23f', 28, 0.8); puff(_p.set(R.x, 1.5, R.z), 8, 0xffd23f, { star: true, add: true, speed: 3 }); }
+    if (o.t === 'pump' && Math.abs(dz) < 7.5 && R.x < -3.2) {
+      if (R.speed < 9) { if (G.M.fuel < 100) { G.M.fuel = Math.min(100, G.M.fuel + 45 * dt); G.M.out = false; sfxT('glug', 0.35); showHint('⛽ FILLING… ' + Math.round(G.M.fuel) + '%'); if (G.M.fuel >= 100 && !o.full) { o.full = true; sfx('kaching'); G.coins += 10; banner('⛽ FULL TANK!', 'Now go crash something!', 1.2); } } }
+      else if (G.M.fuel < 95 && !o.told) { o.told = true; showHint('🐢 SLOW DOWN in the yellow bay to fill up!'); }
+    }
     if (o.t === 'power' && o.items[0].visible && Math.abs(dz) < 1.8 && Math.abs(o.x - R.x) < 1.9) { o.items[0].visible = false; gotPower(o.pow); }
     if (o.t === 'runs' && o.items[0].visible && Math.abs(dz) < 1.6 && Math.abs(o.x - R.x) < 1.8) { o.items[0].visible = false; sfx('gateGood'); popText(o.k === 6 ? 'SIXER! +6' : 'FOUR! +4', _p.set(R.x, 3, R.z), o.k === 6 ? '#ffb03a' : '#7ac8ff', 32, 1); H.runs && H.runs(M, o.k); addCombo(1); puff(_p.set(o.x, 2, o.z), 12, 0xffffff, { star: true, add: true, cols: [0xffd23f, 0xff7a1a, 0x2a8ad8], speed: 4 }); }
     if ((o.t === 'balloon' || o.t === 'heart') && o.items) for (const b of o.items) { const bz = o.z + b.position.z; if (b.visible && Math.abs(bz - R.z) < 1.6 && Math.abs(b.position.x - R.x) < 1.6) { b.visible = false; sfx(o.t === 'balloon' ? 'pop' : 'gateGood'); puff(_p.set(b.position.x, 2, bz), 8, o.t === 'balloon' ? 0xffd23f : 0xff3a7a, { star: true, add: true, speed: 3 }); if (o.t === 'balloon' && H.balloon) H.balloon(M); if (o.t === 'heart' && H.heart) H.heart(M); } }
     if ((o.t === 'ramp' || o.t === 'mega') && !R.air && dz <= (o.t === 'mega' ? 1.5 : 0.5) && dz > -0.8 && Math.abs(R.x - o.x) < o.w / 2) { const mg = o.t === 'mega'; R.air = true; R.vy = mg ? 15 + R.speed * 0.12 : 9 + R.speed * 0.13; sfx('whoosh'); if (mg) { sfx('wheee'); sfx('crowd', 0.2); } banner(mg ? '🚀 MEGA JUMP!' : '🚀 JUMP!', 'Swipe UP to SPIN!', mg ? 1.4 : 0.9); E.slow = mg ? 0.45 : 0.65; setTimeout(() => { E.slow = 1; }, mg ? 1300 : 650); addCombo(mg ? 3 : 1, mg ? 'MEGA AIR!' : 'BIG AIR'); task('air'); if (mg) G.coins += 15; if (H.air) H.air(M); else if (G.lv.m !== 'sleep') say(pick(['AAAAH!', 'We are FLYING!', 'Wheee!', 'Bhaiya, this is a TAXI not a plane!']), 'scared'); }
     if (o.t === 'stop' && o.state === 'wait') {
-      if (Math.abs(dz) < 7 && R.x < -2.5 && R.speed < 3) { o.state = 'done'; mood(22); G.coins += 40; addCombo(2, 'GOOD STOP'); sfx('kaching'); popText('+₹40 TIP · 😍', _p.set(R.x, 3.5, R.z), '#ff9ad8', 30, 1.1); say(pick(['Wah! Thank you!', 'Perfect stop!', 'You are the best driver!']), 'laugh'); o.zone.visible = false; }
+      if (Math.abs(dz) < 7 && R.x < -2.5 && R.speed < 3) { o.state = 'done'; mood(22); G.coins += 40; addCombo(2, 'GOOD STOP'); sfx('kaching'); popText('+🪙40 TIP · 😍', _p.set(R.x, 3.5, R.z), '#ff9ad8', 30, 1.1); say(pick(['Wah! Thank you!', 'Perfect stop!', 'You are the best driver!']), 'laugh'); o.zone.visible = false; }
       else if (dz > -60 && dz < -20 && !o.told) { o.told = true; say(STOPS[G.lv.P.id][1], 'happy'); showHint('🛑 STOP in the PINK zone for a tip!'); }
       else if (R.z < o.z - 9) { o.state = 'missed'; mood(-8); say(pick(['Arre! You passed it!', 'Never mind…', 'Hmph.']), 'sad'); o.zone.visible = false; }
     }
     if (R.air && R.y > 1) continue;
     if (o.t === 'breaker' && !o.hit.has(R) && dz < 0.6 && dz > -0.8) { o.hit.add(R); const k = clamp((R.speed - 10) / 10, 0, 1.4) * carSpec().soft; if (k > 0.05) { R.bumpY = 0.25 + k * 0.4; E.shake = 0.2 + k * 0.3; sfx('thud'); vib(40); popText(k > 0.6 ? 'BUMP!! 😵' : 'BUMP!', _p.set(R.x, 3, R.z), '#ffd0a0', 28, 0.8); bumpPassenger(k, 'breaker'); } else { popText('SMOOTH! 👌', _p.set(R.x, 3, R.z), '#a0ffb0', 24, 0.8); if (H.smooth) H.smooth(M); } }
     if (o.t === 'pothole' && !o.hit.has(R) && Math.abs(dz) < 1 && Math.abs(R.x - o.x) < 1.4) { o.hit.add(R); const k = clamp(R.speed / 22, 0.15, 1.2) * carSpec().soft; R.bumpY = 0.2 + k * 0.3; E.shake = 0.3; sfx('thud'); vib(50); popText('POTHOLE! 🕳️', _p.set(R.x, 3, R.z), '#ffd0a0', 26, 0.8); bumpPassenger(k, 'pothole'); }
-    if (o.t === 'puddle' && !o.hit.has(R) && Math.abs(dz) < 2.5 && Math.abs(R.x - o.x) < 2.4) { o.hit.add(R); for (let i = 0; i < 3; i++) puff(_p.set(R.x + (i - 1) * 1.4, 0.5, R.z), 14, 0xc8dcf0, { size: 0.9, speed: 6, life: 0.9, grav: 12 }); sfx('bigSplash'); popText('SPLAAASH! 💦', _p.set(R.x, 3, R.z), '#8ae8ff', 30, 0.9); addCombo(1, 'SPLASH'); R.speed *= 0.85; if (Math.random() < 0.5) say(pick(['Hahaha! Everyone is wet!', 'My shoes!', 'Splash!']), 'laugh'); }
+    if (o.t === 'puddle' && !o.hit.has(R) && Math.abs(dz) < 2.5 && Math.abs(R.x - o.x) < 2.4) { o.hit.add(R); for (let i = 0; i < 3; i++) puff(_p.set(R.x + (i - 1) * 1.4, 0.5, R.z), 14, 0xc8dcf0, { size: 0.9, speed: 6, life: 0.9, grav: 12 }); task('splash'); sfx('bigSplash'); popText('SPLAAASH! 💦', _p.set(R.x, 3, R.z), '#8ae8ff', 30, 0.9); addCombo(1, 'SPLASH'); R.speed *= 0.85; if (Math.random() < 0.5) say(pick(['Hahaha! Everyone is wet!', 'My shoes!', 'Splash!']), 'laugh'); }
     if (o.t === 'smash' && !o.hit.has(R) && Math.abs(dz) < 2 && Math.abs(R.x - o.x) < 1.9) smash(o, R);
     if (o.t === 'jay' && o.go) for (const p of o.people) if (!p.fly && !(p.down > 0) && Math.abs(p.x - R.x) < 1.4 && Math.abs(o.z - p.dz - R.z) < 1.8 && R.speed > 4) { p.fly = { vx: (p.x < R.x ? -1 : 1) * rnd(2, 5), vz: -R.speed * 0.7, vy: 9 + R.speed * 0.18, y: 0.3, ry: 0, spin: rnd(8, 14) }; R.speed *= 0.97; G.coins += 3; sfx('boing'); scream(); E.shake = 0.25; vib(40); popText(pick(['BOING! 🤸', 'YEEET!', 'SORRY UNCLE!', 'WHEEE!']), _p.set(p.x, 3.4, R.z), '#ffe066', 28, 0.9); addCombo(1, 'BOUNCE!'); task('bounce'); addWanted(0.25, 'people'); crashReact('people'); }
     if ((o.t === 'baraat' || o.t === 'fans') && o.cross && !o.scared && dz < 3 && dz > -2 && R.speed > 6) { o.scared = true; o.people.forEach(p => { p.jump = 1; }); R.speed *= 0.92; mood(-3); addWanted(0.3); task('bounce', 3); sfx('boing'); scream(); addCombo(2, 'BARAAT BOUNCE!'); popText(o.t === 'baraat' ? 'ARRE! THE BARAAT!' : 'WATCH OUT!', _p.set(R.x, 3.5, R.z), '#ff9a9a', 26, 0.9); sfx('talk', 0, { w: 'aaah', f0: 220 }); say(pick(['Careful!! People!', 'Bhaiya, BRAKE!']), 'scared'); }
@@ -585,7 +711,7 @@ function interact(dt) {
       const sx = R.x >= c.x ? 1 : -1, head = c.dir < 0, rel = head ? R.speed + c.cur : R.speed - c.cur, side = ox < oz * 0.5;
       if (G.power === 'shield' || (!side && dz < 0 && rel > 4)) { launchCar(c, R, head, rel); continue; }
       if (side) { R.x += sx * ox; G.tx = R.x + sx * 0.6; c.x -= sx * 0.25; } else if (dz < 0) { R.z = c.z + lenZ; R.speed = Math.min(R.speed, c.cur); } else { R.z = c.z - lenZ; }
-      if (R.crashT <= 0) { R.crashT = 0.6; c.hitT = 1; sfx(side ? 'scrape' : 'bonk'); E.shake = 0.15; for (let i = 0; i < 2; i++) puff(_p.set((R.x + c.x) / 2, 0.8, R.z), 6, 0xffe06a, { add: true, star: true, size: 0.25, speed: 5, life: 0.35, cols: [0xffe06a, 0xff9a2a] }); popText(side ? pick(['SCRAPE!', 'SKRRRT!']) : 'TAP!', _p.set(R.x, 3, R.z), '#ffd0a0', 22, 0.6); bumpPassenger(0.15, 'tap'); }
+      if (R.crashT <= 0) { R.crashT = 0.6; c.hitT = 1; task('hit'); sfx(side ? 'scrape' : 'bonk'); E.shake = 0.15; for (let i = 0; i < 2; i++) puff(_p.set((R.x + c.x) / 2, 0.8, R.z), 6, 0xffe06a, { add: true, star: true, size: 0.25, speed: 5, life: 0.35, cols: [0xffe06a, 0xff9a2a] }); popText(side ? pick(['SCRAPE!', 'SKRRRT!']) : 'TAP!', _p.set(R.x, 3, R.z), '#ffd0a0', 22, 0.6); bumpPassenger(0.15, 'tap'); }
     }
     if (!c.nm && Math.abs(dz) < 1 && dx >= wx && dx < wx + 1.0 && R.speed > 14) { c.nm = true; G.turbo = Math.min(1, G.turbo + 0.12); sfx('swoosh'); popText(c.dir < 0 ? 'CLOSE CALL! 😱' : 'NEAR MISS!', _p.set(R.x, 3, R.z), '#ffe066', 26, 0.8); addCombo(c.dir < 0 ? 2 : 1); task('near'); const H2 = MISSIONS[G.lv.m]; if (H2.near) H2.near(G.M); }
     if (Math.abs(dz) > 8) c.nm = false;
@@ -595,6 +721,7 @@ function interact(dt) {
 // a car we hit goes flying (we keep most of our speed: it is a cartoon!)
 function launchCar(c, R, head, rel) {
   const cs = carSpec(), hard = (cs.crash || 1) * (cust().b ? 1.35 : 1) * (G.power === 'shield' ? 1.2 : 1), sx = c.x < R.x ? -1 : c.x > R.x ? 1 : pick([-1, 1]);
+  if (G.t - G.lastLaunch < 2) task('double'); G.lastLaunch = G.t; if (head) task('head'); if (c.type === 'bus' || c.type === 'truck') task('bus');
   c.fly = 4; c.vy = 7 + Math.min(9, Math.abs(rel) * 0.35) * hard; c.vx = sx * rnd(3, 6); c.vz = -R.speed * 1.12 - 5; c.rz = -sx * rnd(4, 8); c.rx = rnd(-3, 3); c.y = 0.1; c.cur = 0; c.bounces = 0;
   const keep = G.power === 'shield' ? 1 : head ? 0.78 : 0.88; R.speed *= Math.min(0.99, keep + (hard - 1) * 0.12); R.crashT = 0.4;
   E.shake = head ? 0.65 : 0.45; vib(head ? 120 : 70); G.launched++; G.coins += head ? 8 : 5; task('launch');
@@ -630,6 +757,8 @@ function updateObjs(dt) {
     const dz = o.z - me.z; o.obj.visible = dz < 30 && dz > -230; if (!o.obj.visible) continue;
     if (o.items && (o.t === 'coins' || o.t === 'ramp' || o.t === 'mega')) for (const c of o.items) if (c.visible && nC < 160) { _cq.setFromAxisAngle(_Y, G.t * 4 + c.position.x); coinIM.setMatrixAt(nC++, _cm.compose(_cp.set(c.position.x, c.position.y, o.z + c.position.z), _cq, _cs)); }
     if (o.t === 'turbo') for (const b of o.items) { b.rotation.y += dt * 3; b.position.y = 1 + Math.sin(G.t * 4) * 0.2; }
+    if (o.t === 'fuel' && o.items[0].visible) { o.items[0].rotation.y += dt * 2.5; o.items[0].position.y = 1.1 + Math.sin(G.t * 3) * 0.15; o.items[1].lookAt(cam.position.x, 1.1, cam.position.z - o.z); }
+    if (o.t === 'pump') o.zone.material.opacity = 0.25 + Math.sin(G.t * 5) * 0.12;
     if (o.t === 'power') { o.items[0].rotation.y += dt * 2.5; o.items[0].position.y = 1.6 + Math.sin(G.t * 3) * 0.25; }
     if (o.t === 'runs') o.items[0].rotation.y = Math.sin(G.t * 2) * 0.4;
     if (o.t === 'stop' && o.zone.visible) o.zone.material.opacity = 0.3 + Math.sin(G.t * 6) * 0.15;
@@ -676,13 +805,14 @@ function update(dt) {
   G.track.update(dt, G.t); G.track.cull(G.me.z);
   if (G.state === 'intro') intro(dt);
   updateMe(dt); updateTraffic(dt); updateThief(dt); updatePolice(dt); updateObjs(dt); updatePeople(dt);
-  if (G.state === 'drive') { interact(dt); MISSIONS[G.lv.m].tick(G.M, dt); checkArrive(dt); Engine.set(G.me.speed / 30, false, PF.set.sound ? 0.07 : 0); G.wanted = Math.max(0, G.wanted - dt * 0.025); if ((G.t * 2 | 0) % 4 === 0) updateWanted(); }
+  if (G.state === 'drive') { interact(dt); MISSIONS[G.lv.m].tick(G.M, dt); checkArrive(dt); Engine.set(G.me.speed / 30, !!G.me.gas, PF.set.sound ? 0.07 : 0); G.wanted = Math.max(0, G.wanted - dt * 0.025); if ((G.t * 2 | 0) % 4 === 0) updateWanted(); }
   updateCombo(dt); if (G.powerT > 0) { G.powerT -= dt; if (G.powerT <= 0) setPower(null); }
   if (G.walker && G.walker.visible) { G.walker.update(dt); walkerMove(dt); }
   if (faceT > 0) { faceT -= dt; if (faceT <= 0) setExpr(baseExpr(), 0); } else if (G.M && G.M.expr !== baseExpr() && G.state === 'drive') setExpr(baseExpr(), 0);
   if (bubbleT > 0) { bubbleT -= dt; if (bubbleT <= 0) $('bubble').classList.add('hidden'); }
   if (hintT > 0) { hintT -= dt; if (hintT <= 0) $('hint').classList.add('hidden'); }
   if (cabFxT > 0) { cabFxT -= dt; if (cabFxT <= 0) $('cabFx').style.opacity = 0; }
+  if (G.state === 'arrive' && G.lv.mayhem) G.me.gas = false;
   if (G.arrow) { G.arrow.position.y = 4 + Math.sin(G.t * 4) * 0.4; G.arrow.rotation.y += dt * 2; G.zone.material.opacity = 0.3 + Math.sin(G.t * 5) * 0.12; }
   // the weather and the life of each place
   const S = G.lv.S, me = G.me;
@@ -691,18 +821,20 @@ function update(dt) {
   if (S.holi && Math.random() < dt * 1.2) puff(_p.set(pick([-1, 1]) * rnd(8, 12), rnd(1, 3), me.z - rnd(20, 80)), 10, 0xffffff, { cols: SMASHC.colour, size: 1.6, speed: 2, life: 1.6, grav: -0.3, grow: 2 });
   if (S.night && Math.random() < dt * 0.7) { puff(_p.set(rnd(-30, 30), rnd(25, 40), me.z - rnd(60, 140)), 24, 0xffffff, { star: true, add: true, cols: [0xff4fa8, 0x4fe8ff, 0xffe04f, 0x8aff4f], speed: 8, life: 1.3, size: 0.8, grav: 3 }); if (Math.random() < 0.3) sfxT('firework', 0.6); }
   if (S.fans && Math.random() < dt * 0.15 && G.state === 'drive') sfxT('crowd', 3);
-  updateCab(dt); updateHud(dt);
+  if (!G.lv.mayhem) updateCab(dt); updateHud(dt); if (G.state === 'drive') { if (G.lv.mayhem) updateGoals(dt); else updateDare(dt); }
   if (G.state === 'arrive') { G.arriveT += dt; if (G.arriveT > 3.6 && !G.resultsShown) { G.resultsShown = true; results(); } }
 }
 
 // ---------------- the start of a ride: the passenger walks to the taxi and gets in ----------------
 function intro(dt) {
   G.introT += dt; const t = G.introT, P = G.lv.P, w = G.walker;
+  if (G.lv.mayhem) { if (!G.cardShown) { G.cardShown = true; banner('💥 MAYHEM!', 'Crash everything! Grab ⛽ fuel to keep going', 2); } const c = 3 - Math.floor((t - 1.4) / 0.6); if (t > 1.4 && c >= 1 && G.cd !== c) { G.cd = c; banner(String(c), '', 0.5); sfx('beep'); } if (t > 3.2) { G.cd = 0; startDrive(); } return; }
   if (t > 1.2 && w.clip === 'wave') { w.play('walk'); sfx('talk', 0, { w: 'taxi', f0: P.f0, fk: P.fk }); }
   if (t > 2.6 && w.visible) { w.visible = false; sfx('thud'); say(P.intro, 'happy'); setExpr('happy', 2); }
   if (t > 3.1 && !G.cardShown) { G.cardShown = true; if (G.lv.mayhem) banner('💥 MAYHEM!', 'Smash, launch, flip — 80 seconds of chaos!', 3); else banner(P.name.toUpperCase(), P.task, 3); }
-  if (t > 5.4) { G.state = 'drive'; Engine.start(); banner('GO!', '', 0.7); sfx('go'); vib(30); if (G.lv.m === 'sleep') setExpr('calm', 99); if (G.lv.m === 'chase') say('Follow that THIEF car!', 'angry'); }
+  if (t > 5.4) { startDrive(); if (G.lv.m === 'sleep') setExpr('calm', 99); if (G.lv.m === 'chase') say('Follow that THIEF car!', 'angry'); }
 }
+function startDrive() { G.state = 'drive'; Engine.start(); banner('GO!', 'Hold the GAS pedal ▶', 0.9); sfx('go'); vib(30); $('gasB').classList.add('ready'); }
 function walkerMove(dt) { const w = G.walker; if (w.clip === 'walk') { w.position.x = damp(w.position.x, G.me.x - 1.2, 2.2, dt); w.position.z = damp(w.position.z, G.me.z, 2.2, dt); w.position.y = damp(w.position.y, 0, 4, dt); w.rotation.y = Math.atan2(G.me.x - 1.2 - w.position.x, G.me.z - w.position.z) || PI / 2; } }
 // ---------------- the end of a ride ----------------
 function checkArrive(dt) {
@@ -710,7 +842,7 @@ function checkArrive(dt) {
   if (G.lv.m === 'chase') { if (R.z < -L - 40 && !G.thief.caught) fail('The thief reached his hideout!'); return; }
   const d = R.z + L;
   if (d < 70 && d > -14) showHint(R.x > 0 ? '⬅️ Pull over to the LEFT!' : '🛑 BRAKE in the green zone!');
-  if (Math.abs(d) < 13 && R.speed < 2.2 && R.x < 0.5) arrive(MISSIONS[G.lv.m].ok ? MISSIONS[G.lv.m].ok(G.M) : true);
+  if (Math.abs(d) < 15 && R.speed < 2.2 && R.x < 0.5) arrive(MISSIONS[G.lv.m].ok ? MISSIONS[G.lv.m].ok(G.M) : true);
   else if (d < -14) {   // missed the stop: around the block (it costs time and mood)
     G.missedN++; mood(-15); say(pick(['Arre! You MISSED it!', 'Bhaiya, it was THERE!', 'Go back! Go back!']), 'angry'); sfx('gateBad');
     G.lv.L += 160; G.dest.position.z = -G.lv.L; G.party.forEach(q => { q.z -= 160; }); banner('⤴️ MISSED THE STOP!', 'Around the block…', 1.4);
@@ -720,6 +852,7 @@ function arrive(ok) {
   if (G.state !== 'drive') return; const M = G.M; M.done = true; G.state = 'arrive'; G.arriveT = 0; Engine.stop(); $('hint').classList.add('hidden');
   const P = G.lv.P; if (!ok) { fail(MISSIONS[G.lv.m].why || P.lose); return; }
   G.result = { ok: true, why: '' };
+  if (G.lv.mayhem) { sfx('fanfare'); music('win'); banner(G.M.fuel <= 0 ? '⛽ OUT OF FUEL!' : '🏁 END OF THE ROAD!', 'Score: ' + G.coins, 2.2); for (let i = 0; i < 5; i++) setTimeout(() => puff(_p.set(G.me.x + rnd(-4, 2), rnd(4, 7), G.me.z + rnd(-3, 3)), 16, 0xffffff, { star: true, add: true, cols: [0xff4f6a, 0xffd23f, 0x3fcf6e, 0x2f8cf0], speed: 5, life: 1.2, size: 0.4 }), i * 300); return; }
   sfx('fanfare'); sfx('crowd', 0.3); music('win'); setExpr('laugh', 99); CAB.actor.play('sittalk'); say(P.win, 'laugh');
   banner(G.lv.mayhem ? '⏱ TIME UP!' : '🎉 RIDE COMPLETE!', G.lv.mayhem ? 'Score: ' + G.coins : P.name + ' is happy!', 2.2);
   // the passenger gets out and dances with the welcome party
@@ -734,34 +867,33 @@ function fail(why) {
 // ---------------- HUD ----------------
 let hudN = 0;
 const MOODE = ['😡', '😠', '😟', '🙂', '😀', '🤩'];
+function nextPump() { const z = G.me.z, P = G.objs.filter(o => o.t === 'pump' && o.z < z + 5).sort((a, b) => b.z - a.z)[0]; return P ? Math.max(0, Math.round(z - P.z)) + ' m' : '—'; }
 function updateHud(dt) {
   if (!G.M || $('hud').classList.contains('hidden')) return; const M = G.M, R = G.me;
   $('coinN').textContent = G.coins; $('kmh').textContent = Math.round(R.speed * 3.6);
   $('turboB').style.setProperty('--p', Math.round(G.turbo * 100)); $('turboB').classList.toggle('ready', G.turbo >= 0.33); $('turboN').textContent = Math.floor(G.turbo / 0.33 + 0.001);
   if ((hudN++ & 3) === 0) {
-    $('moodFill').style.width = M.mood + '%'; $('moodE').textContent = MOODE[Math.min(5, Math.floor(M.mood / 17))]; $('moodName').textContent = G.lv.P.name.toUpperCase();
+    if (G.lv.mayhem) { $('moodFill').style.width = M.fuel + '%'; $('moodE').textContent = M.fuel < 22 ? '⚠️' : '⛽'; $('moodBox').classList.toggle('low', M.fuel < 22); } else { $('moodFill').style.width = M.mood + '%'; $('moodE').textContent = MOODE[Math.min(5, Math.floor(M.mood / 17))]; }
     $('moodBar').style.setProperty('--bw', $('moodBar').offsetWidth + 'px');
     const g = MISSIONS[G.lv.m].goal(M); $('goal').textContent = g.t; $('goal').classList.toggle('warn', !!g.warn);
-    $('dist').textContent = G.police && !G.police.leaving ? '🚨 POLICE ' + Math.max(0, Math.round(G.police.z - R.z)) + ' m behind — ESCAPE!' : G.lv.m === 'chase' ? '🚓 Don\'t let him escape!' : '🏁 ' + Math.max(0, Math.round(R.z + G.lv.L)) + ' m to ' + G.lv.P.place.replace(/^\S+\s/, '');
+    $('dist').textContent = G.police && !G.police.leaving ? '🚨 POLICE ' + Math.max(0, Math.round(G.police.z - R.z)) + ' m behind — ESCAPE!' : G.lv.mayhem ? '⛽ ' + Math.round(M.fuel) + '% fuel · pump in ' + nextPump() : G.lv.m === 'chase' ? '🚓 Don\'t let him escape!' : '🏁 ' + Math.max(0, Math.round(R.z + G.lv.L)) + ' m to ' + G.lv.P.place.replace(/^\S+\s/, '');
   }
-  if ((hudN & 7) === 0) { drawFace(faceCv, G.lv.P.look, M.expr, G.t, bubbleT > 0); $('bubbleFace').getContext('2d').drawImage(faceCv, 0, 0); }
+  if ((hudN & 7) === 0 && !G.lv.mayhem) { drawFace(faceCv, G.lv.P.look, M.expr, G.t, bubbleT > 0); $('bubbleFace').getContext('2d').drawImage(faceCv, 0, 0); }
 }
 
 // ---------------- results, garage ----------------
 function stars() { const m = G.M.mood; return m > 80 ? 5 : m > 60 ? 4 : m > 40 ? 3 : m > 20 ? 2 : 1; }
 const MAY = [400, 900, 1500];   // MAYHEM score for 1, 2, 3 stars
-function taskPay() { return (G.tasks || []).filter(T => T.done).reduce((a, T) => a + T.pay, 0); }
-function taskRows() { return (G.tasks || []).map(T => `<div class="stat ${T.done ? '' : 'no'}"><span>${T.done ? '✅' : '❌'} ${T.t(T.need)}</span><b>${T.done ? '₹' + T.pay : T.have + '/' + T.need}</b></div>`).join(''); }
 function mayhemResults() {
-  const k = G.lv.stage, sc = G.coins + (G.best >= 3 ? G.best * 4 : 0), st = sc >= MAY[2] ? 3 : sc >= MAY[1] ? 2 : sc >= MAY[0] ? 1 : 0, best = PF.may[k] || 0, nb = sc > best, tp = taskPay(), total = Math.round((sc + tp) * MODES[PF.mode].c) - G.fines;
-  if (nb) PF.may[k] = sc; PF.coins += Math.max(0, total); PF.save(); TRIAL = null;
+  const k = G.lv.stage, sc = G.coins + (G.best >= 3 ? G.best * 4 : 0), st = sc >= MAY[2] ? 3 : sc >= MAY[1] ? 2 : sc >= MAY[0] ? 1 : 0, best = PF.may[k] || 0, nb = sc > best, total = Math.max(0, sc - G.fines);
+  if (nb) PF.may[k] = sc; PF.coins += total; PF.save(); TRIAL = null;
   openModal(`<h2>💥 MAYHEM OVER!</h2><div class="stars">${[0, 1, 2].map(i => `<i class="${i < st ? 'on' : ''}">⭐</i>`).join('')}</div><p class="tip">${G.lv.S.name}${nb ? ' · <b>NEW BEST!</b>' : ' · best ' + best}</p>
-    <div class="stat"><span>💥 Score</span><b>${sc}</b></div><div class="stat"><span>🚗 Cars launched</span><b>${G.launched}</b></div><div class="stat"><span>🔥 Best MASTI combo</span><b>x${G.best}</b></div>${taskRows()}
-    ${MODES[PF.mode].c !== 1 ? `<div class="stat"><span>${MODES[PF.mode].n} mode</span><b>x${MODES[PF.mode].c}</b></div>` : ''}${G.fines ? `<div class="stat"><span>🚓 Police challan</span><b>-₹${G.fines}</b></div>` : ''}
-    <div class="big" id="totalB">+₹${Math.max(0, total)}</div>
-    ${adReady() ? '<div class="row"><button class="btn blue" id="dblB">📺 WATCH AD: DOUBLE ₹</button></div>' : ''}
+    <div class="stat"><span>💥 Score (smashes, stunts, goals)</span><b>${sc}</b></div><div class="stat"><span>🚗 Cars launched</span><b>${G.launched}</b></div><div class="stat"><span>✅ Crash goals done</span><b>${G.goalsDone} (+${G.goalPay})</b></div><div class="stat"><span>🔥 Best MASTI combo</span><b>x${G.best}</b></div>
+    ${G.fines ? `<div class="stat"><span>🚓 Police challan</span><b>-${G.fines}</b></div>` : ''}
+    <div class="big" id="totalB">+${total} 🪙</div>
+    ${adReady() ? '<div class="row"><button class="btn blue" id="dblB">📺 WATCH AD: DOUBLE 🪙</button></div>' : ''}
     <div class="row"><button class="btn big green" id="nextB">AGAIN ↻</button></div><div class="row"><button class="btn small" id="stB">🗺️ STAGES</button><button class="btn small" id="garB">🔧 GARAGE</button><button class="btn small" id="homeB">HOME</button></div>`);
-  if ($('dblB')) $('dblB').onclick = () => { sfx('pop'); rewardAd('double', r => { if (!r) return; PF.coins += Math.max(0, total); PF.save(); $('totalB').textContent = '+₹' + Math.max(0, total) * 2; $('dblB').disabled = true; $('dblB').textContent = 'DOUBLED! ✔'; sfx('fanfare'); }); };
+  if ($('dblB')) $('dblB').onclick = () => { sfx('pop'); rewardAd('double', r => { if (!r) return; PF.coins += total; PF.save(); $('totalB').textContent = '+' + total * 2 + ' 🪙'; $('dblB').disabled = true; $('dblB').textContent = 'DOUBLED! ✔'; sfx('fanfare'); }); };
   $('nextB').onclick = () => { sfx('pop'); play(G.lv.n, true); };
   $('stB').onclick = () => { sfx('pop'); goHome(); stages(); };
   $('garB').onclick = () => { sfx('pop'); goHome(); garage('cars'); };
@@ -769,63 +901,101 @@ function mayhemResults() {
 }
 function results() {
   if (G.lv.mayhem) { mayhemResults(); return; }
-  const P = G.lv.P, ok = G.result.ok, st = ok ? stars() : 0, fare = ok ? 50 + Math.round(G.lv.L / 12) : 10, tip = ok ? [0, 0, 10, 30, 60, 100][st] + G.lv.n * 2 : 0, combo = G.best >= 3 ? G.best * 4 : 0, tp = taskPay(), total = Math.max(0, Math.round((fare + tip + G.coins + combo + tp) * MODES[PF.mode].c) - G.fines);
+  const P = G.lv.P, ok = G.result.ok, st = ok ? stars() : 0, fare = ok ? 50 + Math.round(G.lv.L / 12) : 10, tip = ok ? [0, 0, 10, 30, 60, 100][st] + G.lv.n * 2 : 0, combo = G.best >= 3 ? G.best * 4 : 0, total = Math.max(0, fare + tip + G.coins + combo - G.fines);
   PF.coins += total; TRIAL = null; if (ok) { PF.level = Math.max(PF.level, G.lv.n + 1); PF.rides++; PF.stars += st; } PF.save();
   const rv = ok ? P.reviews[st >= 5 ? 0 : st >= 4 ? 1 : st >= 3 ? 2 : 3] : P.lose, unlock = ok ? nextUnlock() : null, nextP = PASS[G.lv.n % PASS.length];
   openModal(`<h2>${ok ? (st >= 5 ? '🤩 SUPER RIDE!' : '🚕 RIDE DONE!') : '😤 RIDE FAILED'}</h2>${ok ? `<div class="stars">${[0, 1, 2, 3, 4].map(i => `<i class="${i < st ? 'on' : ''}">⭐</i>`).join('')}</div>` : `<p class="tip">${G.result.why}</p>`}
     <div class="review"><div class="who"><canvas id="revFace" width="64" height="64"></canvas><b>${P.name}</b></div>“${rv}”</div>
-    <div class="stat"><span>🚕 Fare</span><b>₹${fare}</b></div><div class="stat"><span>💝 Tip</span><b>₹${tip}</b></div><div class="stat"><span>🪙 Coins, smashes & stunts</span><b>₹${G.coins}</b></div>
-    ${combo ? `<div class="stat"><span>🔥 Best MASTI combo x${G.best}</span><b>₹${combo}</b></div>` : ''}${taskRows()}${MODES[PF.mode].c !== 1 ? `<div class="stat"><span>${MODES[PF.mode].n} mode</span><b>x${MODES[PF.mode].c}</b></div>` : ''}${G.fines ? `<div class="stat"><span>🚓 Police challan</span><b>-₹${G.fines}</b></div>` : ''}
-    <div class="big" id="totalB">+₹${total}</div>${ok ? `<p class="tip">Next: <b>${nextP.name}</b> · ${STAGES[STAGE_OF[nextP.id]].name}</p>` : ''}
-    ${unlock ? `<div class="card" style="--rc:#ff4fa8"><div class="rar">SAVE UP FOR</div><div class="hico">${unlock.ico}</div><b>${unlock.name}</b><span>₹${unlock.price} in the garage</span></div>` : ''}
-    ${adReady() ? '<div class="row"><button class="btn blue" id="dblB">📺 WATCH AD: DOUBLE ₹</button></div>' : ''}
+    <div class="stat"><span>🚕 Fare</span><b>🪙${fare}</b></div><div class="stat"><span>💝 Tip</span><b>🪙${tip}</b></div><div class="stat"><span>🪙 Coins, smashes & stunts</span><b>🪙${G.coins}</b></div>
+    ${combo ? `<div class="stat"><span>🔥 Best MASTI combo x${G.best}</span><b>🪙${combo}</b></div>` : ''}<div class="stat"><span>🎯 Dares done ${G.dareDone} / ${G.dareDone + G.dareFail}</span><b>${G.darePay ? '(+' + G.darePay + ' in coins)' : '—'}</b></div>${G.fines ? `<div class="stat"><span>🚓 Police challan</span><b>-🪙${G.fines}</b></div>` : ''}
+    <div class="big" id="totalB">+🪙${total}</div>${ok ? `<p class="tip">Next: <b>${nextP.name}</b> · ${STAGES[STAGE_OF[nextP.id]].name}</p>` : ''}
+    ${unlock ? `<div class="card" style="--rc:#ff4fa8"><div class="rar">SAVE UP FOR</div><div class="hico">${unlock.ico}</div><b>${unlock.name}</b><span>🪙${unlock.price} in the garage</span></div>` : ''}
+    ${adReady() ? '<div class="row"><button class="btn blue" id="dblB">📺 WATCH AD: DOUBLE 🪙</button></div>' : ''}
     <div class="row"><button class="btn big green" id="nextB">${ok ? 'NEXT RIDE ▶' : 'TRY AGAIN ↻'}</button></div><div class="row"><button class="btn small" id="garB">🔧 GARAGE</button><button class="btn small" id="homeB">HOME</button></div>`);
   drawFace($('revFace'), P.look, ok ? (st >= 3 ? 'laugh' : 'calm') : 'angry', 0, false);
-  if ($('dblB')) $('dblB').onclick = () => { sfx('pop'); rewardAd('double', r => { if (!r) return; PF.coins += total; PF.save(); $('totalB').textContent = '+₹' + total * 2; $('dblB').disabled = true; $('dblB').textContent = 'DOUBLED! ✔'; sfx('fanfare'); }); };
+  if ($('dblB')) $('dblB').onclick = () => { sfx('pop'); rewardAd('double', r => { if (!r) return; PF.coins += total; PF.save(); $('totalB').textContent = '+🪙' + total * 2; $('dblB').disabled = true; $('dblB').textContent = 'DOUBLED! ✔'; sfx('fanfare'); }); };
   $('nextB').onclick = () => { sfx('pop'); closeModal(); play(ok ? G.lv.n + 1 : G.lv.n); };
   $('garB').onclick = () => { sfx('pop'); goHome(); garage('cars'); };
   $('homeB').onclick = () => { sfx('pop'); goHome(); };
 }
 function nextUnlock() { if (G.lv.n % 2) return null; const c = CARS.find(v => !PF.cars.includes(v.id)); return c && PF.coins < c.price ? c : null; }
-let gTab = 'cars', gCar = null, freeAdAt = 0;
+let gTab = 'cars', gCar = null;
 const hex = c => '#' + (c >>> 0).toString(16).padStart(6, '0');
 const bar = (v, lo, hi) => `<i class="bar"><u style="width:${Math.round(clamp((v - lo) / (hi - lo), 0.08, 1) * 100)}%"></u></i>`;
+const coins = n => n.toLocaleString('en-IN') + ' 🪙';
 function showCar(id) { if (!G.me) return; const x = G.me.x, z = G.me.z; scene.remove(G.me.V.obj); const keep = PF.car; PF.car = id; G.me = makeMe(); PF.car = keep; G.me.x = x; G.me.z = z; G.me.V.obj.position.set(x, 0, z); }
+const LISTS = { p: PAINTS, r: RIMS, s: STRIPES, d: DECALS, o: ROOFS, t: TINTS };
+const itemPrice = k => k[0] === 'x' ? EXTRAS.find(q => q.k === k[1]).p : LISTS[k[0]][+k.slice(1)].p;
+const owns = k => PF.own.includes(k) || itemPrice(k) === 0;
 function garage(tab) {
-  if (tab) gTab = tab; if (G.state !== 'home') return; gCar = gCar || PF.car; G.garage = true; $('home').classList.add('hidden');
-  const id = gCar, C = CARS.find(c => c.id === id), owned = PF.cars.includes(id), U = cust(id), canAd = adReady();
-  const btn = (key, own, on, price, extra = '') => on ? `<button class="btn small" disabled>ON</button>` : own ? `<button class="btn small blue" data-use="${key}">USE</button>` : `<button class="btn small green" data-buy="${key}" ${PF.coins < price ? 'disabled' : ''}>₹${price}</button>${canAd && extra ? `<button class="btn small try" data-try="${key}">📺 TRY</button>` : ''}`;
-  const tabs = [['cars', '🚗 CARS'], ['paint', '🎨 PAINT'], ['rims', '🛞 WHEELS'], ['eng', '⚙️ ENGINE'], ['extra', '✨ EXTRAS'], ['horn', '📯 HORNS']];
+  if (tab) gTab = tab; if (G.state !== 'home') return; gCar = gCar || PF.car; G.garage = true; $('home').classList.add('hidden'); if (G.walker) G.walker.visible = false;
+  const id = gCar, C = CARS.find(c => c.id === id), owned = PF.cars.includes(id), U = cust(id), canAd = adReady(), store = storeReady();
+  const btn = (key, on) => on ? '<button class="btn small" disabled>✔ ON</button>' : owns(key) ? `<button class="btn small blue" data-use="${key}">USE</button>` : `<button class="btn small green" data-buy="${key}" ${PF.coins < itemPrice(key) ? 'disabled' : ''}>${coins(itemPrice(key))}</button>${canAd ? `<button class="btn small try" data-try="${key}">📺 TRY</button>` : ''}`;
+  const row = (ico, name, sub, b, sel) => `<div class="item ${sel ? 'sel' : ''}"><div class="ico">${ico}</div><div class="txt"><b>${name}</b><span>${sub}</span></div><div class="bt">${b}</div></div>`;
+  const sw = (key, c, name, on) => `<div class="sw ${on ? 'on' : ''}" data-${owns(key) ? 'use' : 'buy'}="${key}" style="--c:${hex(c)}"><i></i><b>${name}</b><span>${on ? '✔ ON' : owns(key) ? 'USE' : coins(itemPrice(key))}</span>${!owns(key) && canAd ? `<em data-try="${key}">📺</em>` : ''}</div>`;
+  const tabs = [['cars', '🚗 CARS'], ['paint', '🎨 PAINT'], ['rims', '🛞 WHEELS'], ['style', '✨ STYLE'], ['extra', '🔥 EXTRAS'], ['eng', '⚙️ ENGINE'], ['horn', '📯 HORN']];
   let body = '';
-  if (gTab === 'cars') body = CARS.map(v => { const own = PF.cars.includes(v.id), sel = v.id === id; return `<div class="item ${sel ? 'sel' : ''}" data-pick="${v.id}"><div class="ico">${v.ico}</div><div class="txt"><b>${v.name}</b><span>${v.about}</span><span class="st">SPEED ${bar(v.sp, 0.9, 1.15)} ACCEL ${bar(v.acc, 0.8, 1.5)}<br>GRIP ${bar(v.grip, 0.8, 1.3)} CRASH ${bar(v.crash, 0.8, 1.8)}</span></div>${PF.car === v.id ? '<button class="btn small" disabled>ON</button>' : own ? `<button class="btn small blue" data-car="${v.id}">USE</button>` : `<button class="btn small green" data-buyc="${v.id}" ${PF.coins < v.price ? 'disabled' : ''}>₹${v.price}</button>`}</div>`; }).join('');
-  else if (!owned) body = `<p class="tip">🔒 Buy the <b>${C.name}</b> first (CARS tab) to customise it.</p>`;
-  else if (gTab === 'paint') body = '<div class="swatches">' + PAINTS.map((q, i) => { const own = PF.own.includes('p' + i), on = U.p === i, c = q.c ?? C.col; return `<div class="sw ${on ? 'on' : ''}" data-${own ? 'use' : 'buy'}="p${i}" style="--c:${hex(c)}"><i></i><b>${q.n}</b><span>${on ? '✔ ON' : own ? 'USE' : '₹' + q.p}</span>${!own && canAd ? `<em data-try="p${i}">📺</em>` : ''}</div>`; }).join('') + '</div>';
-  else if (gTab === 'rims') body = RIMS.map((q, i) => { const own = PF.own.includes('r' + i) || i === 0, on = U.r === i; return `<div class="item"><div class="ico">🛞</div><div class="txt"><b>${q.n}</b><span>${i ? '' : 'Comes with the car: ' + C.rim}</span></div>${btn('r' + i, own, on, q.p, 1)}</div>`; }).join('');
-  else if (gTab === 'eng') body = ENG.map((q, i) => { const have = engLv(id), own = i <= have; return `<div class="item"><div class="ico">${q.ico}</div><div class="txt"><b>${q.n} engine</b><span>${i ? `+${Math.round(q.sp * 100)}% top speed · +${Math.round(q.acc * 100)}% acceleration` : 'Factory engine'}</span></div>${own ? `<button class="btn small" disabled>${i === have ? 'ON' : '✔'}</button>` : i === have + 1 ? `<button class="btn small green" data-eng="${i}" ${PF.coins < q.p ? 'disabled' : ''}>₹${q.p}</button>` : '<button class="btn small" disabled>🔒</button>'}</div>`; }).join('') + '<p class="tip">Engines are fitted to <b>this car</b>. Pick 🐢 CHILL / 🚕 NORMAL / 🔥 CRAZY speed on the home screen.</p>';
-  else if (gTab === 'extra') body = EXTRAS.map(q => { const own = PF.own.includes('x' + q.k), on = !!U[q.k]; return `<div class="item"><div class="ico" ${q.k === 'n' && on ? `style="background:${hex(NEONS[(U.n - 1) % NEONS.length])}"` : ''}>${q.ico}</div><div class="txt"><b>${q.n}</b><span>${q.d}</span></div>${own ? `<button class="btn small ${on ? '' : 'blue'}" data-tog="${q.k}">${on ? (q.k === 'n' ? 'COLOUR' : 'OFF') : 'ON'}</button>${on && q.k === 'n' ? `<button class="btn small" data-tog="n0">OFF</button>` : ''}` : `<button class="btn small green" data-buy="x${q.k}" ${PF.coins < q.p ? 'disabled' : ''}>₹${q.p}</button>${canAd ? `<button class="btn small try" data-try="x${q.k}">📺 TRY</button>` : ''}`}</div>`; }).join('');
-  else if (gTab === 'horn') body = HORNS.map(h => { const own = PF.horns.includes(h.k), on = PF.horn === h.k; return `<div class="item"><div class="ico" data-listen="${h.k}">📯</div><div class="txt"><b>${h.name}</b><span><a data-listen="${h.k}">▶ listen</a></span></div>${on ? '<button class="btn small" disabled>ON</button>' : own ? `<button class="btn small blue" data-horn="${h.k}">USE</button>` : `<button class="btn small green" data-horn="${h.k}" ${PF.coins < h.price ? 'disabled' : ''}>₹${h.price}</button>`}</div>`; }).join('');
+  if (gTab === 'cars') body = CARS.map(v => { const own = PF.cars.includes(v.id), on = PF.car === v.id, iap = store && v.price ? storePrice('car_' + v.id) : '';
+    return `<div class="item ${v.id === id ? 'sel' : ''}" data-pick="${v.id}"><div class="ico">${v.ico}</div><div class="txt"><b>${v.name}</b><span>${v.about}</span><span class="st">SPEED ${bar(v.sp, 0.75, 1.2)} ACCEL ${bar(v.acc, 0.8, 1.5)}<br>GRIP ${bar(v.grip, 0.8, 1.4)} CRASH ${bar(v.crash, 0.7, 2.2)}</span></div><div class="bt">${on ? '<button class="btn small" disabled>✔ ON</button>' : own ? `<button class="btn small blue" data-car="${v.id}">USE</button>` : `<button class="btn small green" data-buyc="${v.id}" ${PF.coins < v.price ? 'disabled' : ''}>${coins(v.price)}</button>${iap ? `<button class="btn small gold" data-iap="car_${v.id}">${iap}</button>` : ''}`}</div></div>`; }).join('');
+  else if (!owned) body = `<p class="tip">🔒 Get the <b>${C.name}</b> first (CARS tab) to customise it.</p>`;
+  else if (gTab === 'paint') body = '<div class="swatches">' + PAINTS.map((q, i) => sw('p' + i, q.c ?? C.col, q.n, U.p === i)).join('') + '</div>';
+  else if (gTab === 'rims') body = RIMS.map((q, i) => row('🛞', q.n, i ? '' : 'Comes with this car', btn('r' + i, U.r === i))).join('');
+  else if (gTab === 'style') body = '<h4>🏁 Racing stripes</h4><div class="swatches">' + STRIPES.map((q, i) => sw('s' + i, q.c ?? 0xdddddd, q.n, U.s === i)).join('') + '</div>'
+    + '<h4>🔥 Side decals</h4>' + DECALS.map((q, i) => row(q.ico, q.n, '', btn('d' + i, U.d === i))).join('')
+    + '<h4>🧳 On the roof</h4>' + ROOFS.map((q, i) => row(q.ico, q.n, '', btn('o' + i, U.o === i))).join('')
+    + '<h4>🕶️ Window tint</h4><div class="swatches">' + TINTS.map((q, i) => sw('t' + i, q.c ?? 0x6a8aa8, q.n, U.t === i)).join('') + '</div>';
+  else if (gTab === 'extra') body = EXTRAS.map(q => { const own = owns('x' + q.k), on = !!U[q.k]; return row(q.ico, q.n, q.d, own ? `<button class="btn small ${on ? '' : 'blue'}" data-tog="${q.k}">${on ? (q.k === 'n' ? 'COLOUR' : 'OFF') : 'ON'}</button>${on && q.k === 'n' ? '<button class="btn small" data-tog="n0">OFF</button>' : ''}` : `<button class="btn small green" data-buy="x${q.k}" ${PF.coins < q.p ? 'disabled' : ''}>${coins(q.p)}</button>${canAd ? `<button class="btn small try" data-try="x${q.k}">📺 TRY</button>` : ''}`); }).join('');
+  else if (gTab === 'eng') body = ENG.map((q, i) => { const have = engLv(id), own = i <= have; return row(q.ico, q.n + ' engine', i ? `+${Math.round(q.sp * 100)}% top speed · +${Math.round(q.acc * 100)}% acceleration` : 'Factory engine', own ? `<button class="btn small" disabled>${i === have ? '✔ ON' : '✔'}</button>` : i === have + 1 ? `<button class="btn small green" data-eng="${i}" ${PF.coins < q.p ? 'disabled' : ''}>${coins(q.p)}</button>` : '<button class="btn small" disabled>🔒</button>'); }).join('') + '<p class="tip">Engines are fitted to <b>this car</b>. Control your speed with the GAS and BRAKE pedals while driving.</p>';
+  else if (gTab === 'horn') body = HORNS.map(h => { const own = PF.horns.includes(h.k), on = PF.horn === h.k; return row(`<span data-listen="${h.k}">${h.ico}</span>`, h.n, `<a data-listen="${h.k}">▶ listen</a>${h.k === 'own' ? ' · ' + C.name : ''}`, on ? '<button class="btn small" disabled>✔ ON</button>' : own ? `<button class="btn small blue" data-horn="${h.k}">USE</button>` : `<button class="btn small green" data-horn="${h.k}" ${PF.coins < h.p ? 'disabled' : ''}>${coins(h.p)}</button>`); }).join('');
   const adOk = canAd && Date.now() > (PF.adT || 0);
-  openModal(`<div class="gtop"><b>${C.ico} ${C.name}</b><span class="pill out">₹ ${PF.coins.toLocaleString()}</span></div>${adOk ? '<button class="btn small blue adfree" id="adCoins">📺 Watch an ad: FREE ₹250</button>' : ''}<div class="tabs">${tabs.map(([k, n]) => `<button class="tab ${k === gTab ? 'on' : ''}" data-tab="${k}">${n}</button>`).join('')}</div><div class="gbody">${body}</div><div class="row"><button class="btn green" id="closeB">DONE ✔</button></div>`);
+  openModal(`<div class="gtop"><b>${C.ico} ${C.name}</b><span class="pill out">${coins(PF.coins)}</span></div><div class="grow">${adOk ? '<button class="btn small blue" id="adCoins">📺 FREE 500 🪙</button>' : ''}<button class="btn small gold" id="shopB2">🛒 GET COINS</button></div><div class="tabs">${tabs.map(([k, n]) => `<button class="tab ${k === gTab ? 'on' : ''}" data-tab="${k}">${n}</button>`).join('')}</div><div class="gbody">${body}</div><div class="row"><button class="btn green" id="closeB">DONE ✔</button></div>`);
   $('modal').classList.add('sheet');
   const redo = () => { showCar(gCar); garage(); };
+  const setC = (key, val) => { const c = PF.cust[id] = { ...(PF.cust[id] || {}) }; c[key] = val; PF.save(); };
+  const apply = k => { if (k[0] === 'x') setC(k[1], 1); else setC(k[0], +k.slice(1)); };
   document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { sfx('pop'); garage(b.dataset.tab); });
   document.querySelectorAll('[data-pick]').forEach(b => b.onclick = e => { if (e.target.closest('button')) return; sfx('pop'); gCar = b.dataset.pick; redo(); });
   document.querySelectorAll('[data-car]').forEach(b => b.onclick = () => { sfx('pop'); PF.car = gCar = b.dataset.car; PF.save(); redo(); });
   document.querySelectorAll('[data-buyc]').forEach(b => b.onclick = () => { const v = CARS.find(q => q.id === b.dataset.buyc); if (PF.coins < v.price) return; PF.coins -= v.price; PF.cars.push(v.id); PF.car = gCar = v.id; PF.save(); sfx('kaching'); sfx('fanfare', 0.1); redo(); });
-  const setC = (key, val) => { const c = PF.cust[id] = { ...(PF.cust[id] || {}) }; c[key] = val; PF.save(); };
-  const apply = k => { if (k[0] === 'p') setC('p', +k.slice(1)); else if (k[0] === 'r') setC('r', +k.slice(1)); else setC(k[1], k[1] === 'n' ? 1 : 1); };
-  const price = k => k[0] === 'p' ? PAINTS[+k.slice(1)].p : k[0] === 'r' ? RIMS[+k.slice(1)].p : EXTRAS.find(q => q.k === k[1]).p;
+  document.querySelectorAll('[data-iap]').forEach(b => b.onclick = () => { sfx('pop'); storeBuy(b.dataset.iap); });
   document.querySelectorAll('[data-use]').forEach(b => b.onclick = () => { sfx('pop'); apply(b.dataset.use); redo(); });
-  document.querySelectorAll('[data-buy]').forEach(b => b.onclick = e => { if (e.target.dataset.try) return; const k = b.dataset.buy, pr = price(k); if (PF.coins < pr) { sfx('gateBad'); return; } PF.coins -= pr; PF.own.push(k); apply(k); PF.save(); sfx('kaching'); redo(); });
+  document.querySelectorAll('[data-buy]').forEach(b => b.onclick = e => { if (e.target.dataset.try) return; const k = b.dataset.buy, pr = itemPrice(k); if (PF.coins < pr) { sfx('gateBad'); return; } PF.coins -= pr; PF.own.push(k); apply(k); PF.save(); sfx('kaching'); redo(); });
   document.querySelectorAll('[data-try]').forEach(b => b.onclick = e => { e.stopPropagation(); const k = b.dataset.try; sfx('pop'); rewardAd('try', ok => { if (!ok) return; TRIAL = { car: id, k: k[0] === 'x' ? k[1] : k[0], v: k[0] === 'x' ? 1 : +k.slice(1) }; banner('📺 TRY IT!', 'Free for your next ride', 1.4); redo(); }); });
   document.querySelectorAll('[data-tog]').forEach(b => b.onclick = () => { sfx('pop'); const k = b.dataset.tog; if (k === 'n0') setC('n', 0); else if (k === 'n') setC('n', U.n ? U.n % NEONS.length + 1 : 1); else setC(k, U[k] ? 0 : 1); redo(); });
   document.querySelectorAll('[data-eng]').forEach(b => b.onclick = () => { const i = +b.dataset.eng; if (PF.coins < ENG[i].p) return; PF.coins -= ENG[i].p; PF.eng[id] = i; PF.save(); sfx('kaching'); sfx('nitro', 0.1); garage(); });
-  document.querySelectorAll('[data-horn]').forEach(b => b.onclick = () => { const h = HORNS.find(q => q.k === +b.dataset.horn); if (!PF.horns.includes(h.k)) { if (PF.coins < h.price) return; PF.coins -= h.price; PF.horns.push(h.k); sfx('kaching'); } PF.horn = h.k; PF.save(); sfx('horn', 0, h.k); garage(); });
-  document.querySelectorAll('[data-listen]').forEach(b => b.onclick = () => { Audio.resume(); sfx('horn', 0, +b.dataset.listen); });
-  if ($('adCoins')) $('adCoins').onclick = () => { sfx('pop'); rewardAd('coins', ok => { if (!ok) return; PF.coins += 250; PF.adT = Date.now() + 3 * 60e3; PF.save(); sfx('fanfare'); garage(); }); };
+  document.querySelectorAll('[data-horn]').forEach(b => b.onclick = () => { const h = HORNS.find(q => q.k === b.dataset.horn); if (!PF.horns.includes(h.k)) { if (PF.coins < h.p) return; PF.coins -= h.p; PF.horns.push(h.k); sfx('kaching'); } PF.horn = h.k; PF.save(); listenHorn(h.k); garage(); });
+  document.querySelectorAll('[data-listen]').forEach(b => b.onclick = () => listenHorn(b.dataset.listen));
+  if ($('adCoins')) $('adCoins').onclick = () => { sfx('pop'); rewardAd('coins', ok => { if (!ok) return; PF.coins += 500; PF.adT = Date.now() + 3 * 60e3; PF.save(); sfx('fanfare'); garage(); }); };
+  $('shopB2').onclick = () => { sfx('pop'); shop(() => garage()); };
   $('closeB').onclick = () => { sfx('pop'); closeGarage(); };
 }
-function closeGarage() { closeModal(); G.garage = false; gCar = null; if (G.me && G.state === 'home') showCar(PF.car); $('home').classList.remove('hidden'); refreshHome(); }
+function listenHorn(k) { Audio.resume(); const ctx = Audio.H.ctx; if (!ctx || !PF.set.sound) return; const kind = k === 'own' ? (CARS.find(c => c.id === gCar) || carSpec()).horn : k; hornVoice(kind, ctx.currentTime + 0.02, 0.8); }
+// ---------------- the shop: coin packs (and cars) for real money, through Google Play ----------------
+const PACKS = [{ id: 'coins_25k', n: 25000, ico: '💰', name: 'Bag of coins' }, { id: 'coins_80k', n: 80000, ico: '💰💰', name: 'Big bag of coins' }, { id: 'coins_200k', n: 200000, ico: '🏦', name: 'Coin bank' }, { id: 'vip_allcars', n: 0, ico: '👑', name: 'VIP: ALL 7 cars, forever' }];
+const NAT = window.GameNative;
+function storeReady() { try { return !!(NAT && NAT.billingReady && NAT.billingReady()); } catch (e) { return false; } }
+function storePrice(id) { try { return JSON.parse(NAT.prices() || '{}')[id] || ''; } catch (e) { return ''; } }
+function storeBuy(id) { try { NAT.buy(id); } catch (e) { /* not in the app */ } }
+function syncStore() {   // what the player bought (also restores cars after a reinstall)
+  if (!NAT || !NAT.owned) return;
+  try {
+    const own = JSON.parse(NAT.owned() || '[]'); let got = [];
+    for (const p of own) { const ids = p === 'vip_allcars' ? CARS.map(c => c.id) : [p.replace(/^car_/, '')]; for (const id of ids) if (CARS.some(c => c.id === id) && !PF.cars.includes(id)) { PF.cars.push(id); got.push(id); } }
+    const n = NAT.takeCoins ? +NAT.takeCoins() : 0; if (n > 0) { PF.coins += n; sfx('kaching'); banner('🪙 +' + n.toLocaleString('en-IN'), 'Thank you for supporting us!', 1.8); }
+    if (got.length) { sfx('fanfare'); banner('🎉 NEW IN YOUR GARAGE', got.map(id => CARS.find(c => c.id === id).name).join(', '), 2); }
+    if (n > 0 || got.length) { PF.save(); if (G.garage) garage(); else if (G.state === 'home') refreshHome(); }
+  } catch (e) { /* ignore */ }
+}
+window.onStore = () => syncStore();
+function shop(back) {
+  const ok = storeReady(), canAd = adReady() && Date.now() > (PF.adT || 0);
+  const rows = PACKS.map(q => { const pr = ok ? storePrice(q.id) : ''; return `<div class="item"><div class="ico">${q.ico}</div><div class="txt"><b>${q.n ? coins(q.n) : q.name}</b><span>${q.n ? q.name : 'Every car unlocked, including future ones'}</span></div><div class="bt">${pr ? `<button class="btn small gold" data-iap="${q.id}">${pr}</button>` : '<button class="btn small" disabled>—</button>'}</div></div>`; }).join('');
+  openModal(`<h2>🛒 SHOP</h2><p>You have <b>${coins(PF.coins)}</b></p>${canAd ? '<div class="row"><button class="btn blue" id="adC">📺 Watch an ad: FREE 500 🪙</button></div>' : ''}<div class="list">${rows}</div>${ok ? '<p class="tip">Payments are handled safely by Google Play.</p>' : '<p class="tip">Coin packs can be bought in the Google Play version of the game. You can always earn coins by driving, daily gifts and MAYHEM!</p>'}<div class="row"><button class="btn" id="closeB">BACK</button></div>`);
+  document.querySelectorAll('[data-iap]').forEach(b => b.onclick = () => { sfx('pop'); storeBuy(b.dataset.iap); });
+  if ($('adC')) $('adC').onclick = () => { sfx('pop'); rewardAd('coins', r => { if (!r) return; PF.coins += 500; PF.adT = Date.now() + 3 * 60e3; PF.save(); sfx('fanfare'); shop(back); }); };
+  $('closeB').onclick = () => { sfx('pop'); closeModal(); if (back) back(); else refreshHome(); };
+}
+function closeGarage() { closeModal(); G.garage = false; if (G.walker && G.state === 'home') G.walker.visible = true; gCar = null; if (G.me && G.state === 'home') showCar(PF.car); $('home').classList.remove('hidden'); refreshHome(); }
 // ---------------- stage select: every place, a RIDE and a 90-second MAYHEM ----------------
 const STAGE_ICO = { bazaar: '🛺', shaadi: '💍', ghat: '⛰️', marine: '🌅', monsoon: '🌧️', stadium: '🏏', cyber: '🏙️', holi: '🎨' };
 const rideFor = i => PF.level < i + 1 ? 0 : i + 1 + 8 * Math.floor((PF.level - 1 - i) / 8);
@@ -839,11 +1009,13 @@ function stages() {
 }
 // ---------------- screens ----------------
 function setScreen(s) { $('home').classList.toggle('hidden', s !== 'home'); $('hud').classList.toggle('hidden', s !== 'hud'); }
-function play(n = PF.level, mayhem = false) { closeModal(); G.garage = false; G.resultsShown = false; G.cardShown = false; $('bubble').classList.add('hidden'); if (G.pristine === n + (mayhem ? 'm' : '') && G.state === 'home') { G.me.V.obj.removeFromParent(); G.me = Object.assign(makeMe(), { x: G.me.x, z: G.me.z }); setScreen('hud'); beginRide(); return; } busy(() => { startLevel(n, true, mayhem); setScreen('hud'); }); }
+function play(n = PF.level, mayhem = false) { closeModal(); G.garage = false; G.resultsShown = false; G.cardShown = false; $('bubble').classList.add('hidden'); if (G.pristine === n + (mayhem ? 'm' : '') && G.state === 'home') { G.me.V.obj.removeFromParent(); G.me = Object.assign(makeMe(), { x: G.me.x, z: G.me.z }); setScreen('hud'); beginRide(); return; } busy(async () => { if (!mayhem) await needPerson(PASS[(n - 1) % PASS.length].id); startLevel(n, true, mayhem); setScreen('hud'); }); }
 // heavy work after the screen has shown 'loading' (so a tap never looks frozen)
-function busy(f) { const L = $('loading'); L.textContent = '🚕 Loading…'; L.classList.remove('hidden'); requestAnimationFrame(() => requestAnimationFrame(() => { try { f(); } finally { L.classList.add('hidden'); } })); }
+function busy(f) { const L = $('loading'); L.textContent = '🚕 Loading…'; L.classList.remove('hidden'); requestAnimationFrame(() => requestAnimationFrame(() => { Promise.resolve().then(f).catch(e => console.error(e)).finally(() => L.classList.add('hidden')); })); }
+// passengers are loaded only when their ride starts (a much faster start)
+async function needPerson(id) { if (PEOPLE[id]) return; Object.assign(PEOPLE, await loadPeople(await loadBin('people/' + id + '.bin'))); }
 function goHome() { closeModal(); Engine.stop(); if (!G.lv) startLevel(PF.level, false); else { G.state = 'home'; G.me.speed = 0; G.me.brake = false; G.me.air = false; G.me.y = 0; G.me.z = Math.min(G.me.z, 0); if (G.police) { scene.remove(G.police.V.obj); G.police = null; } $('combo').classList.add('hidden'); } setScreen('home'); refreshHome(); music('title'); }
-function refreshHome() { const P = PASS[(PF.level - 1) % PASS.length]; $('homeCoins').textContent = PF.coins.toLocaleString(); $('speedB').textContent = MODES[PF.mode].n; $('carName').textContent = (CARS.find(c => c.id === PF.car) || CARS[0]).name + ' · ' + ENG[engLv()].n; $('homeLevel').innerHTML = `RIDE ${PF.level}<small>Next: ${P.name}</small>`; $('giftB').classList.toggle('dot', giftState(PF).can); }
+function refreshHome() { const P = PASS[(PF.level - 1) % PASS.length]; $('homeCoins').textContent = PF.coins.toLocaleString(); $('carName').textContent = (CARS.find(c => c.id === PF.car) || CARS[0]).ico + ' ' + (CARS.find(c => c.id === PF.car) || CARS[0]).name + ' · ' + ENG[engLv()].n + ' engine'; $('homeLevel').innerHTML = `RIDE ${PF.level}<small>Next: ${P.name}</small>`; $('giftB').classList.toggle('dot', giftState(PF).can); }
 function pause() { if (G.state !== 'drive' && G.state !== 'intro') return; G.paused = G.state; G.state = 'pause'; Engine.stop(); Music.stop(); openModal(`<h2>PAUSED</h2><div class="row"><button class="btn big green" id="resB">RESUME</button></div><div class="row"><button class="btn small" id="setB2">SETTINGS</button><button class="btn small" id="homeB">HOME</button></div>`); $('resB').onclick = () => { sfx('pop'); closeModal(); resume(); }; $('setB2').onclick = () => settings(); $('homeB').onclick = () => { sfx('pop'); goHome(); }; }
 function resume() { G.state = G.paused || 'drive'; if (G.state === 'drive') Engine.start(); music(G.lv.music); }
 function settings() { settingsPanel(PF, 'Mad Taxi Masti', 'Characters, animals, nature: Quaternius (CC0) · Road signs and cones: Kenney (CC0) · Cars and streets: BajrangVerse Studios<br>Title and victory music: BajrangVerse Studios<br>Music: "Riley", "Polka Train", "Monkeys Spinning Monkeys", "Fuzzball Parade", "Merry Go" by Kevin MacLeod (incompetech.com), licensed under Creative Commons: By Attribution 4.0', k => { if (k === 'music') { if (PF.set.music) music(G.state === 'home' ? 'title' : G.lv.music); else Music.stop(); } if (k === 'hi') setQuality(PF.set.hi ? 2 : 0); }, () => { if (G.state === 'pause') resume(); }); }
@@ -857,18 +1029,22 @@ $('gl').addEventListener('pointerdown', e => { Audio.resume(); drag = { x: e.cli
 addEventListener('pointermove', e => { if (!drag || e.pointerId !== drag.id || G.state !== 'drive') return; const dy = e.clientY - drag.y; if (!drag.sw && dy < -40 && G.me.air) { drag.sw = true; stunt(); return; } G.tx = drag.tx + (e.clientX - drag.x) / Math.min(innerWidth, 500) * 16; });
 addEventListener('pointerup', e => { if (drag && e.pointerId === drag.id) drag = null; });
 const brakeOn = on => { if (G.me) G.me.brake = on; $('brakeB').classList.toggle('on', on); };
+const gasOn = on => { if (G.me) G.me.gas = on; $('gasB').classList.toggle('on', on); if (on) $('gasB').classList.remove('ready'); };
+$('gasB').addEventListener('pointerdown', e => { e.stopPropagation(); Audio.resume(); gasOn(true); });
+for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) $('gasB').addEventListener(ev, () => gasOn(false));
 $('brakeB').addEventListener('pointerdown', e => { e.stopPropagation(); brakeOn(true); });
 for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) $('brakeB').addEventListener(ev, () => brakeOn(false));
 $('hornB').addEventListener('pointerdown', e => { e.stopPropagation(); honk(); });
+for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) $('hornB').addEventListener(ev, hornUp);
 $('turboB').addEventListener('pointerdown', e => { e.stopPropagation(); useTurbo(); });
-addEventListener('keydown', e => { if (e.key === 'ArrowDown' || e.key === 's') brakeOn(true); if (e.key === 'h') honk(); if (e.key === 'ArrowUp') stunt(); if (e.key === ' ' || e.key === 'n') useTurbo(); if (e.key === 'ArrowLeft') G.tx -= 3.5; if (e.key === 'ArrowRight') G.tx += 3.5; });
-addEventListener('keyup', e => { if (e.key === 'ArrowDown' || e.key === 's') brakeOn(false); });
+addEventListener('keydown', e => { if (e.repeat) return; if (e.key === 'ArrowDown' || e.key === 's') brakeOn(true); if (e.key === 'h') honk(); if (e.key === 'ArrowUp' || e.key === 'w') gasOn(true); if (e.key === 'x') stunt(); if (e.key === ' ' || e.key === 'n') useTurbo(); if (e.key === 'ArrowLeft') G.tx -= 3.5; if (e.key === 'ArrowRight') G.tx += 3.5; });
+addEventListener('keyup', e => { if (e.key === 'ArrowDown' || e.key === 's') brakeOn(false); if (e.key === 'ArrowUp' || e.key === 'w') gasOn(false); if (e.key === 'h') hornUp(); });
 $('playB').onclick = () => { Audio.resume(); sfx('pop'); play(); };
 $('garageB').onclick = () => { sfx('pop'); garage('cars'); };
 $('stagesB').onclick = () => { sfx('pop'); stages(); };
 $('mayhemB').onclick = () => { Audio.resume(); sfx('pop'); play(((PF.level - 1) % 8) + 1, true); };
-$('speedB').onclick = () => { sfx('pop'); PF.mode = (PF.mode + 1) % 3; PF.save(); refreshHome(); showHint(['🐢 CHILL: slower car, easier ride (x0.9 coins)', '🚕 NORMAL speed', '🔥 CRAZY: much faster car — x1.3 coins!'][PF.mode]); };
-$('giftB').onclick = () => { sfx('pop'); giftPanel(PF, '₹', refreshHome); };
+$('shopB').onclick = () => { sfx('pop'); shop(); };
+$('giftB').onclick = () => { sfx('pop'); giftPanel(PF, '🪙', refreshHome); };
 $('setB').onclick = () => { sfx('pop'); settings(); };
 $('pauseB').onclick = () => { sfx('pop'); pause(); };
 document.addEventListener('pointerdown', () => { Audio.resume(); if (G.state === 'home') music('title'); }, { once: true });
@@ -881,7 +1057,7 @@ function camera(dt) {
   else if (G.state === 'home') { tp.set(R.x + 4.5 + Math.sin(G.t * 0.3) * 1.5, 2.3, R.z - 5.5 + Math.sin(G.t * 0.2)); tl.set(R.x - 0.4, 0.9, R.z + 0.5); k1 = 2; }
   else if (G.state === 'intro') { tp.set(R.x + 6.5, 2.8, R.z - 6.5); tl.set(R.x - 2.2, 1.0, R.z); k1 = 2.5; }
   else if (G.state === 'arrive') { tp.set(R.x + 4.5, 3, R.z + 6.5); tl.set(R.x - 2.5, 1.3, R.z - 1); k1 = 1.8; }
-  else { const air = R.air ? Math.min(3, R.y * 0.45) : 0; tp.set(R.x * 0.7, R.y * 0.5 + 4.2 + air, R.z + 9 + air); tl.set(R.x * 0.85, R.y * 0.6 + 1.3, R.z - 10); }
+  else { const air = R.air ? Math.min(3, R.y * 0.45) : 0; tp.set(R.x * 0.85, R.y * 0.5 + 4.2 + air, R.z + 9 + air); tl.set(R.x * 0.92, R.y * 0.6 + 1.3, R.z - 10); }
   camP.lerp(tp, 1 - Math.exp(-k1 * dt)); camL.lerp(tl, 1 - Math.exp(-k2 * dt));
   if (G.state === 'drive') { camP.z = tp.z; camL.z = tl.z; }
   const fovT = E.fovBase + (R.turbo > 0 ? 12 : 0) + Math.min(6, R.speed * 0.12); if (Math.abs(cam.fov - fovT) > 0.05) { cam.fov = damp(cam.fov, fovT, 4, dt); cam.updateProjectionMatrix(); }
@@ -890,23 +1066,26 @@ function camera(dt) {
   const sp = bendPoint(_p.set(R.x, 0, R.z - 4)); sun.target.position.copy(sp); sun.position.copy(sp).add(_q.set(-8, 22, 10));
 }
 // ---------------- boot ----------------
-const t0 = performance.now();
+const t0 = performance.now(); const BT = window.__bt = []; const T = k => BT.push(k + ':' + Math.round(performance.now() - t0));
 if (PF.set.music && !Q.get('fast')) { try { Music.play('title'); } catch (e) { /* needs a tap */ } }
-Promise.all(['people.bin', 'kit.glb', 'nature.glb', 'cow.glb', 'pug.glb', 'horse.glb'].map(loadBin)).then(async ([pb, kb, nb, cb, db, hb]) => {
-  PEOPLE = await loadPeople(pb);
+const BOOTL = {}, BOOTS = {};
+const BOOTP = PASS[((Q.get('level') ? +Q.get('level') : PF.level) - 1) % PASS.length].id;
+Promise.all(['people/pedM.bin', 'people/pedF.bin', 'people/' + BOOTP + '.bin', 'kit.glb.pak', 'nature.glb.pak', 'cow.glb.pak', 'pug.glb.pak', 'horse.glb.pak'].map((f, i, all) => loadBin(f, (a, b) => { BOOTL[f] = a; BOOTS[f] = b || BOOTS[f] || 0; const x = Object.values(BOOTL).reduce((p, q) => p + q, 0); $('loading').textContent = '🚕 Loading… ' + Math.min(99, Math.round(x / 1.2e7 * 100)) + '%'; }))).then(async ([pm, pf, pp, kb, nb, cb, db, hb]) => {
+  T('files'); PEOPLE = Object.assign({}, await loadPeople(pm), await loadPeople(pf), await loadPeople(pp)); T('people');
   const gl = new GLTFLoader(), K = (await gl.parseAsync(kb, '')).scene, N = (await gl.parseAsync(nb, '')).scene.getObjectByName('nature');
-  setKits(K, N);
+  setKits(K, N); T('kits');
   const cow = await gl.parseAsync(cb, ''); COW = { scene: cow.scene, anims: cow.animations, s: animalScale(cow.scene, 1.6) };
   const pug = await gl.parseAsync(db, ''); PUG = { scene: pug.scene, anims: pug.animations, s: animalScale(pug.scene, 0.6) };
   const hor = await gl.parseAsync(hb, ''); HORSE = { scene: hor.scene, anims: hor.animations, s: animalScale(hor.scene, 2.0) };
-  blobs = new Blobs(scene, dotTex, 90); crowdM = new Crowd(scene, PEOPLE.pedM); crowdF = new Crowd(scene, PEOPLE.pedF); crowdM.prewarm(16); crowdF.prewarm(16);
+  blobs = new Blobs(scene, dotTex, 90); crowdM = new Crowd(scene, PEOPLE.pedM); crowdF = new Crowd(scene, PEOPLE.pedF); crowdM.prewarm(16); crowdF.prewarm(16); T('animals+crowd');
   if (Q.get('level')) PF.level = +Q.get('level');
-  { const W = warmMeshes(); W.forEach(m => scene.add(m)); try { renderer.compile(scene, cam); } catch (e) { /* not needed */ } W.forEach(m => scene.remove(m)); }
-  placeCabFrame(); startLevel(PF.level, false); setScreen('home'); refreshHome(); $('loading').classList.add('hidden'); G.state = 'home';
-  Music.warm(['title', 'drive', 'win']);
+  placeCabFrame(); startLevel(PF.level, false); T('level'); setScreen('home'); refreshHome(); $('loading').classList.add('hidden'); G.state = 'home';
+  syncStore(); Music.warm(['title', 'drive', 'win']);
+  // the other places' shaders are prepared a moment after the home screen shows (not while the player waits)
+  setTimeout(() => { if (G.state !== 'home') return; const W = warmMeshes(); W.forEach(m => scene.add(m)); try { renderer.compile(scene, cam); } catch (e) { /* not needed */ } W.forEach(m => scene.remove(m)); }, 1500);
   setTimeout(() => $('studio').classList.add('gone'), Q.get('fast') ? 0 : Math.max(1200, 2800 - (performance.now() - t0)));
   startLoop({ update, camera, post: renderCab, active: () => G.state === 'drive', frozen: () => G.state === 'load' || G.state === 'pause' });
   if (Q.get('play')) play();
 }).catch(e => { $('loading').textContent = '⚠️ ' + e.message; console.error(e); });
 window.__cab = { cab, cabCam, CAB, renderCab };
-window.__G = G; window.__garage = garage; window.__stages = stages; window.__PF = PF; window.__start = startLevel; window.__play = play; window.__honk = honk; window.__turbo = useTurbo; window.__brake = brakeOn; window.__stunt = stunt; window.__police = callPolice; window.__places = () => [G.state, Math.round(G.me.z), G.M && Math.round(G.M.mood)];
+window.__gas = gasOn; window.__hv = hornVoice; window.__A = Audio; window.__CARS = CARS; window.__hornUp = hornUp; window.__task = task; window.__G = G; window.__garage = garage; window.__stages = stages; window.__PF = PF; window.__start = startLevel; window.__play = play; window.__honk = honk; window.__turbo = useTurbo; window.__brake = brakeOn; window.__stunt = stunt; window.__police = callPolice; window.__places = () => [G.state, Math.round(G.me.z), G.M && Math.round(G.M.mood)];

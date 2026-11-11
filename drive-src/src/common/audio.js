@@ -45,6 +45,7 @@ export const Audio = {
   H,
   init,
   extend(o) { Object.assign(fx, o); },
+  get(name) { return fx[name]; },
   sfx(name, delay = 0, arg) {
     if (muted || !init() || ctx.state !== 'running') return;
     const f = fx[name]; if (!f) return;

@@ -9,8 +9,9 @@ export function protect(file) {
   const src = fs.readFileSync(file, 'utf8'), t0 = Date.now();
   const out = JO.obfuscate(src, {
     compact: true, target: 'browser', identifierNamesGenerator: 'mangled-shuffled', renameGlobals: false,
-    stringArray: true, stringArrayThreshold: 0.6, stringArrayEncoding: ['base64'], stringArrayRotate: true, stringArrayShuffle: true,
-    stringArrayWrappersCount: 1, splitStrings: false, controlFlowFlattening: false, deadCodeInjection: false, selfDefending: false,
+    // names are scrambled; strings are NOT moved into a decoded array: that made the game ~6x slower to start
+    // (3D loops read many strings). The app also encrypts the whole file (tools/seal.mjs), so it is not readable.
+    stringArray: false, splitStrings: false, controlFlowFlattening: false, deadCodeInjection: false, selfDefending: false,
     numbersToExpressions: false, simplify: true, transformObjectKeys: false, unicodeEscapeSequence: false, sourceMap: false,
   }).getObfuscatedCode();
   fs.writeFileSync(file, out);

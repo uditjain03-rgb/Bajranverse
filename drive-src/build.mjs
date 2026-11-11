@@ -3,12 +3,13 @@
 import fs from 'fs';
 import path from 'path';
 import esbuild from 'esbuild';
+import zlib from 'zlib';
 import { protect } from './tools/protect.mjs';
 import { seal, writeK } from './tools/seal.mjs';
 const here = path.dirname(new URL(import.meta.url).pathname);
 const GAMES = {
   splash: { people: 'people-splash.bin', extra: [], music: ['bv_title', 'bv_win', 'duck', 'gameshow', 'wallpaper', 'snitch', 'carefree', 'hyperfun'], app: '../splashapp' },
-  taxi: { people: 'people-taxi.bin', extra: ['cow.glb', 'pug.glb', 'horse.glb'], music: ['bv_title', 'bv_win', 'riley', 'polka', 'monkeys', 'fuzzball', 'merry_go'], app: '../taxiapp', pkg: 'com.bajrangverse.madtaxi' },
+  taxi: { people: 'people-taxi.bin', extra: ['cow.glb', 'pug.glb', 'horse.glb'], music: ['bv_title', 'bv_win', 'riley', 'polka', 'monkeys', 'fuzzball', 'merry_go'], app: '../taxiapp', pkg: 'com.bajrangverse.madtaxi', lean: 1 },
 };
 for (const id of (process.argv[2] ? [process.argv[2]] : Object.keys(GAMES))) {
   const C = GAMES[id], www = path.join(here, 'www-' + id);
@@ -19,6 +20,10 @@ for (const id of (process.argv[2] ? [process.argv[2]] : Object.keys(GAMES))) {
   const pb = fs.existsSync(path.join(here, 'assets', C.people)) ? C.people : 'people-all.bin';
   fs.copyFileSync(path.join(here, 'assets', pb), path.join(www, 'people.bin'));
   for (const f of ['kit.glb', 'nature.glb', 'logo.jpg', ...C.extra]) fs.copyFileSync(path.join(here, 'assets', f), path.join(www, f));
+  if (C.lean) {   // fast start: each person in a file of their own (only the ones a ride needs are loaded), 3D models gzipped
+    splitPeople(path.join(www, 'people.bin'), path.join(www, 'people'));
+    for (const f of ['kit.glb', 'nature.glb', ...C.extra]) { fs.writeFileSync(path.join(www, f + '.pak'), zlib.gzipSync(fs.readFileSync(path.join(www, f)), { level: 9 })); fs.rmSync(path.join(www, f)); }
+  }
   for (const m of C.music) fs.copyFileSync(path.join(here, 'assets/music', m + '.ogg'), path.join(www, 'music', m + '.ogg'));
   await esbuild.build({ entryPoints: [path.join(here, `src/${id}/main.js`)], bundle: true, minify: !process.env.DEV, format: 'iife', target: 'es2020', outfile: path.join(www, 'game.js'), logLevel: 'warning' });
   if (process.env.PROTECT) protect(path.join(www, 'game.js'));
@@ -29,4 +34,18 @@ for (const id of (process.argv[2] ? [process.argv[2]] : Object.keys(GAMES))) {
     const jd = path.join(here, C.app, 'src/main/java', ...C.pkg.split('.'));
     if (process.env.PROTECT) seal(assets, jd, C.pkg); else writeK(jd, C.pkg, null);
   }
+}
+
+// people.bin → people/<id>.bin, each a complete people file holding one person
+function splitPeople(file, dir) {
+  const b = fs.readFileSync(file), hl = b.readUInt32LE(4), head = JSON.parse(b.subarray(8, 8 + hl).toString()), base = (8 + hl + 3) & ~3, chars = head.chars;
+  fs.mkdirSync(dir, { recursive: true });
+  chars.forEach((h, i) => {
+    const start = Math.min(...h.o), end = i + 1 < chars.length ? Math.min(...chars[i + 1].o) : b.length - base;
+    if (start % 4) throw new Error('people data not aligned: ' + h.id);
+    const hj = Buffer.from(JSON.stringify({ chars: [{ ...h, o: h.o.map(o => o - start) }] })), nb = (8 + hj.length + 3) & ~3, out = Buffer.alloc(nb + end - start);
+    b.copy(out, 0, 0, 4); out.writeUInt32LE(hj.length, 4); hj.copy(out, 8); b.copy(out, nb, base + start, base + end);
+    fs.writeFileSync(path.join(dir, h.id + '.bin'), out);
+  });
+  fs.rmSync(file);
 }

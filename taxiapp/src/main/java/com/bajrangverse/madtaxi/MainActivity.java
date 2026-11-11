@@ -29,6 +29,18 @@ import android.webkit.*;
 import android.net.Uri;
 import androidx.annotation.NonNull;
 import androidx.webkit.WebViewAssetLoader;
+import com.android.billingclient.api.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.spec.X509EncodedKeySpec;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import com.google.android.gms.ads.AdError;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.FullScreenContentCallback;
@@ -52,6 +64,15 @@ public class MainActivity extends Activity {
   private WebView web;
   private RewardedAd rewarded;
   private byte[] gameJs;
+  // Google Play Billing: one-time products. Create them with EXACTLY these IDs in Play Console (Monetize → In-app products).
+  static final String[] CAR_IDS = { "car_auto", "car_creta", "car_tractor", "car_thar", "car_muscle", "car_supercar", "car_monster", "vip_allcars" };
+  static final String[] COIN_IDS = { "coins_25k", "coins_80k", "coins_200k" };
+  static final int[] COIN_N = { 25000, 80000, 200000 };
+  // Optional: paste your app's Base64 licence key (Play Console → Monetize → Monetization setup) to verify every purchase.
+  static final String PLAY_LICENSE_KEY = "";
+  private BillingClient billing;
+  private final Map<String, ProductDetails> products = new HashMap<>();
+  private final Set<String> owned = new HashSet<>();
   private boolean earned;
 
   @Override public void onCreate(Bundle b) {
@@ -85,7 +106,54 @@ public class MainActivity extends Activity {
     setContentView(web);
     hideSystemUi();
     MobileAds.initialize(this, st -> loadRewarded());
+    setupBilling();
   }
+
+  // ---------- Google Play Billing ----------
+  private void setupBilling() {
+    billing = BillingClient.newBuilder(this).setListener((r, list) -> { if (r.getResponseCode() == BillingClient.BillingResponseCode.OK && list != null) for (Purchase p : list) handlePurchase(p); })
+      .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build()).build();
+    connectBilling();
+  }
+  private void connectBilling() {
+    billing.startConnection(new BillingClientStateListener() {
+      @Override public void onBillingSetupFinished(@NonNull BillingResult r) { if (r.getResponseCode() == BillingClient.BillingResponseCode.OK) { queryProducts(); restorePurchases(); } }
+      @Override public void onBillingServiceDisconnected() { if (web != null) web.postDelayed(() -> connectBilling(), 20000); }
+    });
+  }
+  private void queryProducts() {
+    List<QueryProductDetailsParams.Product> ps = new ArrayList<>();
+    for (String id : CAR_IDS) ps.add(QueryProductDetailsParams.Product.newBuilder().setProductId(id).setProductType(BillingClient.ProductType.INAPP).build());
+    for (String id : COIN_IDS) ps.add(QueryProductDetailsParams.Product.newBuilder().setProductId(id).setProductType(BillingClient.ProductType.INAPP).build());
+    billing.queryProductDetailsAsync(QueryProductDetailsParams.newBuilder().setProductList(ps).build(), (r, list) -> { if (list != null) synchronized (products) { for (ProductDetails d : list) products.put(d.getProductId(), d); } });
+  }
+  private void restorePurchases() {
+    billing.queryPurchasesAsync(QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.INAPP).build(), (r, list) -> { if (list != null) for (Purchase p : list) handlePurchase(p); });
+  }
+  private int coinsFor(String id) { for (int i = 0; i < COIN_IDS.length; i++) if (COIN_IDS[i].equals(id)) return COIN_N[i]; return 0; }
+  private void handlePurchase(Purchase p) {
+    if (p.getPurchaseState() != Purchase.PurchaseState.PURCHASED || !verified(p)) return;
+    for (String id : p.getProducts()) {
+      int n = coinsFor(id);
+      if (n > 0) billing.consumeAsync(ConsumeParams.newBuilder().setPurchaseToken(p.getPurchaseToken()).build(), (r, t) -> {
+        if (r.getResponseCode() == BillingClient.BillingResponseCode.OK) { SharedPreferences g = gp(); g.edit().putInt("pc", g.getInt("pc", 0) + n).apply(); notifyStore(); } });
+      else {
+        synchronized (owned) { owned.add(id); }
+        if (!p.isAcknowledged()) billing.acknowledgePurchase(AcknowledgePurchaseParams.newBuilder().setPurchaseToken(p.getPurchaseToken()).build(), r -> {});
+        notifyStore();
+      }
+    }
+  }
+  // checks Google's signature on the purchase (when the licence key is filled in above)
+  private boolean verified(Purchase p) {
+    if (PLAY_LICENSE_KEY.isEmpty()) return true;
+    try {
+      PublicKey k = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(Base64.decode(PLAY_LICENSE_KEY, Base64.DEFAULT)));
+      java.security.Signature v = java.security.Signature.getInstance("SHA1withRSA"); v.initVerify(k); v.update(p.getOriginalJson().getBytes("UTF-8"));
+      return v.verify(Base64.decode(p.getSignature(), Base64.DEFAULT));
+    } catch (Exception e) { return false; }
+  }
+  private void notifyStore() { runOnUiThread(() -> { if (web != null) web.evaluateJavascript("window.onStore&&window.onStore()", null); }); }
 
   // ---------- protection ----------
   // the app only runs when it is signed with our certificate (or installed by Google Play, which re-signs apps
@@ -142,7 +210,7 @@ public class MainActivity extends Activity {
 
   @Override public void onWindowFocusChanged(boolean hasFocus) { super.onWindowFocusChanged(hasFocus); if (hasFocus && web != null) hideSystemUi(); }
   @Override protected void onPause() { super.onPause(); if (web == null) return; web.evaluateJavascript("window.onAppPause&&window.onAppPause()", null); web.onPause(); }
-  @Override protected void onResume() { super.onResume(); if (web == null) return; web.onResume(); web.evaluateJavascript("window.onAppResume&&window.onAppResume()", null); }
+  @Override protected void onResume() { super.onResume(); if (web == null) return; if (billing != null && billing.isReady()) restorePurchases(); web.onResume(); web.evaluateJavascript("window.onAppResume&&window.onAppResume()", null); }
 
   @Override public void onBackPressed() {
     if (web == null) { finish(); return; }
@@ -169,6 +237,22 @@ public class MainActivity extends Activity {
         rewarded.show(MainActivity.this, item -> earned = true);
       });
     }
+    // the shop: billingReady(), prices() → {"id":"₹49.00"}, buy(id), owned() → ["car_thar"], takeCoins() → coins bought and not yet given
+    @JavascriptInterface public boolean billingReady() { synchronized (products) { return billing != null && billing.isReady() && !products.isEmpty(); } }
+    @JavascriptInterface public String prices() {
+      JSONObject o = new JSONObject();
+      synchronized (products) { for (ProductDetails d : products.values()) { ProductDetails.OneTimePurchaseOfferDetails f = d.getOneTimePurchaseOfferDetails(); if (f != null) try { o.put(d.getProductId(), f.getFormattedPrice()); } catch (Exception e) { /* skip */ } } }
+      return o.toString();
+    }
+    @JavascriptInterface public void buy(String id) {
+      runOnUiThread(() -> {
+        ProductDetails d; synchronized (products) { d = products.get(id); } if (d == null || billing == null) return;
+        List<BillingFlowParams.ProductDetailsParams> l = new ArrayList<>(); l.add(BillingFlowParams.ProductDetailsParams.newBuilder().setProductDetails(d).build());
+        billing.launchBillingFlow(MainActivity.this, BillingFlowParams.newBuilder().setProductDetailsParamsList(l).build());
+      });
+    }
+    @JavascriptInterface public String owned() { synchronized (owned) { return new JSONArray(owned).toString(); } }
+    @JavascriptInterface public int takeCoins() { SharedPreferences g = gp(); int n = g.getInt("pc", 0); if (n > 0) g.edit().putInt("pc", 0).apply(); return n; }
     // saved progress: sign(key, data) after saving; check(key, data, sig) on loading → "ok", "new" (never signed) or "bad" (edited)
     @JavascriptInterface public String sign(String key, String data) { gp().edit().putBoolean("s_" + key, true).apply(); return hmac(data); }
     @JavascriptInterface public String check(String key, String data, String sig) {

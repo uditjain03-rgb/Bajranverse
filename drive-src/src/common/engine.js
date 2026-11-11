@@ -1,6 +1,7 @@
 // The shared runtime of the BajrangVerse driving games: renderer and lights, phone-friendly resolution steps, batched
 // particles (puffs, sparks, splashes), explosions, floating words, banners, and the frame loop.
 import * as THREE from 'three';
+import { gunzipSync } from 'three/examples/jsm/libs/fflate.module.js';
 import { canvasTex, bendPoint } from './gfx.js';
 
 // the game only runs from its own app (or a local test page): copies put on other websites stop here
@@ -113,4 +114,17 @@ export function startLoop(L) {   // L: { update(dt), camera(dt), active() → fr
   }
   requestAnimationFrame(frame);
 }
-export function loadBin(url) { return new Promise((ok, no) => { const x = new XMLHttpRequest(); x.open('GET', url); x.responseType = 'arraybuffer'; x.onload = () => (x.status === 200 || x.status === 0) && x.response ? ok(x.response) : no(new Error('load ' + x.status)); x.onerror = () => no(new Error('load ' + url)); x.send(); }); }
+// load a file as bytes; ".gz" and ".pak" (gzip; Android's packager would unpack a ".gz") files are unpacked (the browser's own gzip decoder, or fflate on old WebViews).
+// onProgress(bytesSoFar, total) lets a loading bar move.
+export function loadBin(url, onProgress) {
+  return new Promise((ok, no) => {
+    const x = new XMLHttpRequest(); x.open('GET', url); x.responseType = 'arraybuffer';
+    if (onProgress) x.onprogress = e => onProgress(e.loaded, e.lengthComputable ? e.total : 0);
+    x.onload = () => { if (!((x.status === 200 || x.status === 0) && x.response)) { no(new Error('load ' + x.status)); return; } if (onProgress) onProgress(x.response.byteLength, x.response.byteLength); if (!url.endsWith('.gz') && !url.endsWith('.pak')) { ok(x.response); return; } gunzip(x.response).then(ok, no); };
+    x.onerror = () => no(new Error('load ' + url)); x.send();
+  });
+}
+async function gunzip(buf) {
+  if (typeof DecompressionStream === 'function') { try { return await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer(); } catch (e) { /* fall back */ } }
+  return gunzipSync(new Uint8Array(buf)).buffer;
+}

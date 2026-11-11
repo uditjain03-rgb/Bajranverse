@@ -6,8 +6,8 @@ android {
     applicationId 'com.bajrangverse.madtaxi'
     minSdk 24
     targetSdk 35
-    versionCode 3
-    versionName '3.0.0'
+    versionCode 4
+    versionName '4.0.0'
   }
   buildTypes {
     release {
@@ -17,9 +17,10 @@ android {
     }
   }
   compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
-  androidResources { noCompress += ['bin'] }
+  androidResources { noCompress += ['bin', 'pak'] }
 }
 dependencies {
   implementation 'com.google.android.gms:play-services-ads:23.6.0'   // AdMob (rewarded ads only)
-  implementation 'androidx.webkit:webkit:1.12.1'                     // serves the game files from a secure local address
+  implementation 'androidx.webkit:webkit:1.12.1'
+  implementation 'com.android.billingclient:billing:7.1.1'            // Google Play Billing: cars and coin packs for real money                     // serves the game files from a secure local address
 }

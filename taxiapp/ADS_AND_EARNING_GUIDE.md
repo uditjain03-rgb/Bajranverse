@@ -8,8 +8,8 @@ The game is already wired for **Google AdMob rewarded ads**. Right now it uses G
 - There are **no ads during play** and no ads between rides.
 - The only ads are **rewarded ads the player chooses** to watch:
   - **📺 TRY** in the garage: try a paint, wheels or an add-on free for one ride.
-  - **📺 Watch an ad: FREE ₹250** in the garage. It can be used once every 3 minutes.
-  - **📺 WATCH AD: DOUBLE ₹** on the results screen.
+  - **📺 FREE 500 🪙** in the garage and the shop. It can be used once every 3 minutes.
+  - **📺 WATCH AD: DOUBLE 🪙** on the results screen.
 - Rewarded ads earn the most per view, and players do not mind them because they asked for them.
 
 ## Step 1: Create your AdMob account (one time)
@@ -73,16 +73,43 @@ The game is already wired for **Google AdMob rewarded ads**. Right now it uses G
 3. Add your bank account (IFSC + account number). Google sends a small test deposit to confirm it.
 4. You are paid monthly (around the 21st) once your balance is above the payout threshold (about ₹8,000 / $100).
 
-## Optional: sell add-ons for real money (Google Play Billing)
+## Selling cars and coin packs for real money (Google Play Billing, already built in)
 
-The garage sells cars and add-ons for in-game ₹ coins. To also sell, for example, a "Coin Pack ₹10,000" or "Gold Car
-Pack" for real money:
+In-game prices are in **🪙 coins**, which players earn by driving. Players can also buy cars and coin packs with real
+money through Google Play. The app already contains this code. You only need to create the products:
 
-1. In Play Console, open **Monetize → Products → In-app products**. Create the products (for example
-   `coins_10000`, priced ₹79).
-2. Add `com.android.billingclient:billing:7.1.1` to the app and connect it to the game through the `GameNative`
-   bridge, the same way ads work. This is a separate piece of work. Ask, and it can be added in the next version.
-3. Google keeps 15% (on the first $1M per year) and pays the rest to the same Payments profile.
+1. In Play Console, open your app → **Monetize → Products → In-app products**. (Play asks you to upload an AAB with
+   the billing library first. This version already has it.)
+2. Create these **one-time products** with exactly these product IDs. Suggested prices are below; you can change them.
+
+| Product ID | What the player gets | Suggested price |
+|---|---|---|
+| `car_auto` | Auto Rickshaw | ₹29 |
+| `car_creta` | City Cruiser SUV | ₹49 |
+| `car_tractor` | Kisan Tractor + Trolley | ₹49 |
+| `car_thar` | Jungle King 4x4 | ₹79 |
+| `car_muscle` | Muscle Masti V8 | ₹99 |
+| `car_supercar` | Super Taxi GT | ₹129 |
+| `car_monster` | Monster Bully 4x4 | ₹149 |
+| `vip_allcars` | Every car, forever | ₹299 |
+| `coins_25k` | 25,000 🪙 (can be bought again) | ₹49 |
+| `coins_80k` | 80,000 🪙 | ₹129 |
+| `coins_200k` | 200,000 🪙 | ₹249 |
+
+3. Activate each product.
+4. **Recommended:** copy your app's **licence key** (Play Console → Monetize → Monetization setup) into
+   `PLAY_LICENSE_KEY` in `MainActivity.java`. The app then checks Google's signature on every purchase, so fake
+   purchases from cracking tools are rejected.
+5. Test before going live. In Play Console, open **Setup → License testing** and add your Gmail. Install the app from
+   the internal testing track. Test purchases are free and are refunded automatically.
+
+How it works in the game:
+
+- When the store is available, the garage shows a gold **price button** (for example ₹79) next to the coin price.
+- **🛒 SHOP** on the home screen and **🛒 GET COINS** in the garage sell the coin packs.
+- Cars bought with money come back automatically after a reinstall, as long as the player uses the same Google account.
+- Google keeps 15% and pays the rest into the same Payments profile as AdMob.
+- When the game is not installed from Google Play, the money buttons simply don't appear.
 
 ## Rebuild and sign (after changing the IDs)
 
@@ -104,11 +131,18 @@ keytool -exportcert -alias upload -keystore play-upload-key/mad-taxi-upload.jks 
 Google Play installed. To also accept that key in other cases, copy the **App signing key certificate SHA-256** from
 Play Console → **Setup → App signing** and pass it as `PLAY_CERT=<sha256>` when you build.
 
+## About the car names
+
+The 4x4 and the SUV are styled after popular Indian vehicles, but in the game they are called **Jungle King 4x4** and
+**City Cruiser SUV**. Real brand names (Mahindra Thar, Hyundai Creta, and others) are trademarks. Using them in a game
+you sell or show ads in needs the car makers' permission, and Google Play can remove apps that use brands without
+permission.
+
 ## About copy protection (honest summary)
 
 What the release build does:
 
-- The game code is **obfuscated** (renamed, strings hidden).
+- The game code is **obfuscated**: all names are scrambled. Strings are left in place, because moving them made the game about 6x slower to start.
 - The game code is **encrypted** inside the APK (AES-256). It is only decrypted in memory and never written as a file.
 - The app **refuses to run** if it was re-signed by someone else (a modded APK), is debuggable, or has a debugger attached.
 - The Java side is shrunk and obfuscated by R8.

@@ -67,6 +67,12 @@ export const CARS = {
   hatch: { L: 3.85, W: 1.7, H: 1.52, wb: 2.45, R: 0.31, clr: 0.17, belt: 0.95, hoodF: 0.76, trunk: 0.98, ws: 0.75, wsTop: -0.02, rw: -1.8, rwTop: -1.48, trunkEnd: -1.9, tumble: 0.2, wheel: 'alloy', grille: 'black', round: [0.45, 0.12] },
   suv: { L: 4.55, W: 1.85, H: 1.9, wb: 2.7, R: 0.38, clr: 0.28, belt: 1.18, hoodF: 1.02, trunk: 1.2, ws: 0.82, wsTop: 0.25, rw: -2.18, rwTop: -2.08, trunkEnd: -2.26, tumble: 0.1, wheel: 'black', grille: 'chrome', boxy: 1, round: [0.35, 0.08] },
   sports: { L: 4.5, W: 1.92, H: 1.2, wb: 2.65, R: 0.34, clr: 0.12, belt: 0.78, hoodF: 0.58, trunk: 0.8, ws: 0.55, wsTop: -0.32, rw: -1.7, rwTop: -1.02, trunkEnd: -2.2, tumble: 0.26, wheel: 'black', grille: 'black', round: [0.6, 0.16] },
+  // the player's cars
+  supercar: { L: 4.55, W: 1.98, H: 1.17, wb: 2.68, R: 0.35, clr: 0.11, belt: 0.76, hoodF: 0.55, trunk: 0.8, ws: 0.5, wsTop: -0.42, rw: -1.5, rwTop: -0.98, trunkEnd: -2.2, tumble: 0.22, wheel: 'sport', grille: 'black', round: [0.7, 0.2], intakes: 1, diffuser: 1, quadEx: 1, tw: 0.27 },
+  muscle: { L: 4.85, W: 1.95, H: 1.36, wb: 2.85, R: 0.36, clr: 0.14, belt: 0.9, hoodF: 0.8, trunk: 0.92, ws: 0.6, wsTop: -0.12, rw: -1.42, rwTop: -1.02, trunkEnd: -2.3, tumble: 0.16, wheel: 'alloy', grille: 'black', round: [0.35, 0.06], scoop: 1, quad: 1, tw: 0.26 },
+  thar: { L: 3.99, W: 1.82, H: 1.93, wb: 2.45, R: 0.4, clr: 0.3, belt: 1.15, hoodF: 1.08, trunk: 1.15, ws: 0.78, wsTop: 0.68, rw: -1.93, rwTop: -1.93, trunkEnd: -1.96, tumble: 0.02, wheel: 'offroad', grille: 'black', boxy: 1, box: 1, round: [0.12, 0.02], roof: 0x16161a, flares: 1, spare: 1, slots: 1, step: 1, tw: 0.27 },
+  creta: { L: 4.3, W: 1.79, H: 1.64, wb: 2.61, R: 0.36, clr: 0.2, belt: 1.04, hoodF: 0.95, trunk: 1.08, ws: 0.86, wsTop: 0.02, rw: -1.86, rwTop: -1.6, trunkEnd: -2.1, tumble: 0.13, wheel: 'alloy', grille: 'chrome', round: [0.4, 0.1], rails: 1, cladding: 1, drl: 1, tw: 0.23 },
+  monster: { L: 4.4, W: 2.1, H: 2.42, wb: 2.75, R: 0.62, clr: 0.72, belt: 1.62, hoodF: 1.52, trunk: 1.62, ws: 0.9, wsTop: 0.74, rw: -2.0, rwTop: -2.0, trunkEnd: -2.15, tumble: 0.03, wheel: 'offroad', grille: 'black', boxy: 1, box: 1, round: [0.15, 0.03], roof: 0x16161a, flares: 1, lightbar: 1, step: 1, tw: 0.42 },
   gypsy: { L: 4.0, W: 1.6, H: 1.85, wb: 2.37, R: 0.36, clr: 0.3, belt: 1.12, hoodF: 1.02, trunk: 1.12, ws: 0.62, wsTop: 0.56, rw: -1.95, rwTop: -1.95, trunkEnd: -1.98, tumble: 0.03, wheel: 'black', grille: 'black', boxy: 1, round: [0.2, 0.04] },
 };
 // colours of the standard liveries
@@ -79,20 +85,19 @@ export const LIVERY = {
 const carCache = {};
 export function makeCar(type, col = 0xc8302a, o = {}) {
   if (o.spin) return buildCar(type, col, o);
-  const k = type + '|' + col + '|' + (o.livery || '') + '|' + (o.taxi ? 1 : 0) + '|' + (o.top ?? '');
+  const k = type + '|' + col + '|' + JSON.stringify(o);
   const T = carCache[k] || (carCache[k] = buildCar(type, col, o)), obj = T.obj.clone(true);
   return { ...T, obj, model: obj.children[0], wheels: [], front: [], size: T.size.clone() };
 }
 function buildCar(type, col = 0xc8302a, o = {}) {
-  if (LOFT[type]) return loftCar(type, col, o);
-  if (type === 'auto') return makeAuto(col, o); if (type === 'bus') return makeBus(col, o); if (type === 'truck') return makeTruck(col, o);
+  if (type === 'auto') return makeAuto(col, o); if (type === 'bus') return makeBus(col, o); if (type === 'truck') return makeTruck(col, o); if (type === 'tractor') return makeTractor(col, o);
   const C = CARS[type] || CARS.sedan, L = C.L, W = C.W, L2 = L / 2, body = [], lamps = [];
-  const liv = o.livery ? LIVERY[o.livery] : null, paint = liv ? liv.body : col, roofC = liv ? liv.roof : col;
+  const liv = o.livery ? LIVERY[o.livery] : null, paint = liv ? liv.body : col, roofC = liv ? liv.roof : o.roofCol ?? C.roof ?? col, glass = o.tint ?? 0x0e1620;
   const sR = -C.wb / 2 + (C.L / 2 - C.wb / 2 - 0.85 > 0 ? -0.05 : 0), sF = C.wb / 2 - 0.02, aR = C.R + 0.07, y0 = C.clr + 0.05;
   // the lower body: bumpers, wheel arches, hood, the beltline, the boot
   const s = new THREE.Shape(); const B = 0.06;
   s.moveTo(-L2 + 0.12, y0);
-  for (const wc of [sR, sF]) { s.lineTo(wc - aR, y0); for (let i = 0; i <= 10; i++) { const a = PI - i / 10 * PI; s.lineTo(wc + Math.cos(a) * aR, C.R + 0.02 + Math.sin(a) * aR); } s.lineTo(wc + aR, y0); }
+  for (const wc of [sR, sF]) { const pts = []; for (let i = 0; i <= 12; i++) { const a = PI - i / 12 * PI, y = C.R + 0.02 + Math.sin(a) * aR; if (y > y0 + 0.01) pts.push([wc + Math.cos(a) * aR, y]); } if (pts.length) { s.lineTo(pts[0][0], y0); pts.forEach(q => s.lineTo(q[0], q[1])); s.lineTo(pts[pts.length - 1][0], y0); } }
   s.lineTo(L2 - 0.18, y0); s.quadraticCurveTo(L2 - B, y0, L2 - B, y0 + 0.16);
   s.lineTo(L2 - B, C.hoodF - 0.08); s.quadraticCurveTo(L2 - B, C.hoodF, L2 - 0.2, C.hoodF + 0.02);
   s.quadraticCurveTo(C.ws + (L2 - C.ws) * 0.4, C.belt - 0.02, C.ws, C.belt);
@@ -105,10 +110,14 @@ function buildCar(type, col = 0xc8302a, o = {}) {
   c.moveTo(C.rw, C.belt - 0.01); c.lineTo(C.ws, C.belt - 0.01); c.lineTo(C.wsTop, rf - 0.05); c.quadraticCurveTo(C.wsTop - 0.08, rf, C.wsTop - 0.25, rf);
   c.lineTo(C.rwTop + 0.2, rf); c.quadraticCurveTo(C.rwTop + 0.05, rf, C.rwTop, rf - 0.05); c.lineTo(C.rw, C.belt - 0.01);
   const Wc = W - 0.1, cab = extrudeSide(c, Wc, { L, bevel: 0.05, seg: 6, tumble: [C.belt, rf, C.tumble] });
-  body.push(part(cab, 0x0e1620, 1.0, true));
+  body.push(part(cab, glass, 1.0, true));
   // the roof panel (body colour) just above the glass, slightly smaller
   const rs = new THREE.Shape(); rs.moveTo(C.rwTop + 0.12, rf - 0.07); rs.lineTo(C.wsTop - 0.17, rf - 0.07); rs.quadraticCurveTo(C.wsTop - 0.1, rf + 0.012, C.wsTop - 0.25, rf + 0.012); rs.lineTo(C.rwTop + 0.22, rf + 0.012); rs.quadraticCurveTo(C.rwTop + 0.08, rf + 0.012, C.rwTop + 0.12, rf - 0.07);
   body.push(part(extrudeSide(rs, Wc * (1 - C.tumble) + 0.02, { L, bevel: 0.04, seg: 4 }), roofC, 0.6, true));
+  if (o.stripe) for (const sx of [-0.2, 0.2]) {
+    const g = extrudeSide(s, 0.26, { L, bevel: 0.02, seg: 8 }); g.scale(1, (C.H + 0.05) / C.H, (L / 2 + 0.045) / (L / 2)); g.translate(sx, 0.035 - y0 * 0.05 / C.H, 0); body.push(part(g, o.stripe, 0.6, true));   // the body's bevel is 3.5 cm thicker
+    const r = extrudeSide(rs, 0.26, { L, bevel: 0.02, seg: 4 }); r.translate(sx, 0.024, 0); body.push(part(r, o.stripe, 0.6, true));
+  }
   // pillars (A, B, C) in body colour over the glass
   const xr = (y) => (Wc / 2) * (1 - C.tumble * Math.min(1, Math.max(0, (y - C.belt) / (rf - C.belt)))) + 0.012;
   for (const sd of [-1, 1]) {
@@ -125,35 +134,53 @@ function buildCar(type, col = 0xc8302a, o = {}) {
     // a stripe along the side (police, cool-cab)
     if (liv && liv.stripe) body.push(part(box(0.012, 0.12, L - 0.6, sd * (W / 2 - 0.02), C.belt - 0.28, 0), liv.stripe, 0.5));
   }
+  for (const sd of [-1, 1]) {
+    if (C.flares) for (const wc of [sR, sF]) for (let i = 0; i < 7; i++) { const a = PI * (0.08 + i / 6 * 0.84), x = wc + Math.cos(a) * (aR + 0.04), y = C.R + 0.02 + Math.sin(a) * (aR + 0.04); if (y > y0) body.push(part(box(0.14, 0.08, aR * 0.62, sd * (W / 2 + 0.03), y, -x, a - PI / 2), 0x18181a, 0.15)); }
+    if (C.cladding) { body.push(part(box(0.03, 0.14, L - 1.1, sd * (W / 2 - 0.005), y0 + 0.1, 0), 0x202024, 0.15)); }
+    if (C.step) body.push(part(box(0.18, 0.05, C.wb - 2 * aR - 0.1, sd * (W / 2 + 0.05), y0 + 0.02, -(sR + sF) / 2), 0x2a2a2e, 0.6));
+    if (C.intakes) body.push(part(box(0.03, 0.18, 0.55, sd * (W / 2 - 0.01), C.belt - 0.28, -sR + aR + 0.35), 0x0a0a0c, 0.2));
+  }
+  if (C.scoop) body.push(part(rbox(0.6, 0.12, 0.7, 0.05, 0, C.hoodF + 0.08, -L2 + 0.95), paint, 0.6), part(box(0.5, 0.07, 0.02, 0, C.hoodF + 0.1, -L2 + 0.6), 0x0a0a0c, 0.2));
   // bumpers, grille, plates, lamps
   const fz = -L2 + 0.02, rz = L2 - 0.02, bc = C.grille === 'chrome' ? 0xdfe5ec : 0x202024;
   body.push(part(rbox(W - 0.08, 0.16, 0.16, 0.05, 0, y0 + 0.1, fz + 0.04), bc, 0.8)); body.push(part(rbox(W - 0.08, 0.16, 0.16, 0.05, 0, y0 + 0.1, rz - 0.04), bc, 0.8));
   body.push(part(box(W * 0.45, (C.hoodF - y0) * 0.38, 0.03, 0, y0 + (C.hoodF - y0) * 0.62, fz), 0x0c0c0e, 0.3));
-  if (C.grille === 'chrome') for (let i = 0; i < 4; i++) body.push(part(box(W * 0.45, 0.012, 0.035, 0, y0 + (C.hoodF - y0) * (0.48 + i * 0.09), fz - 0.005), 0xe8eef4, 1));
+  if (C.slots) for (let i = -3; i <= 3; i++) body.push(part(box(0.05, (C.hoodF - y0) * 0.3, 0.035, i * 0.11, y0 + (C.hoodF - y0) * 0.62, fz - 0.006), 0x3a3a40, 0.6));
+  if (C.grille === 'chrome' && !C.slots) for (let i = 0; i < 4; i++) body.push(part(box(W * 0.45, 0.012, 0.035, 0, y0 + (C.hoodF - y0) * (0.48 + i * 0.09), fz - 0.005), 0xe8eef4, 1));
   const plate = o.taxi ? 0xffd21a : 0xf4f4f0;
   body.push(part(box(0.5, 0.12, 0.02, 0, y0 + 0.22, fz - 0.01), plate, 0.3)); body.push(part(box(0.5, 0.12, 0.02, 0, y0 + 0.24, rz + 0.01), plate, 0.3));
   for (const sd of [-1, 1]) {
-    if (C.box) { lamps.push(part(cyl(0.085, 0.085, 0.04, 14, sd * (W / 2 - 0.22), C.hoodF - 0.13, fz - 0.005, PI / 2), 0xfff6d8)); body.push(part(cyl(0.1, 0.1, 0.03, 14, sd * (W / 2 - 0.22), C.hoodF - 0.13, fz + 0.01, PI / 2), 0xe8eef4, 1)); }
+    if (C.box) { const lx = sd * (W / 2 - (C.slots ? 0.3 : 0.22)); lamps.push(part(cyl(0.1, 0.1, 0.04, 16, lx, C.hoodF - 0.15, fz - 0.005, PI / 2), 0xfff6d8)); body.push(part(cyl(0.12, 0.12, 0.03, 16, lx, C.hoodF - 0.15, fz + 0.01, PI / 2), 0x2a2a2e, 1)); }
+    else if (C.quad) for (const k of [0.2, 0.42]) { lamps.push(part(cyl(0.07, 0.07, 0.04, 14, sd * (W / 2 - k), C.hoodF - 0.12, fz - 0.005, PI / 2), 0xfff6d8)); body.push(part(cyl(0.085, 0.085, 0.03, 14, sd * (W / 2 - k), C.hoodF - 0.12, fz + 0.01, PI / 2), 0xd8dde4, 1)); }
     else lamps.push(part(box(0.32, 0.09, 0.03, sd * (W / 2 - 0.25), C.hoodF - 0.1, fz - 0.005), 0xfff4e0));
     lamps.push(part(box(0.06, 0.04, 0.02, sd * (W / 2 - 0.12), y0 + 0.2, fz - 0.03), 0xffa21a));
+    if (C.drl) lamps.push(part(box(0.42, 0.025, 0.02, sd * (W / 2 - 0.3), C.hoodF - 0.02, fz - 0.01), 0xf4fbff));
     lamps.push(part(box(C.boxy ? 0.12 : 0.28, C.boxy ? 0.22 : 0.1, 0.03, sd * (W / 2 - (C.boxy ? 0.1 : 0.22)), (C.boxy ? C.belt - 0.15 : Math.min(C.trunk, C.belt) - 0.12), rz + 0.005), 0xff2a1a));
   }
+  if (C.diffuser) { body.push(part(box(W - 0.5, 0.12, 0.25, 0, y0 + 0.02, rz - 0.06), 0x111114, 0.3)); lamps.push(part(box(W - 0.4, 0.04, 0.02, 0, C.trunk - 0.1, rz + 0.012), 0xff2a1a)); }
+  const exY = y0 + 0.07, exs = C.quadEx ? [-0.42, -0.3, 0.3, 0.42] : C.boxy ? [0.5] : [-0.38, 0.38];
+  for (const x of exs) body.push(part(cyl(0.045, 0.05, 0.22, 10, x, exY, rz - 0.02, PI / 2), 0xc8ced6, 1));
   // taxi roof sign, police lights, roof rails (SUV)
-  if ((liv && liv.sign) || o.taxi) { body.push(part(rbox(0.7, 0.2, 0.28, 0.04, 0, rf + 0.12, -0.05), 0xffd21a, 0.4)); body.push(part(box(0.62, 0.11, 0.29, 0, rf + 0.12, -0.05), 0x1a1a1a, 0.4)); lamps.push(part(box(0.5, 0.06, 0.295, 0, rf + 0.13, -0.05), 0xfff2a0)); }
+  const roofItem = o.roofItem ?? ((liv && liv.sign) || o.taxi ? 'sign' : C.lightbar ? 'lightbar' : null), rcx = -(C.wsTop + C.rwTop) / 2, rlen = Math.max(0.6, C.wsTop - C.rwTop - 0.4), rw2 = Wc * (1 - C.tumble) - 0.2;
+  addRoof(roofItem, body, lamps, rf, roofItem === 'sign' ? -0.05 : rcx, rlen, rw2);
   if (liv && liv.siren) { body.push(part(box(0.9, 0.06, 0.25, 0, rf + 0.05, -0.1), 0x1a1a1a, 0.5)); lamps.push(part(box(0.38, 0.1, 0.22, -0.23, rf + 0.12, -0.1), 0xff2a2a)); lamps.push(part(box(0.38, 0.1, 0.22, 0.23, rf + 0.12, -0.1), 0x2a6aff)); }
-  if (type === 'suv' || type === 'gypsy') for (const sd of [-1, 1]) body.push(part(box(0.04, 0.04, (C.wsTop - C.rwTop) * 0.9, sd * (Wc / 2 * (1 - C.tumble) - 0.05), rf + 0.06, -(C.wsTop + C.rwTop) / 2), 0x2a2a30, 0.7));
-  if (type === 'suv' || type === 'gypsy') body.push(part(cyl(C.R * 0.95, C.R * 0.95, 0.24, 16, 0, C.belt - 0.15, rz + 0.12, PI / 2), 0x1c1c1e, 0.1));
-  if (type === 'sports') body.push(part(box(W - 0.2, 0.03, 0.22, 0, C.trunk + 0.16, rz - 0.15), paint, 0.6), part(box(0.05, 0.14, 0.05, -W / 2 + 0.35, C.trunk + 0.08, rz - 0.15), 0x1a1a1a), part(box(0.05, 0.14, 0.05, W / 2 - 0.35, C.trunk + 0.08, rz - 0.15), 0x1a1a1a));
+  if ((type === 'suv' || type === 'gypsy' || C.rails) && roofItem !== 'rack') for (const sd of [-1, 1]) body.push(part(box(0.04, 0.04, (C.wsTop - C.rwTop) * 0.9, sd * (Wc / 2 * (1 - C.tumble) - 0.05), rf + 0.06, -(C.wsTop + C.rwTop) / 2), 0x2a2a30, 0.7));
+  if (type === 'suv' || type === 'gypsy' || C.spare) body.push(part(cyl(C.R * 0.95, C.R * 0.95, 0.24, 16, 0, C.belt - 0.15, rz + 0.12, PI / 2), 0x1c1c1e, 0.1));
+  if (o.wing) { const wy = C.boxy ? rf + 0.12 : C.trunk + 0.3, wz = C.boxy ? -C.rwTop - 0.05 : rz - 0.22; body.push(part(rbox(W - 0.15, 0.05, 0.3, 0.02, 0, wy, wz), o.wingCol ?? 0x111114, 0.7)); for (const sd of [-1, 1]) body.push(part(box(0.05, 0.3, 0.12, sd * (W / 2 - 0.4), wy - 0.16, wz), 0x111114, 0.5)); }
+  else if (type === 'sports') body.push(part(box(W - 0.2, 0.03, 0.22, 0, C.trunk + 0.16, rz - 0.15), paint, 0.6), part(box(0.05, 0.14, 0.05, -W / 2 + 0.35, C.trunk + 0.08, rz - 0.15), 0x1a1a1a), part(box(0.05, 0.14, 0.05, W / 2 - 0.35, C.trunk + 0.08, rz - 0.15), 0x1a1a1a));
   // under the car: dark
   body.push(part(box(W - 0.2, 0.06, L - 0.6, 0, C.clr + 0.02, 0), 0x101012, 0));
-  return assemble(body, lamps, [[sR, C.R, W / 2 - 0.12, 0], [sF, C.R, W / 2 - 0.12, 1]], C.R, 0.21, C.wheel, o, { x: W, y: C.H + (liv && (liv.sign || liv.siren) ? 0.2 : 0), z: L });
+  const extra = [...(o.extra || [])]; if (o.decal) extra.push(...sideDecals(o.decal, W, L * 0.62, (C.belt - y0) * 0.62, y0 + (C.belt - y0) * 0.45, -0.05)); if (o.neon) extra.push(neonPlane(o.neon, W, L));
+  const car = assemble(body, lamps, [[sR, C.R, W / 2 - (C.tw || 0.21) * 0.57, 0], [sF, C.R, W / 2 - (C.tw || 0.21) * 0.57, 1]], C.R, C.tw || 0.21, o.rims || C.wheel, { ...o, extra }, { x: W, y: C.H + (roofItem ? 0.2 : 0), z: L });
+  car.exhaust = exs.map(x => [x, exY, rz + 0.1]); car.roofY = rf; return car;
 }
 // put a vehicle together: one body mesh, one lamp mesh, wheels (spinning ones as separate meshes when asked)
 function assemble(body, lamps, axles, R, tw, kind, o, size) {
   const holder = new THREE.Group(), model = new THREE.Group(); holder.add(model);
-  const wheels = [], front = [], wg = wheelGeo(R, tw, o.rims || kind), still = [];
-  for (const [s, r, x, isFront] of axles) for (const sd of (x === 0 ? [0] : [-1, 1])) {
-    if (o.spin) { const w = new THREE.Mesh(wg, BODY); const pivot = new THREE.Group(); pivot.position.set(sd * x, r, -s); pivot.add(w); model.add(pivot); w.name = 'wheel'; wheels.push(w); if (isFront) front.push(pivot); }
+  const wheels = [], front = [], still = [];
+  for (const [s, r, x, isFront, aw] of axles) for (const sd of (x === 0 ? [0] : [-1, 1])) {
+    const wg = wheelGeo(r, aw || tw, kind);
+    if (o.spin) { const w = new THREE.Mesh(wg, BODY); w.userData.r = r; const pivot = new THREE.Group(); pivot.position.set(sd * x, r, -s); pivot.add(w); model.add(pivot); w.name = 'wheel'; wheels.push(w); if (isFront) front.push(pivot); }
     else { const g = wg.clone(); g.translate(sd * x, r, -s); still.push(g); }
   }
   const m = new THREE.Mesh(mergeGeometries([...body, ...still]), o.mat || BODY); model.add(m);
@@ -168,7 +195,7 @@ function makeAuto(col = 0x2a9a3a, o = {}) {
   const s = new THREE.Shape(); s.moveTo(-1.3, 0.3); s.lineTo(0.95, 0.3); s.quadraticCurveTo(1.32, 0.32, 1.3, 0.75); s.lineTo(1.22, 1.05); s.lineTo(0.85, 1.08); s.lineTo(0.62, 0.62); s.lineTo(-0.5, 0.62); s.lineTo(-0.55, 0.95); s.lineTo(-1.3, 0.95); s.lineTo(-1.3, 0.3);
   body.push(part(extrudeSide(s, W, { L, bevel: 0.06, round: [0.5, 0.35] }), col, 0.6, true));
   // windscreen and the canopy (rexine roof) on its frame
-  body.push(part(box(W * 0.62, 0.55, 0.03, 0, 1.33, -0.9, -0.12), 0x0e1620, 1));
+  body.push(part(box(W * 0.62, 0.55, 0.03, 0, 1.33, -0.9, -0.12), o.tint ?? 0x0e1620, 1));
   const cs = new THREE.Shape(); cs.moveTo(-1.32, 1.7); cs.quadraticCurveTo(-1.35, 1.95, -0.9, 1.97); cs.lineTo(0.75, 1.97); cs.quadraticCurveTo(1.05, 1.95, 1.0, 1.62); cs.lineTo(0.92, 1.62); cs.lineTo(-1.25, 1.7);
   body.push(part(extrudeSide(cs, W + 0.06, { L, bevel: 0.05, seg: 6 }), top, 0.35, true));
   body.push(part(box(W + 0.02, 0.1, 1.6, 0, 1.08, 0.15), 0x161616, 0.3));
@@ -178,7 +205,12 @@ function makeAuto(col = 0x2a9a3a, o = {}) {
   lamps.push(part(cyl(0.08, 0.08, 0.04, 12, 0, 0.8, -1.33, PI / 2), 0xfff6d8)); lamps.push(part(box(0.18, 0.08, 0.02, -0.45, 0.6, 1.33), 0xff2a1a), part(box(0.18, 0.08, 0.02, 0.45, 0.6, 1.33), 0xff2a1a));
   body.push(part(box(0.38, 0.12, 0.02, 0, 0.45, 1.33), 0xffd21a, 0.3));
   body.push(part(box(W - 0.3, 0.06, L - 0.5, 0, 0.26, 0.1), 0x101012, 0));
-  return assemble(body, lamps, [[-0.95, 0.22, 0, 1], [0.85, 0.22, W / 2 - 0.08, 0]], 0.22, 0.14, 'black', o, { x: W, y: 2.0, z: L });
+  if (o.stripe) body.push(part(box(0.25, 0.012, 1.0, 0, 1.98, -0.1), o.stripe, 0.5), part(box(W + 0.02, 0.1, 0.012, 0, 0.75, -1.25), o.stripe, 0.5));
+  if (o.roofItem === 'rack') addRoof('rack', body, lamps, 1.97, 0, 1.2, W - 0.2); else if (o.roofItem === 'lightbar') addRoof('lightbar', body, lamps, 1.97, -0.6, 0.5, W - 0.2); else if (o.roofItem === 'sign') addRoof('sign', body, lamps, 1.97, -0.4, 0.6, W - 0.3);
+  if (o.wing) body.push(part(rbox(W - 0.1, 0.04, 0.25, 0.02, 0, 2.06, 1.15), 0x111114, 0.6));
+  const extra = [...(o.extra || [])]; if (o.decal) extra.push(...sideDecals(o.decal, W + 0.02, 1.6, 0.36, 0.5, 0.1)); if (o.neon) extra.push(neonPlane(o.neon, W, L));
+  const car = assemble(body, lamps, [[-0.95, 0.22, 0, 1], [0.85, 0.22, W / 2 - 0.08, 0]], 0.22, 0.14, o.rims || 'black', { ...o, extra }, { x: W, y: 2.0, z: L });
+  car.exhaust = [[0.35, 0.28, 1.35]]; car.roofY = 1.97; return car;
 }
 // ---------------- the red double-decker bus ----------------
 const busSide = canvasTex(256, 64, (c, w, h) => { c.fillStyle = '#c8202a'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.font = 'bold 34px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('B.E.S.T.', w / 2, h / 2 + 2); });
@@ -217,7 +249,7 @@ function makeTruck(col = 0xff7a1a, o = {}) {
   const back = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.1, 1.75), new THREE.MeshBasicMaterial({ map: truckBack })); back.position.set(0, 2.1, 3.81); back.rotation.y = 0;
   return assemble(body, lamps, [[-3.0, 0.52, W / 2 - 0.25, 1], [2.5, 0.52, W / 2 - 0.25, 0]], 0.52, 0.34, 'black', { ...o, extra: [back] }, { x: W, y: 3.2, z: L });
 }
-export function spinWheels(V, dist, steer) { for (const w of V.wheels) w.rotation.x -= dist / V.r; for (const f of V.front) f.rotation.y = steer; }
+export function spinWheels(V, dist, steer) { for (const w of V.wheels) w.rotation.x -= dist / (w.userData.r || V.r); for (const f of V.front) f.rotation.y = steer; }
 
 // ---------------- boats ----------------
 // a hull lofted from cross-sections: V-shaped bottom (deadrise), a raised pointed bow, a flat transom at the back
@@ -274,66 +306,71 @@ export function makeBoat(type = 'speed', col = 0xe8302a, o = {}) {
   const V2 = assemble(body, lamps, [], 0.3, 0.2, 'black', { ...o, mat: BOATM, extra: [prop] }, { x: B.W, y: B.H + 1, z: B.L }); V2.prop = type === 'airboat' ? prop : null; V2.deckY = hull(B.L, B.W, B.H, { dead: B.dead }).sheerAt(0.5); return V2;
 }
 
-// ---------------- sculpted cars (the player's taxis): a smooth body lofted through cross-sections ----------------
-// Each section (along the car) is a closed outline: a flat floor, wheel wells cut into the outer strip over the wheels,
-// curved sides, a narrower glass house and a rounded roof. Glass, paint, black trim and the wheel wells are vertex
-// colours of the same smooth mesh, so the car is one draw call and has no box corners anywhere.
-const KEYS = (k, u) => { if (u <= k[0][0]) return k[0][1]; for (let i = 1; i < k.length; i++) if (u <= k[i][0]) { const a = k[i - 1], b = k[i], t = (u - a[0]) / (b[0] - a[0]), s = t * t * (3 - 2 * t); return a[1] + (b[1] - a[1]) * s; } return k[k.length - 1][1]; };
-export const LOFT = {
-  // u: 0 = front bumper … 1 = rear bumper. top: roof/hood line, belt: window line, hw: half width
-  super: { L: 4.55, W: 1.98, wb: 2.7, R: 0.35, clr: 0.13, wheel: 'sport', top: [[0, 0.5], [0.06, 0.6], [0.3, 0.74], [0.4, 1.06], [0.52, 1.14], [0.66, 1.08], [0.84, 0.92], [0.96, 0.86], [1, 0.72]], belt: [[0, 0.5], [0.3, 0.74], [0.45, 0.8], [0.7, 0.86], [1, 0.8]], hw: [[0, 0.72], [0.08, 0.92], [0.25, 0.99], [0.55, 0.96], [0.75, 1.0], [0.93, 0.95], [1, 0.82]], ws: 0.3, rw: 0.86, tumble: 0.3, intake: 1, wing: 0, lights: 'led' },
-  muscle: { L: 4.85, W: 1.94, wb: 2.85, R: 0.36, clr: 0.16, wheel: 'black', top: [[0, 0.62], [0.05, 0.74], [0.36, 0.86], [0.46, 1.3], [0.6, 1.34], [0.8, 1.04], [0.95, 0.98], [1, 0.84]], belt: [[0, 0.62], [0.36, 0.86], [0.6, 0.94], [1, 0.92]], hw: [[0, 0.8], [0.06, 0.95], [0.3, 0.97], [0.55, 0.95], [0.78, 1.0], [0.95, 0.97], [1, 0.86]], ws: 0.39, rw: 0.86, tumble: 0.22, scoop: 1, lights: 'round' },
-  monster: { L: 4.6, W: 2.05, wb: 2.75, R: 0.5, clr: 0.5, wheel: 'offroad', top: [[0, 1.28], [0.06, 1.4], [0.24, 1.46], [0.32, 2.05], [0.42, 2.1], [0.92, 2.08], [1, 1.95]], belt: [[0, 1.28], [0.24, 1.46], [0.5, 1.5], [1, 1.5]], hw: [[0, 0.88], [0.05, 0.98], [0.5, 1.0], [0.95, 0.99], [1, 0.92]], ws: 0.27, rw: 0.97, tumble: 0.09, boxy: 1, lights: 'square' },
-};
-function loftBody(C, paint, roof) {
-  const NS = 44, L = C.L, L2 = L / 2, W2 = C.W / 2, pos = [], col = [], gl = [], idx = [];
-  const wz = [-C.wb / 2 - 0.05, C.wb / 2 - 0.05], Ra = C.R + 0.07, wy = C.R + (C.boxy ? 0.05 : 0.02);
-  const archY = z => { let y = C.clr; for (const c of wz) { const d = Math.abs(z - c); if (d < Ra) y = Math.max(y, wy + Math.sqrt(Ra * Ra - d * d)); } return y; };
-  const P = new THREE.Color(paint), Rf = new THREE.Color(roof), Gl = new THREE.Color(0x0c141e), Bk = new THREE.Color(0x111114), Tr = new THREE.Color(0x26262a);
-  let ring = 0;
-  for (let i = 0; i <= NS; i++) {
-    const u = i / NS, z = -L2 + u * L, hw = W2 * KEYS(C.hw, u), top = KEYS(C.top, u), belt = Math.min(top, KEYS(C.belt, u)), ay = archY(z), glassZ = u > C.ws && u < C.rw;
-    const bS = Math.max(belt, ay + 0.1), gh = Math.max(0, top - bS), tw = hw * (1 - C.tumble * Math.min(1, gh / 0.4)), hood = top <= bS + 0.03;   // fenders always rise over the wheels
-    const g2 = glassZ && !hood;
-    const half = [   // [x, y, part] from the floor's centre round to the roof's centre
-      [0, C.clr, 'b'], [hw - 0.4, C.clr, 'b'], [hw - 0.38, ay, 'w'], [hw - 0.04, ay, 'w'], [hw, ay + 0.06, 'p'],
-      [hw * 1.015, ay + (bS - ay) * 0.45, 'p'], [hw * 0.995, bS - 0.03, 'p'], [hw * 0.975, bS, g2 ? 'g' : 'p'],
-      hood ? [hw * 0.8, (bS + top) / 2 + 0.01, 'p'] : [tw + (hw - tw) * 0.35, bS + gh * 0.55, g2 ? 'g' : 'p'], hood ? [hw * 0.58, top + 0.005, 'p'] : [tw, top - Math.min(0.05, gh * 0.2), g2 ? 'g' : 'r'], [tw * 0.7 * (hood ? 0.8 : 1), top, 'r'], [0, top + 0.012, 'r']];
-    const pts = [...half, ...half.slice(1, -1).reverse().map(([x, y, k]) => [-x, y, k])];
-    for (const [x, y, k] of pts) { pos.push(x, y, z); const c = k === 'g' ? Gl : k === 'w' ? Bk : k === 'b' ? Tr : k === 'r' ? (glassZ ? Rf : P) : P; col.push(c.r, c.g, c.b); gl.push(k === 'g' ? 1 : k === 'p' || k === 'r' ? 0.78 : 0.1); }
-    ring = pts.length;
-  }
-  for (let i = 0; i < NS; i++) for (let j = 0; j < ring; j++) { const a = i * ring + j, b = i * ring + (j + 1) % ring, c = a + ring, d = b + ring; idx.push(a, b, c, b, d, c); }
-  // close the front and the back
-  for (const e of [0, NS]) { const base = e * ring, cIdx = pos.length / 3; let cx = 0, cy = 0; for (let j = 0; j < ring; j++) { cy += pos[(base + j) * 3 + 1]; } pos.push(cx, cy / ring, pos[base * 3 + 2]); col.push(P.r, P.g, P.b); gl.push(0.7); for (let j = 0; j < ring; j++) { const a = base + j, b = base + (j + 1) % ring; if (e === 0) idx.push(cIdx, a, b); else idx.push(cIdx, b, a); } }
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setAttribute('gloss', new THREE.Float32BufferAttribute(gl, 1)); g.setIndex(idx); g.computeVertexNormals();
-  return g.toNonIndexed();
+// ---------------- the tractor with its trolley (full of hay) ----------------
+function makeTractor(col = 0xc8202a, o = {}) {
+  const body = [], lamps = [], W = 1.75;
+  // bonnet and engine (front at -z), the grille, the radiator cap, the exhaust stack
+  body.push(part(rbox(0.82, 0.72, 1.75, 0.12, 0, 1.2, -1.15), col, 0.6, true));
+  body.push(part(box(0.7, 0.55, 0.04, 0, 1.17, -2.03), 0x1a1a1c, 0.4)); for (let i = 0; i < 6; i++) body.push(part(box(0.66, 0.025, 0.05, 0, 0.95 + i * 0.09, -2.04), 0xc8ced6, 0.9));
+  body.push(part(box(0.62, 0.42, 1.4, 0, 0.72, -1.05), 0x2a2a2e, 0.5));
+  body.push(part(cyl(0.06, 0.07, 0.95, 10, 0.32, 1.95, -1.35), 0x2a2a2e, 0.6), part(cyl(0.09, 0.07, 0.12, 10, 0.32, 2.42, -1.35), 0x1a1a1a, 0.6));
+  if (o.stripe) body.push(part(box(0.84, 0.74, 0.1, 0, 1.2, -1.6), o.stripe, 0.5), part(box(0.84, 0.74, 0.1, 0, 1.2, -0.75), o.stripe, 0.5));
+  // the driver's platform, rear mudguards over the big wheels, the seat, the steering wheel
+  body.push(part(box(1.1, 0.12, 1.0, 0, 0.82, 0.25), 0x2a2a2e, 0.4));
+  for (const sd of [-1, 1]) { const g = new THREE.CylinderGeometry(0.88, 0.88, 0.5, 18, 1, true, -PI / 2 - 1.15, 2.3); g.rotateZ(PI / 2); g.translate(sd * 0.82, 0.8, 0.45); body.push(part(g, col, 0.55)); body.push(part(box(0.5, 0.05, 1.2, sd * 0.82, 1.62, 0.45), col, 0.55)); }
+  body.push(part(rbox(0.5, 0.12, 0.45, 0.05, 0, 1.25, 0.55), 0x1a1a1a, 0.3), part(rbox(0.5, 0.45, 0.1, 0.04, 0, 1.5, 0.8), 0x1a1a1a, 0.3));
+  body.push(part(cyl(0.04, 0.04, 0.7, 6, 0, 1.45, -0.05, 0.6), 0x1a1a1a, 0.4)); { const t = new THREE.TorusGeometry(0.18, 0.025, 6, 16); t.rotateX(PI / 2 - 0.6); t.translate(0, 1.75, -0.25); body.push(part(t, 0x1a1a1a, 0.4)); }
+  // a sun canopy on four poles
+  if (o.roofItem !== 'none') { for (const [x, z] of [[-0.62, -0.25], [0.62, -0.25], [-0.62, 1.0], [0.62, 1.0]]) body.push(part(cyl(0.03, 0.03, 1.35, 6, x, 2.15, z), 0x2a2a2e, 0.5)); body.push(part(rbox(1.5, 0.08, 1.55, 0.04, 0, 2.86, 0.38), o.roofCol ?? 0xf4f4f0, 0.4)); }
+  // the hitch and the trolley: a painted box on two wheels, piled with hay
+  body.push(part(box(0.12, 0.1, 1.0, 0, 0.62, 1.4), 0x2a2a2e, 0.5));
+  const tc = o.trolley ?? 0x2a6ab0, tz = 3.55;
+  body.push(part(box(2.0, 0.12, 3.3, 0, 0.95, tz), 0x3a2a1a, 0.2));
+  for (const sd of [-1, 1]) body.push(part(box(0.06, 0.7, 3.3, sd * 0.97, 1.36, tz), tc, 0.45));
+  body.push(part(box(2.0, 0.7, 0.06, 0, 1.36, tz - 1.62), tc, 0.45), part(box(2.0, 0.7, 0.06, 0, 1.36, tz + 1.62), tc, 0.45));
+  for (const sd of [-1, 1]) for (let i = 0; i < 5; i++) body.push(part(box(0.065, 0.08, 0.5, sd * 0.97, 1.36, tz - 1.3 + i * 0.65), [0xffd21a, 0xe8202a, 0x2aa84a, 0xff7a1a, 0xffffff][i], 0.5));
+  for (let i = 0; i < 6; i++) body.push(part(rbox(0.9, 0.5, 0.95, 0.1, (i % 2 ? 0.45 : -0.45), 1.95 + (i >= 4 ? 0.45 : 0), tz - 1.05 + (i % 3) * 1.05 - (i >= 4 ? 0.5 : 0)), 0xe8c86a, 0.05, true));
+  lamps.push(part(box(0.15, 0.08, 0.02, -0.85, 1.0, tz + 1.66), 0xff2a1a), part(box(0.15, 0.08, 0.02, 0.85, 1.0, tz + 1.66), 0xff2a1a));
+  for (const sd of [-1, 1]) { lamps.push(part(cyl(0.09, 0.09, 0.05, 14, sd * 0.3, 1.5, -2.05, PI / 2), 0xfff6d8)); body.push(part(cyl(0.11, 0.11, 0.04, 14, sd * 0.3, 1.5, -2.03, PI / 2), 0xc8ced6, 1)); }
+  body.push(part(box(0.38, 0.12, 0.02, 0, 0.75, tz + 1.66), 0xffd21a, 0.3));
+  if (o.roofItem === 'lightbar') addRoof('lightbar', body, lamps, 2.9, 0.38, 0.6, 1.3); else if (o.roofItem === 'sign') addRoof('sign', body, lamps, 2.9, 0.38, 0.6, 1.2); else if (o.roofItem === 'rack') addRoof('rack', body, lamps, 2.9, 0.38, 1.2, 1.3);
+  if (o.wing) body.push(part(rbox(1.5, 0.05, 0.3, 0.02, 0, 3.05, 1.05), 0x111114, 0.6));
+  const extra = [...(o.extra || [])]; if (o.decal) extra.push(...sideDecals(o.decal, 0.86, 1.5, 0.5, 1.2, -1.15)); if (o.neon) extra.push(neonPlane(o.neon, 2.0, 7.4));
+  const wk = o.rims || 'offroad', car = assemble(body, lamps, [[-0.45, 0.78, 0.82, 0, 0.42], [1.15, 0.42, 0.68, 1, 0.22], [-3.55, 0.5, 1.12, 0, 0.26]], 0.78, 0.42, wk, { ...o, extra }, { x: 2.0, y: 2.95, z: 7.4 });
+  car.model.position.z = -1.55;   // the whole rig is centred on the length that hits things
+  car.exhaust = [[0.32, 2.5, -2.9, 1]]; car.roofY = 2.9; return car;
 }
-export function loftCar(type, paint, o = {}) {
-  const C = LOFT[type], L2 = C.L / 2, W2 = C.W / 2, body = [loftBody(C, paint, o.roof ?? (type === 'monster' ? 0x111114 : paint))], lamps = [];
-  const yF = KEYS(C.top, 0.02), yR = KEYS(C.top, 0.985), hwF = W2 * KEYS(C.hw, 0.03), hwR = W2 * KEYS(C.hw, 0.97);
-  // lights: LED strips (super), round (muscle), square (monster); a full-width tail light bar
-  for (const s of [-1, 1]) {
-    if (C.lights === 'led') lamps.push(part(box(0.42, 0.05, 0.04, s * hwF * 0.62, yF - 0.06, -L2 + 0.12, 0, s * 0.3, 0), 0xf4f8ff));
-    else if (C.lights === 'round') { lamps.push(part(cyl(0.1, 0.1, 0.04, 14, s * hwF * 0.7, yF - 0.12, -L2 + 0.05, PI / 2), 0xfff6d8)); lamps.push(part(cyl(0.08, 0.08, 0.04, 14, s * hwF * 0.42, yF - 0.12, -L2 + 0.03, PI / 2), 0xfff6d8)); }
-    else lamps.push(part(box(0.3, 0.16, 0.04, s * hwF * 0.66, yF - 0.14, -L2 + 0.04), 0xfff6d8));
-    body.push(part(rbox(0.16, 0.09, 0.2, 0.03, s * (W2 * 0.98 + 0.07), KEYS(C.belt, C.ws + 0.04) + 0.06, -L2 + C.L * (C.ws + 0.04)), paint, 0.7));
-    body.push(part(cyl(0.05, 0.06, 0.25, 10, s * 0.32, C.clr + 0.12, L2 + 0.02, PI / 2), 0xd8dde4, 1));   // exhausts
+// things on the roof: the taxi sign, a rack with luggage, a light bar
+function addRoof(k, body, lamps, rf, cz, len, w) {
+  if (k === 'sign') { body.push(part(rbox(0.7, 0.2, 0.28, 0.04, 0, rf + 0.12, cz), 0xffd21a, 0.4)); body.push(part(box(0.62, 0.11, 0.29, 0, rf + 0.12, cz), 0x1a1a1a, 0.4)); lamps.push(part(box(0.5, 0.06, 0.295, 0, rf + 0.13, cz), 0xfff2a0)); }
+  else if (k === 'rack') {
+    for (const sd of [-1, 1]) body.push(part(box(0.04, 0.05, len, sd * w / 2, rf + 0.08, cz), 0x2a2a30, 0.7));
+    for (let i = 0; i < 4; i++) body.push(part(box(w, 0.035, 0.04, 0, rf + 0.08, cz - len / 2 + 0.1 + i * (len - 0.2) / 3), 0x2a2a30, 0.7));
+    body.push(part(rbox(0.6, 0.32, 0.45, 0.06, -w * 0.18, rf + 0.26, cz - len * 0.18), 0x8a4a1a, 0.2, true), part(rbox(0.45, 0.25, 0.4, 0.06, w * 0.2, rf + 0.22, cz + len * 0.15), 0x2a6ab0, 0.2, true), part(cyl(0.13, 0.13, 0.55, 10, w * 0.15, rf + 0.22, cz - len * 0.25, 0, PI / 2), 0xe8402a, 0.2));
+  } else if (k === 'lightbar') {
+    body.push(part(box(Math.min(1.4, w + 0.1), 0.12, 0.16, 0, rf + 0.1, cz - len / 2 + 0.1), 0x18181a, 0.5));
+    for (let i = 0; i < 6; i++) lamps.push(part(box(0.16, 0.08, 0.02, -0.55 + i * 0.22, rf + 0.1, cz - len / 2 + 0.01), 0xfffbe8));
   }
-  lamps.push(part(box(hwR * 1.7, 0.06, 0.04, 0, yR - 0.1, L2 - 0.02), 0xff1a2a)); for (const s of [-1, 1]) lamps.push(part(box(0.32, 0.12, 0.05, s * hwR * 0.7, yR - 0.14, L2 - 0.03), 0xff2a1a));
-  body.push(part(box(hwF * 1.1, 0.16, 0.05, 0, C.clr + 0.22, -L2 + 0.02), 0x0c0c0e, 0.3));   // grille / intake
-  body.push(part(box(hwR * 1.3, 0.12, 0.2, 0, C.clr + 0.08, L2 - 0.1), 0x0c0c0e, 0.2));     // diffuser
-  body.push(part(box(0.5, 0.12, 0.02, 0, C.clr + 0.32, L2 + 0.01), o.taxi ? 0xffd21a : 0xf4f4f0, 0.3));
-  if (C.intake) for (const s of [-1, 1]) body.push(part(box(0.04, 0.16, 0.5, s * W2 * 0.99, KEYS(C.belt, 0.68) - 0.18, -L2 + C.L * 0.68), 0x0c0c0e, 0.2));
-  if (C.scoop) body.push(part(rbox(0.6, 0.12, 0.8, 0.05, 0, KEYS(C.top, 0.2) + 0.04, -L2 + C.L * 0.2), 0x111114, 0.6));
-  if (C.boxy) { body.push(part(box(W2 * 1.6, 0.06, 0.06, 0, KEYS(C.top, 0.6) + 0.1, 0), 0x2a2a30, 0.6)); for (const s of [-1, 1]) body.push(part(box(0.06, 0.06, C.L * 0.55, s * W2 * 0.75, KEYS(C.top, 0.6) + 0.08, 0.15), 0x2a2a30, 0.6)); body.push(part(box(W2 * 1.5, 0.3, 0.1, 0, C.clr + 0.45, -L2 - 0.05), 0x2a2a30, 0.7)); }
-  // add-ons
-  if (o.wing || C.wing) { const y = KEYS(C.top, 0.94) + 0.32; body.push(part(rbox(C.W * 0.9, 0.05, 0.32, 0.02, 0, y, L2 - 0.3), o.wingCol ?? 0x111114, 0.7)); for (const s of [-1, 1]) body.push(part(box(0.04, 0.3, 0.12, s * W2 * 0.55, y - 0.16, L2 - 0.3), 0x111114, 0.5)); }
-  if (o.taxi) { const y = KEYS(C.top, 0.55); body.push(part(rbox(0.7, 0.2, 0.28, 0.04, 0, y + 0.11, 0.05), 0xffd21a, 0.4)); body.push(part(box(0.62, 0.11, 0.29, 0, y + 0.11, 0.05), 0x1a1a1a, 0.4)); lamps.push(part(box(0.5, 0.06, 0.295, 0, y + 0.12, 0.05), 0xfff2a0)); }
-  const extra = [];
-  if (o.neon) { const t = neonTex(); const m = new THREE.Mesh(new THREE.PlaneGeometry(C.W * 1.5, C.L * 1.15), new THREE.MeshBasicMaterial({ map: t, color: o.neon, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); m.rotation.x = -PI / 2; m.position.y = 0.04; extra.push(m); }
-  const V = assemble(body, lamps, [[-C.wb / 2 + 0.05, C.R, W2 - (C.boxy ? 0.08 : 0.16), 1], [C.wb / 2 - 0.05, C.R, W2 - (C.boxy ? 0.08 : 0.16), 0]], C.R, type === 'monster' ? 0.42 : 0.28, o.rims || C.wheel, { ...o, extra }, { x: C.W, y: KEYS(C.top, 0.55) + (o.taxi ? 0.2 : 0), z: C.L });
-  V.exhaust = [[-0.32, C.clr + 0.12, L2 + 0.15], [0.32, C.clr + 0.12, L2 + 0.15]];
-  return V;
 }
-let NEON = null; function neonTex() { return NEON || (NEON = canvasTex(64, 128, (c, w, h) => { const g = c.createRadialGradient(w / 2, h / 2, 4, w / 2, h / 2, w / 2); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.6, 'rgba(255,255,255,.35)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.save(); c.scale(1, 2); c.fillStyle = g; c.fillRect(0, 0, w, h); c.restore(); })); }
+// pictures on the sides: flames, a checker, tiger stripes, a lightning bolt, a racing number
+const DECALS = {};
+function decalTex(k) {
+  return DECALS[k] || (DECALS[k] = canvasTex(512, 128, (c, w, h) => {
+    c.clearRect(0, 0, w, h);
+    if (k === 'flames') { for (let i = 0; i < 9; i++) { const g = c.createLinearGradient(0, 0, w, 0); g.addColorStop(0, '#ffe24a'); g.addColorStop(0.5, '#ff7a1a'); g.addColorStop(1, 'rgba(232,32,42,0)'); c.fillStyle = g; c.beginPath(); const y = 18 + i * 11; c.moveTo(0, y - 8); c.quadraticCurveTo(w * 0.35, y - 30 + (i % 3) * 8, w * (0.55 + (i % 4) * 0.1), y - 4); c.quadraticCurveTo(w * 0.35, y + 10, 0, y + 10); c.fill(); } }
+    else if (k === 'checker') { for (let x = 0; x < 16; x++) for (let y = 0; y < 4; y++) if ((x + y) % 2) { c.fillStyle = '#111'; c.fillRect(x * 32, y * 32, 32, 32); } else { c.fillStyle = '#fff'; c.fillRect(x * 32, y * 32, 32, 32); } }
+    else if (k === 'tiger') { c.fillStyle = '#111'; for (let i = 0; i < 12; i++) { const x = i * 44 + 10; c.beginPath(); c.moveTo(x, 0); c.lineTo(x + 26, 0); c.lineTo(x + 6, h * 0.55); c.lineTo(x + 22, h); c.lineTo(x - 4, h); c.lineTo(x + 12, h * 0.5); c.fill(); } }
+    else if (k === 'bolt') { c.fillStyle = '#ffe24a'; c.strokeStyle = '#111'; c.lineWidth = 6; c.beginPath(); c.moveTo(10, 70); c.lineTo(220, 40); c.lineTo(200, 64); c.lineTo(500, 30); c.lineTo(290, 96); c.lineTo(310, 70); c.lineTo(10, 100); c.closePath(); c.fill(); c.stroke(); }
+    else if (k === 'num') { c.fillStyle = '#fff'; c.beginPath(); c.arc(w / 2, h / 2, 58, 0, 7); c.fill(); c.lineWidth = 8; c.strokeStyle = '#111'; c.stroke(); c.fillStyle = '#e8202a'; c.font = 'bold 92px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('7', w / 2, h / 2 + 6); c.fillStyle = '#111'; c.fillRect(0, h / 2 - 5, w / 2 - 66, 10); c.fillRect(w / 2 + 66, h / 2 - 5, w / 2, 10); }
+  }));
+}
+function sideDecals(k, W, len, h, y, z) {
+  const t = decalTex(k), out = [];
+  for (const sd of [-1, 1]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(len, h), new THREE.MeshStandardMaterial({ map: t, transparent: true, roughness: 0.35, polygonOffset: true, polygonOffsetFactor: -2 })); m.position.set(sd * (W / 2 + 0.012), y, z); m.rotation.y = sd * PI / 2; if (sd < 0) m.scale.x = -1; out.push(m); }
+  return out;
+}
+let NEON = null;
+function neonPlane(col, W, L) {
+  NEON = NEON || canvasTex(64, 128, (c, w, h) => { const g = c.createRadialGradient(w / 2, h / 2, 4, w / 2, h / 2, w / 2); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.6, 'rgba(255,255,255,.35)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.save(); c.scale(1, 2); c.fillStyle = g; c.fillRect(0, 0, w, h); c.restore(); });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(W * 1.5, L * 1.15), new THREE.MeshBasicMaterial({ map: NEON, color: col, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); m.rotation.x = -PI / 2; m.position.y = 0.04; return m;
+}
