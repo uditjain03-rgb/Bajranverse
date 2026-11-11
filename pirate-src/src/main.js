@@ -1398,7 +1398,7 @@ const WARP = +(new URLSearchParams(location.search).get('warp') || 1);
 const FPS = { t: 0, n: 0, slow: 0 };
 function frame(now) {
   requestAnimationFrame(frame);
-  const raw = now - lastT; let dt = Math.min(0.067, raw / 1000); lastT = now;   // the game keeps its real speed down to 15 frames a second (no slow motion)
+  const raw = now - lastT; let dt = Math.max(0, Math.min(0.067, raw / 1000)); lastT = now;   // the game keeps its real speed down to 15 frames a second (no slow motion)
   // too slow for this phone? render a little less sharp (never below 1.5 pixels per point)
   if ((G.state === 'play' || G.state === 'finale' || G.state === 'home') && raw < 500) {
     if (G.t > 4) { FPS.t += raw; FPS.n++; }   // the first seconds of a level (loading) don't count
