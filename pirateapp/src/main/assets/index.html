@@ -120,6 +120,38 @@ button { font-family: inherit; font-weight: 700; color: inherit; cursor: pointer
 @keyframes logoIn { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 #studio.gone { opacity: 0; pointer-events: none; }
+
+/* the treasure map (level select) */
+#map { position: fixed; inset: 0; z-index: 6; background: radial-gradient(circle at 30% 20%, #f8e6b8, #e8c88a 60%, #c89a5a); overflow: hidden; display: flex; flex-direction: column; }
+#map.hidden { display: none; }
+#mapTop { display: flex; justify-content: space-between; align-items: center; padding: calc(10px + var(--sat)) 12px 8px; background: linear-gradient(rgba(58,36,16,.85), rgba(58,36,16,.6)); }
+#mapTop .t { font-size: 24px; -webkit-text-stroke: 4px var(--dark); paint-order: stroke fill; }
+#mapScroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px 0 40px; touch-action: pan-y; }
+.mw { position: relative; margin: 14px 12px 4px; padding: 10px 8px 16px; border: 4px dashed rgba(90,58,26,.45); border-radius: 26px; }
+.mw h3 { margin: 0 0 4px; text-align: center; font-size: 22px; color: #fff; -webkit-text-stroke: 4px var(--dark); paint-order: stroke fill; }
+.mw h3 small { display: block; font-size: 13px; color: #5a3a1a; -webkit-text-stroke: 0; }
+.mw .isl { position: absolute; right: 10px; top: 6px; font-size: 34px; opacity: .85; }
+.mrow { position: relative; height: 92px; }
+.mnode { position: absolute; top: 6px; width: 72px; height: 72px; margin-left: -36px; border-radius: 50%; border: 5px solid var(--dark); background: radial-gradient(#ffe48a, #f2a81a); box-shadow: 0 5px 0 var(--dark); font-size: 28px; color: #fff; -webkit-text-stroke: 4px var(--dark); paint-order: stroke fill; display: flex; align-items: center; justify-content: center; pointer-events: auto; }
+.mnode.lock { background: radial-gradient(#b8a890, #8a7a64); color: #ddd; }
+.mnode.boss { background: radial-gradient(#ff8a7a, #c8202a); width: 82px; height: 82px; margin-left: -41px; top: 1px; }
+.mnode.cur { animation: glowN .7s ease-in-out infinite alternate; }
+@keyframes glowN { from { box-shadow: 0 5px 0 var(--dark), 0 0 0 0 #fff8; } to { box-shadow: 0 5px 0 var(--dark), 0 0 0 10px #fff0; transform: scale(1.08); } }
+.mnode .st { position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%); font-size: 14px; white-space: nowrap; -webkit-text-stroke: 0; letter-spacing: -2px; }
+.mnode .st i { font-style: normal; filter: grayscale(1) brightness(.6); } .mnode .st i.on { filter: none; }
+.mdot { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: rgba(90,58,26,.55); }
+/* in-game: golden skulls, Mitthu the parrot, the tug of war */
+#skullN { position: absolute; left: 12px; top: calc(86px + var(--sat)); font-size: 20px; pointer-events: none; }
+#skullN i { font-style: normal; filter: grayscale(1) brightness(.5) opacity(.7); } #skullN i.on { filter: drop-shadow(0 0 4px #ffd21a); }
+#mitthu { position: absolute; left: 10px; right: 10px; bottom: calc(118px + var(--sab)); display: flex; align-items: center; gap: 8px; pointer-events: none; }
+#mitthu .f { font-size: 44px; filter: drop-shadow(0 3px 0 var(--dark)); }
+#mitthu .b { background: var(--cream); color: var(--dark); border: 4px solid var(--dark); border-radius: 18px; padding: 6px 12px; font-size: 18px; box-shadow: 0 4px 0 var(--dark); }
+#mitthu .b b { display: block; font-size: 12px; color: #c8302a; }
+#mitthu.in { animation: pop .25s; }
+#tug { position: absolute; left: 50%; top: 32%; transform: translateX(-50%); width: min(80vw, 340px); text-align: center; pointer-events: none; }
+#tug .bar { height: 26px; border: 4px solid var(--dark); border-radius: 14px; background: #c8302a; overflow: hidden; margin-top: 6px; }
+#tugFill { height: 100%; width: 50%; background: linear-gradient(#8ae04a, #3a9a1a); }
+#tug .lab { font-size: 26px; -webkit-text-stroke: 4px var(--dark); paint-order: stroke fill; animation: wobble .3s infinite; }
 </style>
 </head>
 <body>
@@ -130,6 +162,9 @@ button { font-family: inherit; font-weight: 700; color: inherit; cursor: pointer
   <div id="herdN" class="out">🏴‍☠️ 5</div>
   <div id="fortN" class="out" style="display:none">🏰 0</div>
   <div id="castleHP" class="hidden"><div class="lab out">🏰 LORD LALCHI'S GOLD FORT</div><div id="hpBar"><div id="hpFill"></div><div id="hpN" class="out">0</div></div></div>
+  <div id="skullN"></div>
+  <div id="tug" class="hidden"><div class="lab">🪢 TAP TAP TAP!</div><div class="bar"><div id="tugFill"></div></div></div>
+  <div id="mitthu" class="hidden"><div class="f" id="mitFace">🦜</div><div class="b"><b id="mitWho">MITTHU</b><span id="mitText"></span></div></div>
   <div id="pops"></div>
   <div id="banner"></div>
   <button id="stormB" class="hidden"><span>💥</span><b>STORM</b></button>
@@ -141,10 +176,11 @@ button { font-family: inherit; font-weight: 700; color: inherit; cursor: pointer
   <div id="homeBottom">
     <div id="homeLevel">LEVEL 1</div>
     <button class="btn big green" id="playB">PLAY</button>
-    <div id="homeRow"><button class="btn" id="shopB">🧥 SHOP</button><button class="btn" id="giftB">🎁 GIFT</button></div>
+    <div id="homeRow"><button class="btn" id="mapB">🗺️ MAP</button><button class="btn" id="shopB">🧥 SHOP</button><button class="btn" id="giftB">🎁 GIFT</button></div>
     <div id="credit">BajrangVerse Studios</div>
   </div>
 </div>
+<div id="map" class="hidden"><div id="mapTop"><button class="btn small" id="mapBack">◀ BACK</button><div class="t">TREASURE MAP</div><div class="pill out">⭐ <span id="mapStars">0</span></div></div><div id="mapScroll"></div></div>
 <div id="modal" class="screen modal hidden"><div class="panel" id="modalBody"></div></div>
 <div id="flash"></div>
 <div id="loading">🏴‍☠️ Loading…</div>

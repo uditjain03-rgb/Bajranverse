@@ -9,7 +9,7 @@ const p = await b.newPage(); p.on('pageerror', e => console.log('ERR', e.message
 await p.route('http://localhost:8765/bake.html', r => r.fulfill({ contentType: 'text/html', body: '<!doctype html><body><script>window.BASE="http://localhost:8765/"</script><script src="/__b.js"></script></body>' }));
 await p.route('http://localhost:8765/__b.js', r => r.fulfill({ contentType: 'text/javascript', body: fs.readFileSync(path.join(here, 'bake3.bundle.js'), 'utf8') }));
 await p.goto('http://localhost:8765/bake.html'); await p.waitForFunction(() => window.ready);
-const spec = JSON.parse(fs.readFileSync(path.join(here, 'people3.json'), 'utf8')).filter(s => !process.argv[2] || process.argv[2].split(',').includes(s.id));
+const spec = JSON.parse(fs.readFileSync(process.env.SPEC || path.join(here, 'people3.json'), 'utf8')).filter(s => !process.argv[2] || process.argv[2].split(',').includes(s.id));
 const out = await p.evaluate(s => window.bake(s), spec);
 const bin = process.env.OUT || path.join(here, '../assets/people.bin'); fs.writeFileSync(bin, Buffer.from(out.b64, 'base64'));
 console.log(JSON.stringify(out.info), (out.size / 1e6).toFixed(2) + ' MB');

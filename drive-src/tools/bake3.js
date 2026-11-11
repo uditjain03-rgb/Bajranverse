@@ -184,6 +184,15 @@ function accessory(rigid, F, A, parts) {
   } else if (A.type === 'moustache') {   // a big funny moustache (hair colour)
     const my = F.eye.y - (F.top - F.eye.y) * 0.44;
     for (const s of [-1, 1]) { const g = new THREE.SphereGeometry(F.sep * 0.2, 10, 6); g.scale(1, 0.38, 0.5); g.rotateZ(s * 0.35); addGeo(rigid, at(g, F.eye.x + s * F.sep * 0.24, my, F.surf(F.eye.x + s * F.sep * 0.2, my) + 0.004 * fz), 0x888888, 3, F.head); }
+  } else if (A.type === 'eyepatch') {   // a pirate eye patch on one eye, and its strap round the head
+    const s = A.side ?? 1, ex = F.eye.x + s * F.sep * 0.27; const g = new THREE.CircleGeometry(F.sep * 0.27, 14); g.scale(1, 0.85, 1); if (fz < 0) g.rotateY(Math.PI); addGeo(rigid, at(g, ex, F.eye.y, F.surf(ex, F.eye.y) + 0.011 * fz), 0x111111, 0, F.head);
+    const band = new THREE.TorusGeometry(R0 * 1.03, R0 * 0.035, 4, 24); band.rotateX(Math.PI / 2); band.rotateZ(-s * 0.32); addGeo(rigid, at(band, hx, F.eye.y + R0 * 0.18, hz), 0x111111, 0, F.head);
+  } else if (A.type === 'bandana') {   // a pirate bandana tied at the back, with the knot tails
+    const g = new THREE.SphereGeometry(R0 * 1.1, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.52); addGeo(rigid, at(g, hx, F.top - R0 * 0.7, hz), A.color ?? 0xd8202a, A.mask ?? 0, F.head);
+    for (let i = 0; i < 9; i++) { const d = new THREE.SphereGeometry(R0 * 0.08, 5, 4); const a = i / 9 * Math.PI * 2; addGeo(rigid, at(d, hx + Math.cos(a) * R0 * 0.75, F.top - R0 * 0.2, hz + Math.sin(a) * R0 * 0.75), 0xffffff, 0, F.head); }
+    for (const s of [-1, 1]) { const t = new THREE.BoxGeometry(R0 * 0.3, R0 * 0.9, 0.01); t.rotateZ(s * 0.4); addGeo(rigid, at(t, hx + s * R0 * 0.2, F.top - R0 * 1.0, hz - R0 * 1.1 * fz), A.color ?? 0xd8202a, 0, F.head); }
+  } else if (A.type === 'earring') {
+    const g = new THREE.TorusGeometry(R0 * 0.14, R0 * 0.03, 5, 12); g.rotateY(Math.PI / 2); addGeo(rigid, at(g, hx + (A.side ?? -1) * R0 * 0.98, F.eye.y - R0 * 0.55, hz), 0xffcc33, 0, F.head);
   } else if (A.type === 'bindi') {
     const y = F.eye.y + (F.top - F.eye.y) * 0.32, g = new THREE.CircleGeometry(F.sep * 0.06, 10); if (fz < 0) g.rotateY(Math.PI); addGeo(rigid, at(g, F.eye.x, y, F.surf(F.eye.x, y) + 0.002 * fz), 0xd8102a, 0, F.head);
   }

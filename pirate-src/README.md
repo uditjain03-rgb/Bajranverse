@@ -7,6 +7,17 @@ arm, barrels, anchors and narrow bridges, fly over chasms on mega ramps, and bom
 fortress (gatehouse, four towers, a keep) the army **throws bombs — tap to throw more**: blocks blow out of the walls,
 guards on the walls and towers shoot back, Rocky's cannon booms, and the whole fortress comes down.
 
+## v3.0 — the Mega Update
+- **Treasure map**: choose any unlocked level, island by island, and see the stars won on each.
+- **Three stars per level**: capture the fort · climb 3+ treasure steps · find all **3 golden skulls** hidden next to the dangers.
+- **New skill dangers** (not just army size): rolling boulders (steer away), Lalchi's parrots dropping coconuts on
+  red circles (keep moving), swinging anchors (time it), and **Kala Daku's rival crew** — a tug of war (tap fast; win
+  and they join your army!). Each danger can only take a share of the army.
+- **Real faces**: every pirate laughs, gets scared or angry with the army (re-baked with `drive-src/tools/bake3.mjs`
+  and `tools/people4.json`: bandanas, eye patches, earrings, moustaches).
+- **Mitthu the parrot** flies with Rocky and cracks jokes; **Lord Lalchi** taunts you at the fort.
+- **New music**: fiddle jigs and a tarantella on the islands, "Cut and Run" for the fort battle.
+
 ## Build
     npm install
     node tools/bake2.mjs           # only when characters change: serve the unpacked CC0 Quaternius packs (Universal Base
@@ -29,8 +40,8 @@ renders the app icon.
 ## Credits
 Characters: "Universal Base Characters", "Modular Character Outfits - Fantasy", "Universal Animation Library", hats from
 "Ultimate Animated Character Pack" and weapons from "Pirate Pack", all by Quaternius (CC0).
-Music: title and victory tunes by BajrangVerse Studios (recorded from Monster Mayhem Run); "Galway", "Achaidh Cheide",
-"Pixel Peeker Polka - faster", "Life of Riley", "Run Amok", "Hyperfun" by Kevin MacLeod (incompetech.com), CC-BY 4.0.
+Music: title and victory tunes by BajrangVerse Studios (recorded from Monster Mayhem Run); "Fiddles McGinty", "Bushwick Tarantella", "Celtic Impulse",
+"Rollin at 5", "Master of the Feast", "Cut and Run", "Hyperfun" by Kevin MacLeod (incompetech.com), CC-BY 4.0.
 Castle, trees, rocks and props: Quaternius Medieval Village / Stylized Nature / Fantasy Props MegaKits (CC0).
 Studio logo: from Monster Mayhem Run.
 Ads: Google AdMob — the IDs in the app are Google's TEST IDs; replace them with your own before publishing.

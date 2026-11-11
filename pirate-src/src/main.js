@@ -7,7 +7,9 @@
 // treasure chest may hold a new crew hero with a special power.
 import * as THREE from 'three';
 import { WORLDS, PATH_W, buildWorld, setBend, bendPoint, slopeAt, canvasTex, flat, mesh, setNature, oneMesh } from './world.js';
-import { loadPeople, Crowd, Actor, Blobs } from './people.js';
+import { loadPeople, Crowd, Actor, Blobs, EXPR } from './people.js';
+// the faces of the whole army change together: laugh at a good gate, scared near cannons, angry at Lalchi
+let crewE = 0, crewET = 0; function crewExpr() { return crewET > 0 ? crewE : EXPR.happy; } function setCrewExpr(e, dur = 1.2) { crewE = EXPR[e] ?? 0; crewET = dur; if (rocky) rocky.expr = crewE; }
 import { buildCastle, setCastleModel, GATE_TOP } from './castle.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -181,9 +183,9 @@ function flash(c = '#fff') { const f = $('flash'); f.style.background = c; f.sty
 // ---------------- levels ----------------
 // one level = a winding path with gates, castaways, coins, hazards, jump/slide obstacles and a pirate-ship ride, then
 // the fort (a Lalchi boss fight every 5th level). Same number → same level.
-const UNLOCK = { jump: 1, slide: 2, wolves: 2, cannons: 3, ramp: 3, hay: 4, kraken: 4, bridge: 6, spinner: 6, log: 7 };
+const UNLOCK = { jump: 1, slide: 2, wolves: 2, cannons: 3, ramp: 3, hay: 4, kraken: 4, boulder: 6, bridge: 6, spinner: 7, rival: 7, log: 8, parrots: 9, pendulum: 11 };
 // how much of an ordinary army each hazard costs (used to make the fort fair)
-const LOSS = { cannons: 0.07, kraken: 0.07, hay: 0.05, log: 0.06, bridge: 0.06, ramp: 0.04, spinner: 0.05, jump: 0.05, slide: 0.05 };
+const LOSS = { boulder: 0.05, parrots: 0.06, pendulum: 0.05, cannons: 0.07, kraken: 0.07, hay: 0.05, log: 0.06, bridge: 0.06, ramp: 0.04, spinner: 0.05, jump: 0.05, slide: 0.05 };
 const SHIP_FROM = 2;
 function makeLevel(n) {
   let seed = n * 9301 + 49297; const R = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
@@ -211,7 +213,8 @@ function makeLevel(n) {
       for (let bz = -40; bz > -len + 25; bz -= r(26, 36)) boats.push({ dz: bz, side: pk([-1, 1]), hp: 2 + Math.round(d * 2) });
       ev.push({ t: 'ship', z, len, boats }); avg += boats.length * 2.2; best += boats.length * 3; z -= len + 34; continue;
     }
-    let p = k <= 2 || R() < 0.26 ? 'gate' : pk(['strays', 'apples', 'powder', 'boost', ...(has('jump') ? ['jump', 'jump'] : []), ...(has('slide') ? ['slide', 'slide'] : []), ...(has('hay') ? ['hay'] : []), ...(has('wolves') ? ['wolves', 'wolves'] : []), ...(has('cannons') ? ['cannons', 'cannons'] : []), ...(has('ramp') ? ['ramp'] : []), ...(has('kraken') ? ['kraken', 'kraken'] : []), ...(has('bridge') ? ['bridge'] : []), ...(has('spinner') ? ['spinner'] : []), ...(has('log') ? ['log'] : [])]);
+    if (has('rival') && !ev.some(e => e.t === 'rival') && z < -L * 0.55 && k > 3) { const c = Math.max(4, Math.round(avg * 0.35)); ev.push({ t: 'rival', z, n: c, pull: 0.32 + d * 0.3 }); avg += c * 0.4; best += c; z -= 44; continue; }
+    let p = k <= 2 || R() < 0.26 ? 'gate' : pk(['strays', 'apples', 'powder', 'boost', ...(has('boulder') ? ['boulder', 'boulder'] : []), ...(has('parrots') ? ['parrots', 'parrots'] : []), ...(has('pendulum') ? ['pendulum'] : []), ...(has('jump') ? ['jump', 'jump'] : []), ...(has('slide') ? ['slide', 'slide'] : []), ...(has('hay') ? ['hay'] : []), ...(has('wolves') ? ['wolves', 'wolves'] : []), ...(has('cannons') ? ['cannons', 'cannons'] : []), ...(has('ramp') ? ['ramp'] : []), ...(has('kraken') ? ['kraken', 'kraken'] : []), ...(has('bridge') ? ['bridge'] : []), ...(has('spinner') ? ['spinner'] : []), ...(has('log') ? ['log'] : [])]);
     if ((p === 'powder' || p === 'boost') && ev.filter(e => e.t === p).length >= 2) p = 'apples';
     if (!['gate', 'strays', 'apples', 'powder', 'boost'].includes(p) && ev.filter(e => e.t === p).length >= (p === 'jump' || p === 'slide' ? 3 : 2)) p = R() < 0.5 ? 'gate' : 'strays';
     const fresh = Object.keys(UNLOCK).find(q => UNLOCK[q] === n && !ev.some(e => e.t === q));
@@ -231,10 +234,16 @@ function makeLevel(n) {
     else if (p === 'kraken') ev.push({ t: 'kraken', z, side: pk([-1, 1]), ph: R() * 3 });
     else if (p === 'jump') ev.push({ t: 'jump', z });
     else if (p === 'slide') ev.push({ t: 'slide', z });
+    else if (p === 'boulder') ev.push({ t: 'boulder', z, x: pk([-3.3, 3.3]), n: R() < 0.35 + d * 0.4 ? 2 : 1 });
+    else if (p === 'parrots') ev.push({ t: 'parrots', z, shots: 4 + Math.round(d * 3) });
+    else if (p === 'pendulum') ev.push({ t: 'pendulum', z, sp: r(1.6, 2.2) + d * 0.6, ph: R() * 6 });
+    else if (p === 'rival') { const c = Math.max(4, Math.round(avg * 0.35)); ev.push({ t: 'rival', z, n: c, pull: 0.32 + d * 0.3 }); avg += c * 0.4; best += c; z -= 20; }
     if (LOSS[p]) avg *= 1 - LOSS[p] * (0.6 + d * 0.8);
     avg = Math.max(start, avg);
     z -= p === 'bridge' ? 46 : p === 'ramp' ? 36 : p === 'boost' ? 18 : r(26, 34);
   }
+  { const spots = ev.filter(e => ['cannons', 'boulder', 'parrots', 'pendulum', 'kraken', 'hay', 'spinner', 'log', 'jump', 'slide', 'wolves'].includes(e.t)); const pickN = []; while (pickN.length < 3 && spots.length) pickN.push(spots.splice(Math.floor(R() * spots.length), 1)[0]);
+    while (pickN.length < 3) pickN.push({ z: -L * (0.25 + pickN.length * 0.25) }); pickN.forEach(e => ev.push({ t: 'skull', z: e.z - (e.t === 'jump' || e.t === 'slide' ? 1 : 7), x: pk([-3.6, 3.6]) })); }
   // the fort needs a share of an ordinary player's army that grows gently with the level (boss forts a little more):
   // an ordinary player arrives with about 1.3-2x what it takes, so nobody gets stuck on one level
   const need = Math.max(6, Math.round(avg * (0.42 + 0.3 * d) * (boss ? 1.1 : 1)));
@@ -245,6 +254,7 @@ function makeLevel(n) {
 
 // ---------------- state ----------------
 const G = { state: 'load', t: 0, z: 0, x: 0, tx: 0, speed: 0, crew: [], flying: [], apples: 0, lost: 0, finale: null, shake: 0, slow: 1 };
+let MIT = null;
 let P = null, lv = null, W = null, castle = null, rocky = null, lalchi = null, crowds = {}, crowdG = null, crowdGL = null, blobs = null;
 const objs = [];
 const HERD_SPEED = 15, SP = 0.66, MAX_DRAWN = 80;
@@ -278,6 +288,7 @@ function startLevel(n, playNow) {
   W = buildWorld(lv, scene);
   hemi.color.set(lv.world.night ? 0x8a9aff : 0xdcecff); hemi.intensity = lv.world.night ? 1.0 : 1.5; sun.intensity = lv.world.night ? 1.1 : 2.6;
   Object.assign(G, { t: 0, z: 6, x: 0, tx: 0, speed: 0, crew: [], flying: [], apples: 0, lost: 0, finale: null, shake: 0, slow: 1, guardFight: null, bombPow: 1, combo: 0, air: 0, acts: [], ract: null, teach: null, power: 0, storm: 0, ship: null, shield: 0, fireCD: 0 });
+  G.skulls = 0; G.tug = null; $('tug').classList.add('hidden'); $('mitthu').classList.add('hidden'); updateSkulls();
   for (let i = 0; i < 5 + PF.up.start + heroBonusStart(); i++) addPirate();
   for (const h of HEROES) if (hasHero(h.id)) addPirate({ hero: h.id, tint: h.coat, name: h.name, s: 1.08 });
   G.power = hasHero('golu') ? 1 : 0.2; G.shield = hasHero('nisha') ? 5 : 0; G.bombPow = hasHero('bunty') ? 2 : 1;
@@ -301,7 +312,7 @@ function startLevel(n, playNow) {
     const fr = Object.keys(UNLOCK).find(q => UNLOCK[q] === n); if (fr) setTimeout(() => G.state === 'play' && banner(TIPS[fr][0], TIPS[fr][1], 2.2), 2600);
   }
 }
-const TIPS = { jump: ['⬆️ BARREL WALL!', 'Swipe UP to jump over it'], slide: ['⬇️ SPIKY LOG!', 'Swipe DOWN to slide under it'], cannons: ['💥 CANNON ATTACK!', 'Dodge the red circles!'], ramp: ['🚀 MEGA JUMP!', 'Stay in the middle of the ramp'], kraken: ['🐙 THE KRAKEN!', 'Watch its shadow — then run!'], hay: ['🛢️ ROLLING BARRELS!', 'Steer around them'], wolves: ['💂 LALCHI\'S GUARDS!', 'Bomb them! A bigger army wins'], bridge: ['🌉 NARROW BRIDGE!', 'Keep the army in the middle'], spinner: ['🌀 SPINNING MAST!', 'Time your run'], log: ['⚓ SWINGING ANCHOR!', 'Wait for the gap'] };
+const TIPS = { boulder: ['🪨 BOULDER ROLLING!', 'Steer out of its way!'], parrots: ['🦜 LALCHI\'S PARROTS!', 'Keep moving — dodge the coconuts!'], pendulum: ['⚓ SWINGING ANCHOR!', 'Time it — run past when it swings away'], rival: ['🏴‍☠️ RIVAL CREW!', 'Tug of war — TAP TAP TAP!'], jump: ['⬆️ BARREL WALL!', 'Swipe UP to jump over it'], slide: ['⬇️ SPIKY LOG!', 'Swipe DOWN to slide under it'], cannons: ['💥 CANNON ATTACK!', 'Dodge the red circles!'], ramp: ['🚀 MEGA JUMP!', 'Stay in the middle of the ramp'], kraken: ['🐙 THE KRAKEN!', 'Watch its shadow — then run!'], hay: ['🛢️ ROLLING BARRELS!', 'Steer around them'], wolves: ['💂 LALCHI\'S GUARDS!', 'Bomb them! A bigger army wins'], bridge: ['🌉 NARROW BRIDGE!', 'Keep the army in the middle'], spinner: ['🌀 SPINNING MAST!', 'Time your run'], log: ['⚓ SWINGING ANCHOR!', 'Wait for the gap'] };
 
 // ---------------- the things on the path ----------------
 const opTex = {};
@@ -416,6 +427,24 @@ function spawnEvent(e) {
     o.piv = piv; o.segs = segs; o.reach = SEG * LEN; o.bx = bx;
     const sh = new THREE.Mesh(new THREE.PlaneGeometry(o.reach, 2.2), new THREE.MeshBasicMaterial({ color: 0x200010, transparent: true, opacity: 0, depthWrite: false })); sh.rotation.x = -PI / 2; sh.position.set(bx - e.side * o.reach / 2, 0.08, 0); g.add(sh); o.shadow = sh;
   }
+  else if (e.t === 'boulder') {   // a giant boulder rolls down the path at the army: steer out of its lane
+    o.rocks = []; for (let i = 0; i < e.n; i++) { const r = mesh(new THREE.DodecahedronGeometry(1.5, 1), flat(pick([0x8a8278, 0x7a7268, 0x9a9084])), 0, 1.5, 0, g); const p = r.geometry.attributes.position; for (let k = 0; k < p.count; k++) p.setXYZ(k, p.getX(k) * rnd(0.9, 1.1), p.getY(k) * rnd(0.9, 1.1), p.getZ(k) * rnd(0.9, 1.1)); r.geometry.computeVertexNormals(); o.rocks.push({ m: r, x: i ? -e.x : e.x, z: -38 - i * 16, go: false }); r.position.set(o.rocks[i].x, 1.5, o.rocks[i].z); }
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.2), new THREE.MeshStandardMaterial({ map: signTex('🪨 LOOK OUT!', '#a83a1a'), side: THREE.DoubleSide })); sg.position.set(PATH_W / 2 + 0.6, 1.6, 2); sg.rotation.y = -0.4; g.add(sg); mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.6, 5), flat(0x6a4a2a), PATH_W / 2 + 0.6, 0.8, 2, g);
+  } else if (e.t === 'parrots') {   // Lalchi's parrots fly over the army and drop coconuts where it is going
+    o.birds = []; for (let i = 0; i < 3; i++) { const b = parrotModel(i ? 0x2ad83a : 0xe8302a); g.add(b); o.birds.push(b); } o.drops = []; o.cd = 1.2; o.fired = 0;
+  } else if (e.t === 'pendulum') {   // a giant anchor swings across the path on a chain
+    const fr = new THREE.Group(), wood = flat(0x6a4422); for (const s of [-1, 1]) mesh(new THREE.BoxGeometry(0.5, 7.4, 0.5), wood, s * (PATH_W / 2 + 0.6), 3.7, 0, fr); mesh(new THREE.BoxGeometry(PATH_W + 2, 0.5, 0.6), wood, 0, 7.4, 0, fr); g.add(oneMesh(fr));
+    const piv = new THREE.Group(); piv.position.set(0, 7.2, 0); g.add(piv); const chain = mesh(new THREE.CylinderGeometry(0.07, 0.07, 4.6, 5), flat(0x4a4a50, { metalness: 0.5 }), 0, -2.3, 0, piv); void chain;
+    const an = new THREE.Group(), iron = flat(0x2a2a30, { metalness: 0.6, roughness: 0.4 }); mesh(new THREE.BoxGeometry(0.35, 2.0, 0.35), iron, 0, -0.9, 0, an); mesh(new THREE.TorusGeometry(1.1, 0.22, 6, 16, PI), iron, 0, -1.4, 0, an).rotation.z = PI; mesh(new THREE.TorusGeometry(0.35, 0.1, 6, 12), iron, 0, 0.25, 0, an); for (const s of [-1, 1]) mesh(new THREE.ConeGeometry(0.3, 0.6, 4), iron, s * 1.1, -1.2, 0, an);
+    an.position.y = -4.6; piv.add(an); o.piv = piv; o.anchor = an;
+  } else if (e.t === 'rival') {   // a rival pirate crew blocks the path: tug of war!
+    o.list = []; for (let i = 0; i < Math.min(e.n, 24); i++) { const [ox, oz] = slot(i, Math.min(e.n, 24)); o.list.push(newPirate({ x: ox * 0.9, z: e.z - oz - 1.5, st: 'idle', kind: pick(['pirate2', 'pirate3']), tint: pick([0x1a1a1e, 0x3a1a2a, 0x2a2a3a]), ph: Math.random() * 2 })); }
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.9), new THREE.MeshStandardMaterial({ map: signTex('☠️ KALA DAKU\'S CREW ☠️', '#2a1a1a'), side: THREE.DoubleSide })); sign.position.set(0, 3.6, -1.2); g.add(sign);
+    const rope = mesh(new THREE.CylinderGeometry(0.07, 0.07, 1, 6), flat(0xc89a5a), 0, 1.1, 0, g); rope.rotation.x = PI / 2; rope.visible = false; o.rope = rope; o.v = 0.5;
+  } else if (e.t === 'skull') {   // a golden skull: collect all three for the third star
+    const sk = new THREE.Group(), gold = flat(0xffc21a, { metalness: 0.7, roughness: 0.25, emissive: 0x6a4a00 }); mesh(new THREE.SphereGeometry(0.45, 14, 10), gold, 0, 0, 0, sk); mesh(new THREE.BoxGeometry(0.5, 0.3, 0.4), gold, 0, -0.32, 0.05, sk); for (const s of [-1, 1]) mesh(new THREE.SphereGeometry(0.12, 8, 6), flat(0x1a1a1a), s * 0.17, 0.02, 0.38, sk); mesh(new THREE.ConeGeometry(0.07, 0.14, 4), flat(0x1a1a1a), 0, -0.12, 0.42, sk).rotation.x = PI;
+    sk.position.set(e.x, 1.3, 0); g.add(sk); o.sk = sk;
+  }
   g.traverse(q => { q.frustumCulled = false; }); objs.push(o);
 }
 // height of the ground (ramps and jumps) at z
@@ -425,10 +454,13 @@ function rampAt(z) { for (const o of objs) if (o.t === 'ramp') { const l = o.z -
 const _p = new THREE.Vector3();
 const lists = { pirate: [], pirate2: [], pirate3: [], pirateF: [], pirateF2: [], pirate_lo: [], pirate2_lo: [], pirate3_lo: [], pirateF_lo: [], pirateF2_lo: [], g: [], gl: [] };
 const NEAR = 10;   // the first rows are drawn in full detail, the rest with the lighter version
-function person(q, extra) { const o = { x: q.x, y: q.y || 0, z: q.z, ry: q.ry || 0, rx: q.rx || 0, rz: q.rz || 0, s: q.s ?? 1, clip: q.clip || 'run', t: q.t || 0, tint: q.tint, skin: q.skin, hair: q.hair, ...extra }; return o; }
+function person(q, extra) { const o = { x: q.x, y: q.y || 0, z: q.z, ry: q.ry || 0, rx: q.rx || 0, rz: q.rz || 0, s: q.s ?? 1, clip: q.clip || 'run', t: q.t || 0, tint: q.tint, skin: q.skin, hair: q.hair, ...extra }; o.expr = o.clip === 'hit' ? EXPR.scared : o.clip === 'victory' || o.clip === 'throw' ? EXPR.laugh : q.expr ?? crewExpr(); return o; }
 function pushCrew(q, extra, far) { (lists[far ? q.kind + '_lo' : q.kind] || lists.pirate).push(person(q, extra)); }
 function update(dt) {
   if (window.__bot) window.__bot(dt);
+  crewET -= dt; if (crewET <= 0 && rocky && rocky.expr !== 0) rocky.expr = 0;
+  if (mitT > 0) { mitT -= dt; if (mitT <= 0) $('mitthu').classList.add('hidden'); }
+  if (MIT && rocky) { const fl = G.state === 'play' || G.state === 'home'; MIT.visible = fl && !G.finale; MIT.position.set(rocky.position.x + 0.9 + Math.sin(G.t * 1.3) * 0.3, rocky.position.y + 2.5 + Math.sin(G.t * 2.6) * 0.25, rocky.position.z + 0.3); MIT.rotation.y = G.state === 'home' ? 0 : PI; MIT.userData.wl.rotation.z = Math.sin(G.t * 16) * 0.7; MIT.userData.wr.rotation.z = -Math.sin(G.t * 16) * 0.7; }
   G.t += dt; G.storm = Math.max(0, (G.storm || 0) - dt); G.fireCD = Math.max(0, (G.fireCD || 0) - dt); W.update(dt, G.t); W.cull(G.finale ? castle.z + 20 : G.z); if ((G.state === 'play' || G.state === 'home') && Math.random() < dt * 0.06) sfxT('gull', 6); if (bannerT > 0) { bannerT -= dt; if (bannerT <= 0) $('banner').classList.remove('show'); }
   for (const k in lists) lists[k].length = 0;
   let airborne = false;
@@ -436,7 +468,7 @@ function update(dt) {
   if (play) {
     const sl = slopeAt(G.z);
     G.boost = Math.max(0, (G.boost || 0) - dt);
-    G.speed = damp(G.speed, HERD_SPEED * clamp(1 - sl * 0.9, 0.75, 1.3) * (G.guardFight ? 0.2 : 1) * (G.boost > 0 || G.storm > 0 ? 1.6 : 1) * (G.ship ? 0.85 : 1), G.boost > 0 || G.storm > 0 ? 6 : 3, dt);
+    G.speed = damp(G.speed, HERD_SPEED * clamp(1 - sl * 0.9, 0.75, 1.3) * (G.guardFight ? 0.2 : 1) * (G.tug ? 0 : 1) * (G.boost > 0 || G.storm > 0 ? 1.6 : 1) * (G.ship ? 0.85 : 1), G.boost > 0 || G.storm > 0 ? 6 : 3, dt);
     if (G.storm > 0 && Math.random() < dt * 9) skyBomb(G.x + rnd(-5, 5), 0.3, G.z - rnd(16, 42), 0.25);
     if ((G.boost > 0 || G.storm > 0) && Math.random() < dt * 40) puff(_p.set(G.x + rnd(-5, 5), rnd(0.5, 3), G.z - rnd(4, 12)), 1, 0xffffff, { size: 0.25, speed: 0, life: 0.25, grav: 0, grow: 3 });
     G.z -= G.speed * dt;
@@ -501,6 +533,45 @@ function updateObj(o, dt) {
   const dz = o.z - G.z;
   o.obj.visible = G.finale ? false : o.t === 'ship' ? G.z < o.z + 140 && G.z > o.z - o.len - 30 : dz > -140 && dz < 25;   // far-away things are not drawn
   if (o.broken && o.t !== 'wolves') { o.obj.visible = false; return; }   // smashed by a Cannon Storm
+  if (o.t === 'boulder') {
+    for (const r of o.rocks) {
+      if (!r.go && G.state === 'play' && dz + r.z > -62) { r.go = true; sfxT('crumble', 0.5); G.shake = Math.max(G.shake, 0.2); if (!o.told) { o.told = true; mitthu(pick(['Boulder! BHAAGO!', 'Squawk! Big rock coming!', 'Move move MOVE!']), 'scared'); setCrewExpr('scared', 1.6); } }
+      if (r.go && !r.gone) { r.z += 16 * dt; r.m.position.set(r.x, 1.5, r.z); r.m.rotation.x += dt * 10; if (Math.random() < dt * 12) puff(_p.set(r.x + rnd(-1, 1), 0.3, o.z + r.z + 1.2), 1, 0xc8b89a, { size: 0.7, speed: 1, life: 0.5 }); G.shake = Math.max(G.shake, 0.06);
+        const az = o.z + r.z; o.cap = o.cap ?? Math.ceil((G.crew.length + 1) * 0.3); for (const q of G.crew.slice()) if ((o.kills || 0) < o.cap && Math.abs(q.x - r.x) < 1.35 && Math.abs(q.z - az) < 1.4) { o.kills = (o.kills || 0) + 1; losePirate(q, 'hit', Math.sign(q.x - r.x) || 1); if (Math.random() < 0.3) popText(pick(['SQUASH!', 'BONK!', 'MUMMYYY!']), _p.set(q.x, 2.4, q.z), '#ffd0a0', 22, 0.7); }
+        if (az > G.z + 30) { r.gone = true; r.m.visible = false; } }
+    }
+    return;
+  }
+  if (o.t === 'parrots') {
+    const act = G.state === 'play' && dz > -55 && dz < 8;
+    o.birds.forEach((b, i) => { const fx = act ? G.x + Math.sin(G.t * 1.7 + i * 2.1) * 3 : (i - 1) * 3, fz = act ? G.z - o.z - 14 - i * 3 : -6; b.position.set(damp(b.position.x, fx, 2, dt), 6 + Math.sin(G.t * 3 + i) * 0.6, damp(b.position.z, fz, 2, dt)); b.userData.wl.rotation.z = Math.sin(G.t * 18 + i) * 0.7; b.userData.wr.rotation.z = -Math.sin(G.t * 18 + i) * 0.7; b.rotation.y = PI; });
+    if (act && o.fired < o.shots) { o.cd -= dt; if (o.cd <= 0) { o.cd = 1.1 - lv.d * 0.3; o.fired++; const b = pick(o.birds), tx = clamp(G.x + G.speed * 0 + rnd(-1.5, 1.5), -PATH_W / 2 + 1, PATH_W / 2 - 1), tz = G.z - G.speed * 1.0 - 1; const ring = ringPool.pop() || new THREE.Mesh(ringGeo, ringMat.clone()); ring.material.color.set(0xff3a2a); ring.material.opacity = 0.8; ring.rotation.set(-PI / 2, 0, 0); ring.scale.setScalar(2.2); ring.position.set(tx, 0.12, tz); scene.add(ring); sfxT('squawk', 0.3); o.drops.push({ x: tx, z: tz, t: 0, ring, from: new THREE.Vector3(o.obj.position.x + b.position.x, b.position.y, o.z + b.position.z) }); if (o.fired === 1) mitthu(pick(['Arre, coconuts?! Keep moving!', 'Squawk! Those are MY cousins!', 'Coconut rain!']), 'laugh'); } }
+    for (const d of o.drops) { d.t += dt; if (d.t >= 1.0 && !d.done) { d.done = true; scene.remove(d.ring); ringPool.push(d.ring); boom(_p.set(d.x, 0.4, d.z), 0.9); puff(_p.set(d.x, 0.6, d.z), 8, 0x8a5a2a, { size: 0.35, speed: 5, life: 0.7, grav: 14 }); let k = 0; for (const q of G.crew.slice()) if (k < 5 && Math.abs(q.x - d.x) < 1.4 && Math.abs(q.z - d.z) < 1.4) { k++; losePirate(q, 'hit', Math.sign(q.x - d.x) || 1); } } else if (!d.done) d.ring.material.opacity = 0.5 + Math.sin(G.t * 20) * 0.3; }
+    o.drops = o.drops.filter(d => !d.done || d.t < 1.1);
+    return;
+  }
+  if (o.t === 'pendulum') {
+    const a = Math.sin(G.t * o.sp + o.ph) * 1.0; o.piv.rotation.z = a; const ax = Math.sin(a) * 6.4, ay = 7.2 - Math.cos(a) * 6.4;
+    if (G.state === 'play' && Math.abs(dz) < 12) { o.cap = o.cap ?? Math.ceil((G.crew.length + 1) * 0.25); for (const q of G.crew.slice()) if ((o.kills || 0) < o.cap && Math.abs(q.z - o.z) < 0.8 && Math.abs(q.x - ax) < 1.1 && ay < 2.2) { o.kills = (o.kills || 0) + 1; losePirate(q, 'hit', Math.sign(Math.cos(G.t * o.sp + o.ph)) || 1); sfxT('clang', 0.1); if (Math.random() < 0.3) popText('DHISHOOM!', _p.set(q.x, 2.4, q.z), '#ffd0a0', 22, 0.6); } }
+    if (!o.told && dz > -30 && G.state === 'play') { o.told = true; mitthu(pick(['Wait for it… NOW!', 'Tick… tock… RUN!', 'Squawk! Time it right!']), 'calm'); }
+    return;
+  }
+  if (o.t === 'rival') {
+    for (const q of o.list) { if (q.joined) continue; if (o.state === 'won' || o.state === 'lost') q.x = damp(q.x, (Math.sign(q.x) || 1) * (PATH_W / 2 + 1.5), 2.5, dt); q.clip = o.state === 'won' ? 'hit' : o.state === 'lost' ? 'victory' : G.tug && G.tug.o === o ? 'throw' : 'idle'; q.t = G.t + q.ph; q.ry = 0; q.expr = o.state === 'won' ? EXPR.scared : EXPR.angry; if (q.flyT) { q.flyT += dt; q.y = Math.max(0, Math.sin(q.flyT * 3) * 1.2); } pushCrew(q, undefined, true); }
+    if (!o.state && G.state === 'play' && dz > -7) { o.state = 'tug'; G.tug = { o, v: 0.5, t: 0, taps: 0 }; o.rope.visible = true; banner('🪢 TUG OF WAR!', 'TAP TAP TAP as fast as you can!', 1.4); mitthu(pick(['Kala Daku?! Pull, PULL!', 'Squawk! Tap fast, Captain!', 'Show them our muscles!']), 'angry'); setCrewExpr('angry', 9); sfx('capCharge'); $('tug').classList.remove('hidden'); }
+    if (o.state === 'tug') {
+      const T = G.tug; T.t += dt; const mine = Math.min(1.6, (G.crew.length + 1) / Math.max(4, o.n)) * 0.07; T.v -= o.pull * dt * (1.1 - mine * 4); T.v = clamp(T.v, 0, 1);
+      { const a = G.z - 0.5 - o.z, b = -1.5; o.rope.position.set(0, 1.1, (a + b) / 2); o.rope.scale.y = Math.max(0.5, Math.abs(a - b)); } o.rope.position.x = Math.sin(G.t * 20) * 0.05;
+      $('tugFill').style.width = (T.v * 100) + '%'; G.shake = Math.max(G.shake, 0.04);
+      if (T.v >= 1 || T.v <= 0 || T.t > 9) endTug(o, T.v >= 0.5);
+    }
+    return;
+  }
+  if (o.t === 'skull') {
+    if (!o.done) { o.sk.rotation.y += dt * 3; o.sk.position.y = 1.3 + Math.sin(G.t * 3) * 0.2; if (Math.random() < dt * 4) puff(_p.set(o.x + rnd(-0.4, 0.4), 1.4, o.z), 1, 0xffe066, { star: true, add: true, size: 0.25, speed: 1, life: 0.6 });
+      if (G.state === 'play' && dz > -0.6 && dz < 1.5) { const hit = Math.abs(G.x - o.x) < 1.3 || G.crew.some(q => Math.abs(q.x - o.x) < 0.9 && Math.abs(q.z - o.z) < 1.2); if (hit) { o.done = true; o.sk.visible = false; G.skulls++; updateSkulls(); sfx('kaching'); sfx('gateGood', 0.1); popText('💀 GOLDEN SKULL ' + G.skulls + '/3', _p.set(o.x, 2.8, o.z), '#ffe066', 28, 1.1); puff(_p.set(o.x, 1.3, o.z), 16, 0xffe066, { star: true, add: true, speed: 5 }); setCrewExpr('laugh', 1.2); if (G.skulls === 3) mitthu('ALL THREE SKULLS! Shiny shiny!', 'laugh'); } else if (dz > 1.4) { o.done = true; } } }
+    return;
+  }
   if (o.t === 'gate') {
     if (!o.done && G.state === 'play' && dz > 0) {   // the army's front is through the gate
       o.done = true; const side = G.x >= 0 ? 1 : 0, op = o.ops[side], pl = o['p' + side]; const before = G.crew.length + 1; let after = before;
@@ -509,6 +580,7 @@ function updateObj(o, dt) {
       const diff = after - before;
       const val = q => q[0] === '+' ? before + q[1] : q[0] === 'x' ? before * q[1] : q[0] === '-' ? before - q[1] : before / q[1];
       if (val(op) >= val(o.ops[1 - side])) { G.combo++; if (G.combo >= 2) { const b = G.combo * 5; G.apples += b; $('appleN').textContent = G.apples; popText('🔥 PERFECT x' + G.combo + '  +' + b + ' 🪙', _p.set(G.x, 5.2, G.z), '#ffb03a', 26, 1.2); sfx('coins', 0.1); } } else G.combo = 0;
+      if (diff > 0) { setCrewExpr('laugh', 1.1); if (Math.random() < 0.3) mitthu(pick(['Squawk! More pirates, more masti!', 'Yo ho ho! Bigger army!', 'Lalchi is shaking in his socks!', 'Wah Captain, wah!']), 'laugh'); } else if (diff < 0) { setCrewExpr('sad', 1.2); if (Math.random() < 0.5) mitthu(pick(['Arre! Wrong gate!', 'Squawk! Red gate = BAD gate!', 'Oops… where did they go?']), 'sad'); }
       if (diff > 0) { addPower(0.16); for (const m of [50, 100, 150, 200]) if (before < m && before + diff >= m) setTimeout(() => { banner(m >= 150 ? '🔥 UNSTOPPABLE!' : m >= 100 ? '💪 MEGA ARMY!' : '⭐ AWESOME!', m + ' PIRATES!', 1.1); sfx('hooray'); }, 250); for (let i = 0; i < diff; i++) addPirate({ x: G.x + rnd(-2, 2), z: o.z - rnd(0, 1) }); sfx('gateGood'); sfx('crewCheer', 0.1); popText('+' + diff + ' PIRATES', _p.set(G.x, 3, G.z), '#bff4ff', 34); if (diff >= 10) popText(pick(['SHABAASH!', 'WAH! SUPERB!', 'BIGGER ARMY!']), _p.set(G.x, 4.2, G.z), '#ffe066', 26, 1.2); vib(25); puff(_p.set(G.x, 1.5, G.z), 14, 0xffffff, { star: true, cols: [0x8ad8ff, 0xffffff, 0xffe066], speed: 4, size: 0.4 }); }
       else if (diff < 0) { for (let i = 0; i < -diff && G.crew.length; i++) { const q = G.crew.pop(); puff(_p.set(q.x, 0.8, q.z), 2, 0xffffff); } G.lost -= diff; sfx('gateBad'); popText(diff + ' PIRATES', _p.set(G.x, 3, G.z), '#ff8a8a', 34); vib(60); if (!G.crew.length) setTimeout(() => fail('Oops — that gate sank the whole army!'), 500); }
       reslot(); pl.userData.pop = 0.001;
@@ -646,6 +718,21 @@ function updateObj(o, dt) {
   }
 }
 
+// ---------------- the new dangers' helpers, Mitthu the parrot, golden skulls, tug of war ----------------
+function parrotModel(c) {
+  const b = new THREE.Group(), m = flat(c), wc = c === 0xe8302a ? 0x2a8ad8 : 0xffd21a; const bd = mesh(new THREE.SphereGeometry(0.32, 10, 8), m, 0, 0, 0, b); bd.scale.set(0.8, 0.9, 1.4); mesh(new THREE.SphereGeometry(0.24, 10, 8), m, 0, 0.25, -0.38, b); mesh(new THREE.ConeGeometry(0.09, 0.22, 6), flat(0xffd21a), 0, 0.2, -0.62, b).rotation.x = -PI / 2; for (const s of [-1, 1]) mesh(new THREE.SphereGeometry(0.05, 6, 4), flat(0x111111), s * 0.13, 0.3, -0.52, b); const t = mesh(new THREE.BoxGeometry(0.2, 0.05, 0.6), flat(0x2a6ad8), 0, -0.05, 0.6, b); t.rotation.x = -0.4;
+  const wl = new THREE.Group(), wr = new THREE.Group(); mesh(new THREE.BoxGeometry(0.7, 0.04, 0.45), flat(wc), -0.35, 0, 0, wl); mesh(new THREE.BoxGeometry(0.7, 0.04, 0.45), flat(wc), 0.35, 0, 0, wr); wl.position.set(-0.2, 0.1, 0); wr.position.set(0.2, 0.1, 0); b.add(wl, wr); b.userData.wl = wl; b.userData.wr = wr; b.traverse(q => { q.frustumCulled = false; }); return b;
+}
+let mitT = 0;
+const MIT_FACE = { happy: '🦜', laugh: '🤣', scared: '😱', angry: '😤', calm: '🦜', sad: '😢' };
+function mitthu(text, mood = 'happy', who) { const b = $('mitthu'); $('mitText').textContent = text; $('mitFace').textContent = who ? '🤴' : MIT_FACE[mood] || '🦜'; $('mitWho').textContent = who || 'MITTHU'; b.classList.remove('hidden'); b.classList.remove('in'); void b.offsetWidth; b.classList.add('in'); mitT = 2.8; sfxT('squawk', 0.8); }
+function updateSkulls() { $('skullN').innerHTML = [0, 1, 2].map(i => `<i class="${i < G.skulls ? 'on' : ''}">💀</i>`).join(''); }
+function tugTap() { const T = G.tug; if (!T) return; T.v = Math.min(1, T.v + 0.05 + (hasHero('bunty') ? 0.01 : 0)); T.taps++; sfxT('pop', 0.04); vib(10); G.shake = Math.max(G.shake, 0.08); if (T.taps % 6 === 0) popText(pick(['HEAVE!', 'HO!', 'PULL!', 'JOR LAGAO!']), _p.set(rnd(-2, 2), 3, G.z - 2), '#ffe066', 24, 0.6); }
+function endTug(o, won) {
+  G.tug = null; $('tug').classList.add('hidden'); o.rope.visible = false; o.state = won ? 'won' : 'lost'; setCrewExpr(won ? 'laugh' : 'sad', 2);
+  if (won) { const n = Math.ceil(o.list.length * 0.6); o.list.slice(0, n).forEach(q => { q.joined = true; addPirate({ x: q.x, z: q.z, tint: q.tint, kind: q.kind }); }); o.list.slice(n).forEach(q => { q.flyT = 0.01; }); reslot(); sfx('crewCheer'); sfx('hooray', 0.2); banner('💪 YOU WON!', '+' + n + ' rivals join your army!', 1.6); mitthu(pick(['Hahaha! They want to join US now!', 'Kala Daku fell on his bottom!', 'Squawk! Too strong!']), 'laugh'); addPower(0.25); }
+  else { const n = Math.ceil(G.crew.length * 0.2); for (let i = 0; i < n; i++) { const q = pick(G.crew); if (q) losePirate(q, 'hit', pick([-1, 1])); } sfx('adNooo'); banner('😵 THEY PULLED HARDER!', 'Tap faster next time!', 1.6); mitthu(pick(['Arre! They pulled our pants down!', 'Squawk! We need more laddoos!', 'Next time, TAP faster!']), 'sad'); }
+}
 // ---------------- Rocky's super move: CANNON STORM (the meter fills from gates, coins, rescues and good moves) ----------------
 function addPower(v) { if (G.storm > 0) return; G.power = Math.min(1, G.power + v * (hasHero('kaka') ? 1.5 : 1)); }
 const HAZ = { wolves: 1, hay: 1, cannons: 1, kraken: 1, spinner: 1, log: 1, jump: 1, slide: 1 };
@@ -796,6 +883,7 @@ function formUp(F) {   // the army forms wide rows facing the castle
   list.forEach((q, i) => { const r = Math.floor(i / cols), k = i % cols, inRow = Math.min(cols, n - r * cols); q.fx = (k - (inRow - 1) / 2) * 0.7 + (r % 2 ? 0.2 : 0); q.fz = F.line + r * 0.85; q.st = 'form'; });
 }
 function startFinale() {
+  setTimeout(() => mitthu(pick(['My gold! MY GOLD! Go away, you smelly pirates!', 'Guards! Throw your socks at them!', 'I will tell your mummies!', 'Ha! My fort is made of SOLID laddoo… I mean stone!']), 'angry', 'LORD LALCHI'), 600); setTimeout(() => mitthu(pick(['Squawk! TAP TAP to throw bombs!', 'Captain, his moustache is FAKE!', 'Get him! For the gold!']), 'laugh'), 3800);
   G.state = 'finale'; music(lv.boss ? 'bossfight' : 'fight'); G.guardFight = null; G.x = 0; G.tx = 0;
   const F = G.finale = { t: 0, done: false, win: false, line: castle.z + FIRE_LINE + (lv.boss ? 4 : 0), phase: 'guards', next: 0.8, boost: 0, guards: [], lal: { x: 0, dir: 1, talkT: 1.5 }, ox: 0, ws: { on: false, t: 2.4 } };
   G.crew.forEach(q => { q.act = null; q.y = 0; q.rx = 0; }); G.ract = null; rocky.rotation.x = 0;
@@ -899,6 +987,7 @@ function updateFinale(dt) {
   if (F.win) winScene(dt);
 }
 function castleDown() {
+  setTimeout(() => mitthu(pick(['Noooo! My precious gold!', 'This is not fair! I want my mummy!', 'Okay okay, take it! TAKE IT!']), 'sad', 'LORD LALCHI'), 900); setTimeout(() => mitthu(pick(['Yo ho ho! The gold is OURS!', 'Party on the ship tonight!', 'Squawk! Captain Rocky zindabad!']), 'laugh'), 4200);
   const F = G.finale; if (F.win) return; F.done = true; F.win = true; F.winT = F.t; F.last = null; castle.collapse(); G.slow = 0.35; setTimeout(() => { G.slow = 1; }, 1300); G.shake = 1.2;
   $('hint').classList.add('hidden'); $('hint').classList.remove('big'); $('fortN').style.display = 'none'; bullets.length = 0; bombs.length = 0;
   bossKit.marks.forEach(m => { m.visible = false; }); bossKit.wave.visible = false; bossKit.target.visible = false; if (F.ws) F.ws.on = false;
@@ -1154,17 +1243,20 @@ function rollChest() {
 }
 function heroCard(h) { const [rn, rc] = RARITY[h.rar]; return `<div class="card" style="--rc:${rc}"><div class="rar">${rn}</div><div class="hico">${h.icon}</div><b>${h.name}</b><span>${h.power}</span><small>joins your army!</small></div>`; }
 function results() {
-  const S = (G.finale && G.finale.st) || { mult: 1, reached: 0 }, left = G.crew.length, stars = S.reached >= 6 ? 3 : S.reached >= 3 ? 2 : 1;
+  const S = (G.finale && G.finale.st) || { mult: 1, reached: 0 }, left = G.crew.length, stars = 1 + (S.reached >= 3 ? 1 : 0) + (G.skulls >= 3 ? 1 : 0);
+  PF.stars = PF.stars || {}; PF.stars[lv.n] = Math.max(PF.stars[lv.n] || 0, stars);
   const coins = Math.round(G.apples * (hasHero('laddoo') ? 1.25 : 1)), bonus = left * 2, lvB = 10 + lv.n * 2, total = Math.round((coins + bonus + lvB) * S.mult);
   PF.apples += total; PF.level = Math.max(PF.level, lv.n + 1); PF.best = Math.max(PF.best, left + 1); PF.wins = (PF.wins || 0) + 1;
   const drop = rollChest(); if (drop.hero) PF.heroes.push(drop.hero.id); else PF.apples += drop.coins; save();
   $('castleHP').classList.add('hidden');
   openModal(`<h2>${lv.boss ? 'LALCHI DEFEATED!' : 'FORT CAPTURED!'}</h2><div class="stars">${[0, 1, 2].map(i => `<i class="${i < stars ? 'on' : ''}">⭐</i>`).join('')}</div>
     <div class="stat"><span>🪙 Gold coins${hasHero('laddoo') ? ' (+25% 💰)' : ''}</span><b>${coins}</b></div><div class="stat"><span>🏴‍☠️ Pirates left × 2</span><b>${bonus}</b></div><div class="stat"><span>🏁 Level bonus</span><b>${lvB}</b></div><div class="stat"><span>🪜 Treasure stairs</span><b>×${S.mult}</b></div>
+    <p class="tip">⭐ Fort captured · ⭐ 3+ treasure steps · ⭐ all 3 golden skulls (${G.skulls}/3)</p>
     <div class="big" id="totalB">+${total} 🪙</div>
     <div id="chestArea" class="row"><button class="btn big blue chestBtn" id="chestB">🎁 OPEN THE CHEST!</button></div>
     <div id="after" class="hidden">${adReady() ? '<div class="row"><button class="btn blue" id="dblB">📺 WATCH AD: DOUBLE COINS</button></div>' : ''}
-    <div class="row"><button class="btn big green" id="nextB">NEXT LEVEL ▶</button></div><div class="row"><button class="btn small" id="homeB">HOME</button></div></div>`);
+    <div class="row"><button class="btn big green" id="nextB">NEXT LEVEL ▶</button></div><div class="row"><button class="btn small" id="mapB2">🗺️ MAP</button><button class="btn small" id="homeB">HOME</button></div></div>`);
+  $('mapB2').onclick = () => { click(); openMap(); };
   $('chestB').onclick = () => {
     $('chestB').disabled = true; $('chestB').classList.add('shake'); sfx('roll'); vib(60);
     setTimeout(() => {
@@ -1225,7 +1317,7 @@ function gift() {
 function settings() {
   const t = k => `<button class="toggle ${PF.set[k] ? 'on' : ''}" data-s="${k}"></button>`;
   openModal(`<h2>SETTINGS</h2><div class="list"><div class="item"><div class="ico">🔊</div><div class="txt"><b>Sound</b></div>${t('sound')}</div><div class="item"><div class="ico">🎵</div><div class="txt"><b>Music</b></div>${t('music')}</div><div class="item"><div class="ico">📳</div><div class="txt"><b>Vibration</b></div>${t('vib')}</div><div class="item"><div class="ico">✨</div><div class="txt"><b>Sharp graphics</b><span>Turn off on slower phones</span></div>${t('hi')}</div></div>
-    <p class="tip"><b>Rocky's Pirate Army</b><br>made by <b>BajrangVerse Studios</b><br>Characters: Quaternius (CC0)<br>Title and victory music: BajrangVerse Studios<br>Music: "Galway", "Achaidh Cheide", "Pixel Peeker Polka - faster", "Life of Riley", "Run Amok", "Hyperfun" by Kevin MacLeod (incompetech.com), licensed under Creative Commons: By Attribution 4.0<br>Castle and nature: Quaternius (CC0)<br>Free to play with optional ads (Google AdMob) · no accounts · your progress stays on your phone</p><div class="row"><button class="btn" id="closeB">BACK</button></div>`);
+    <p class="tip"><b>Rocky's Pirate Army</b><br>made by <b>BajrangVerse Studios</b><br>Characters: Quaternius (CC0)<br>Title and victory music: BajrangVerse Studios<br>Music: "Fiddles McGinty", "Bushwick Tarantella", "Celtic Impulse", "Rollin at 5", "Master of the Feast", "Cut and Run", "Hyperfun" by Kevin MacLeod (incompetech.com), licensed under Creative Commons: By Attribution 4.0<br>Castle and nature: Quaternius (CC0)<br>Free to play with optional ads (Google AdMob) · no accounts · your progress stays on your phone</p><div class="row"><button class="btn" id="closeB">BACK</button></div>`);
   document.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { const k = b.dataset.s; PF.set[k] = !PF.set[k]; save(); b.classList.toggle('on', PF.set[k]); click(); if (k === 'music') { if (PF.set.music) music(G.state === 'home' ? 'title' : lv.world.music); else Music.stop(); } if (k === 'hi') { QUAL = PF.set.hi ? 2 : 0; resize(); } });
   $('closeB').onclick = () => { click(); closeModal(); if (G.state === 'pause') resume(); };
 }
@@ -1233,13 +1325,13 @@ function pause() { if (G.state !== 'play' && G.state !== 'finale') return; G.pau
 function resume() { G.state = G.paused || 'play'; if (PF.set.music) music(G.state === 'finale' ? 'fight' : lv.world.music); }
 window.onAppPause = () => { pause(); Audio.suspend(); };
 window.onAppResume = () => Audio.resume();
-window.onBack = () => { if (!$('modal').classList.contains('hidden')) { if (G.state === 'pause') { closeModal(); resume(); } else if (G.state === 'home') closeModal(); return 'stay'; } if (G.state === 'play' || G.state === 'finale') { pause(); return 'stay'; } return G.state === 'home' ? 'exit' : 'stay'; };
+window.onBack = () => { if (!$('map').classList.contains('hidden')) { $('map').classList.add('hidden'); goHome(); return 'stay'; } if (!$('modal').classList.contains('hidden')) { if (G.state === 'pause') { closeModal(); resume(); } else if (G.state === 'home') closeModal(); return 'stay'; } if (G.state === 'play' || G.state === 'finale') { pause(); return 'stay'; } return G.state === 'home' ? 'exit' : 'stay'; };
 
 // ---------------- input: drag to steer, swipe up/down to jump/slide, tap to fire ----------------
 let drag = null;
 $('gl').addEventListener('pointerdown', e => {
   Audio.resume();
-  if (G.state === 'finale') finaleTap(); else if (G.ship) shipFire();
+  if (G.tug) tugTap(); else if (G.state === 'finale') finaleTap(); else if (G.ship) shipFire();
   drag = { x: e.clientX, y: e.clientY, tx: G.tx, swiped: false };
   if (G.state === 'play' && !G.teach) $('hint').classList.add('hidden');
 });
@@ -1253,6 +1345,27 @@ addEventListener('pointerup', () => { drag = null; });
 const keys = {};
 addEventListener('keydown', e => { keys[e.key] = true; if (e.key === 'ArrowUp') doMove('jump'); if (e.key === 'ArrowDown') doMove('slide'); if (e.key === ' ') { if (G.state === 'finale') finaleTap(); else if (G.ship) shipFire(); } if (e.key === 's') cannonStorm(); });
 addEventListener('keyup', e => { keys[e.key] = false; });
+
+// ---------------- the treasure map: every island, every level, the stars won ----------------
+const ISLE = { beach: '🏝️', jungle: '🌴', snow: '❄️', volcano: '🌋', coral: '🐚', night: '🌙' };
+function openMap() {
+  closeModal(); const sc = $('mapScroll'), top = Math.max(PF.level, 1), worlds = Math.max(6, Math.ceil(top / 5) + 1), ST = PF.stars || {};
+  let h = '', total = 0; for (const k in ST) total += ST[k];
+  for (let w = 0; w < worlds; w++) {
+    const W2 = WORLDS[w % WORLDS.length], round = Math.floor(w / WORLDS.length);
+    h += `<div class="mw" style="background:linear-gradient(${W2.sky[1]}55, ${W2.sky[0]}33)"><div class="isl">${ISLE[W2.id] || '🏝️'}</div><h3>${W2.name}${round ? ' ' + 'I'.repeat(round + 1) : ''}<small>Island ${w + 1} · levels ${w * 5 + 1}–${w * 5 + 5}</small></h3>`;
+    for (let i = 0; i < 5; i++) {
+      const n = w * 5 + i + 1, x = [22, 50, 78, 50, 22][i] + (w % 2 ? 0 : 0), lock = n > top, boss = n % 5 === 0, st = ST[n] || 0;
+      h += `<div class="mrow">${i < 4 ? [0.25, 0.5, 0.75].map(k => `<span class="mdot" style="left:calc(${x + ([50, 78, 50, 22][i] - x) * k}% - 5px);top:${42 + 92 * k}px"></span>`).join('') : ''}<button class="mnode${lock ? ' lock' : ''}${boss ? ' boss' : ''}${n === top ? ' cur' : ''}" data-n="${n}" style="left:${x}%">${lock ? '🔒' : boss ? '💰' : n}${!lock ? `<span class="st">${[0, 1, 2].map(k => `<i class="${k < st ? 'on' : ''}">⭐</i>`).join('')}</span>` : ''}</button></div>`;
+    }
+    h += '</div>';
+  }
+  sc.innerHTML = h; $('mapStars').textContent = total; $('map').classList.remove('hidden');
+  sc.querySelectorAll('.mnode').forEach(b => b.onclick = () => { const n = +b.dataset.n; if (n > top) { sfx('gateBad'); return; } click(); Audio.resume(); $('map').classList.add('hidden'); play(n); });
+  const cur = sc.querySelector('.mnode.cur'); if (cur) setTimeout(() => cur.scrollIntoView({ block: 'center' }), 30);
+}
+$('mapBack').onclick = () => { click(); $('map').classList.add('hidden'); goHome(); };
+$('mapB').onclick = () => { click(); Audio.resume(); openMap(); };
 $('playB').onclick = () => { Audio.resume(); click(); play(); };
 $('shopB').onclick = () => { click(); shop(); };
 $('giftB').onclick = () => { click(); gift(); };
@@ -1272,7 +1385,7 @@ function updateCamera(dt) {
   else if (G.finale) { p = tmp.set(0, 10.5, castle.z + 33); l = tmpL.set(0, 4, castle.z + 3); k1 = 2; k2 = 2.5; }
   else { const zoom = 1 + Math.min(0.75, G.crew.length / 150), up = G.air ? 2.5 : 0;
     if (G.ship) { const sz = Math.max(1, (herdDepth() + 3) / 12); p = tmp.set(G.x * 0.6, 11 + zoom * 2, G.z + 12 * sz + 7); l = tmpL.set(G.x * 0.8, 1.5, G.z - 4); }   // high behind the ship
-    else { p = tmp.set(G.x * 0.5 + (G.air ? 4 : 0), 5.6 * zoom + up, G.z + 8.4 * zoom + herdDepth() * 0.45); l = tmpL.set(G.x * 0.7, 1.2 + up * 0.6, G.z - 7); } }
+    else { p = tmp.set(G.x * 0.5 + (G.air ? 4 : 0), 4.9 * zoom + up, G.z + 7.2 * zoom + herdDepth() * 0.42); l = tmpL.set(G.x * 0.7, 1.3 + up * 0.6, G.z - 7); } }
   camP.lerp(p, 1 - Math.exp(-k1 * dt)); camL.lerp(l, 1 - Math.exp(-k2 * dt));
   const fovT = (innerWidth / innerHeight < 0.6 ? 60 : 52) + (G.boost > 0 || G.storm > 0 ? 9 : 0); if (Math.abs(cam.fov - fovT) > 0.05) { cam.fov = damp(cam.fov, fovT, 4, dt); cam.updateProjectionMatrix(); }
   bendPoint(camP, cam.position); if (G.shake > 0) { G.shake -= dt; cam.position.x += rnd(-1, 1) * G.shake * 0.5; cam.position.y += rnd(-1, 1) * G.shake * 0.5; }
@@ -1316,6 +1429,7 @@ Promise.all(['people.bin', 'castle.glb', 'nature.glb'].map(loadBin)).then(async 
   for (const k in crowds) crowds[k].prewarm(24); crowdG.prewarm(24); crowdGL.prewarm(32);
   { const all = [...Object.values(crowds), crowdG, crowdGL]; all.forEach(c => c.gpuWarm(true)); for (const k in P) if (P[k].tex) renderer.initTexture(P[k].tex); renderer.compile(scene, cam); renderer.render(scene, cam); all.forEach(c => c.gpuWarm(false)); } psys(false, false); psys(false, true); psys(true, false); psys(true, true);
   crab = buildCrab(); scene.add(crab); bossKit = buildBossKit(); stairs = buildStairs(); scene.add(stairs);
+  MIT = parrotModel(0x2ad83a); MIT.scale.setScalar(0.7); scene.add(MIT);
   rocky = new Actor(P.hero, { tint: 0xb3202a, skin: 0xb97a52, hair: 0x1a1210 }); rocky.scale.setScalar(1.08); scene.add(rocky);
   lalchi = new Actor(P.villain, { tint: 0x7a1a8a, skin: 0xd8a070, hair: 0x2a2a2a }); scene.add(lalchi);
   if (Q.get('level')) PF.level = +Q.get('level');
@@ -1357,5 +1471,5 @@ window.__wtris = () => { const r = {}; W.group.traverseVisible(o => { if (o.isMe
 window.__alltris = () => { const r = {}; scene.children.forEach(top => { let t = 0; top.traverseVisible(o => { if (o.isMesh || o.isPoints) { const n = (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3 * (o.isInstancedMesh ? o.count : 1); t += n; } }); const k = top === W.group ? 'world' : castle && top === castle.group ? 'castle' : objs.some(x => x.obj === top) ? 'events' : (top.isInstancedMesh ? 'inst:' + (top.material.name || top.geometry.type) : top.type) + (top === rocky ? ':rocky' : top === lalchi ? ':lalchi' : ''); r[k] = (r[k] || 0) + Math.round(t); }); return JSON.stringify(Object.entries(r).filter(e => e[1] > 500).sort((a, b) => b[1] - a[1])); };
 window.__T = THREE; window.__R = renderer; window.__S = scene; window.__C = cam; window.__setQ = q => { QUAL = q; resize(); };
 window.__objs = () => objs; window.__lvl = () => lv; window.__storm = () => cannonStorm(); window.__move = t => doMove(t); window.__fire = () => (G.state === 'finale' ? finaleTap() : shipFire());
-window.__G = G; window.__play = play; window.__castle = () => castle; window.__end = () => { G.z = -lv.L + 3; return lv.L; }; window.__tap = () => tapFire();
+window.__G = G; window.__objs = objs; window.__tug = tugTap; window.__move = doMove; window.__lv = () => lv; window.__play = play; window.__castle = () => castle; window.__end = () => { G.z = -lv.L + 3; return lv.L; }; window.__tap = () => tapFire();
 window.__tris = () => { let t = 0; scene.traverse(o => { if (o.isInstancedMesh && o.count && o.visible) t += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3 * o.count; }); return Math.round(t); };

@@ -24,6 +24,7 @@ class Person {
     this.colorAttr = new THREE.BufferAttribute(this.color, 3, true);
     this.maskAttr = new THREE.BufferAttribute(new Float32Array(this.mask), 1);
     if (h.tex) { this.uvAttr = new THREE.BufferAttribute(new Uint16Array(buf, base + h.o[4], N * 2), 2, true); this.jpg = new Uint8Array(buf, base + h.o[5], h.jl); }
+    this.auxAttr = new THREE.BufferAttribute(h.o[6] !== undefined ? new Float32Array(new Int8Array(buf, base + h.o[6], N)) : new Float32Array(N), 1);
   }
   // the person's texture sheet (outfit, skin, eyes, hair in one picture)
   async loadTexture() {
@@ -52,27 +53,40 @@ class Person {
   }
   geometry(f) {
     const g = new THREE.BufferGeometry(); g.setIndex(this.indexAttr);
-    g.setAttribute('position', new THREE.BufferAttribute(this.positions(f), 3)); g.setAttribute('color', this.colorAttr); g.setAttribute('mask', this.maskAttr); if (this.uvAttr) g.setAttribute('uv', this.uvAttr);
+    g.setAttribute('position', new THREE.BufferAttribute(this.positions(f), 3)); g.setAttribute('color', this.colorAttr); g.setAttribute('mask', this.maskAttr); g.setAttribute('aux', this.auxAttr); if (this.uvAttr) g.setAttribute('uv', this.uvAttr);
     g.setAttribute('normal', new THREE.BufferAttribute(this.normals(f), 3)); g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 3); return g;
   }
 }
 
 // the people's material: their own texture, with clothes / skin / hair recoloured per person (from the texture's
 // light and shade, so all the fabric and face detail stays). Crowds take the colours per instance, heroes as uniforms.
+// Expressions (EXPR): the eyebrows move (raised, knitted, worried) and one of three mouths shows (smile, open, frown).
+export const EXPR = { happy: 0, laugh: 1, angry: 2, scared: 3, sad: 4, calm: 5 };
 function personMaterial(person, inst, cols = {}) {
   const m = new THREE.MeshStandardMaterial({ vertexColors: true, map: person.tex || null, roughness: 0.78, metalness: 0.0 });
-  const U = { uTint: { value: new THREE.Color(cols.tint ?? 0xffffff) }, uSkin: { value: new THREE.Color(cols.skin ?? 0xffffff) }, uHair: { value: new THREE.Color(cols.hair ?? 0xffffff) } };
+  const U = { uTint: { value: new THREE.Color(cols.tint ?? 0xffffff) }, uSkin: { value: new THREE.Color(cols.skin ?? 0xffffff) }, uHair: { value: new THREE.Color(cols.hair ?? 0xffffff) }, uExpr: { value: cols.expr ?? 0 } };
+  m.userData.U = U;
   m.onBeforeCompile = sh => {
     THREE.Material.prototype.onBeforeCompile.call(m, sh); Object.assign(sh.uniforms, U);
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float mask; varying vec3 vTintC; varying float vM;\n' + (inst ? 'attribute vec3 iTint; attribute vec3 iSkin; attribute vec3 iHair;' : 'uniform vec3 uTint; uniform vec3 uSkin; uniform vec3 uHair;'))
-      .replace('#include <color_vertex>', '#include <color_vertex>\nvM = mask; vTintC = ' + (inst ? 'mask < 1.5 ? iTint : mask < 2.5 ? iSkin : iHair;' : 'mask < 1.5 ? uTint : mask < 2.5 ? uSkin : uHair;'));
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float mask; attribute float aux; varying vec3 vTintC; varying float vM;\n' + (inst ? 'attribute vec3 iTint; attribute vec3 iSkin; attribute vec3 iHair; attribute float iExpr;' : 'uniform vec3 uTint; uniform vec3 uSkin; uniform vec3 uHair; uniform float uExpr;'))
+      .replace('#include <color_vertex>', '#include <color_vertex>\nvM = mask; vTintC = ' + (inst ? 'mask < 1.5 ? iTint : mask < 2.5 ? iSkin : iHair;' : 'mask < 1.5 ? uTint : mask < 2.5 ? uSkin : uHair;'))
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+        { float ex = ${inst ? 'iExpr' : 'uExpr'};
+          if (mask > 3.5 && mask < 4.5) {   // eyebrows
+            float s = aux / 127.0, inner = 1.0 - min(1.0, abs(s));
+            float up = (ex > 0.5 && ex < 1.5) ? 0.011 : 0.0, ang = (ex > 1.5 && ex < 2.5) ? 1.0 : 0.0, wor = (ex > 2.5 && ex < 4.5) ? 1.0 : 0.0, calm = ex > 4.5 ? 1.0 : 0.0;
+            transformed.y += up + ang * (-0.013 * inner + 0.005 * (1.0 - inner)) + wor * (0.012 * inner - 0.002) - calm * 0.004;
+          }
+          if (mask > 4.5) {   // mouths: 5 smile, 6 open, 7 frown
+            float want = ex < 0.5 ? 0.0 : ex < 1.5 ? 1.0 : ex < 2.5 ? 2.0 : ex < 3.5 ? 1.0 : ex < 4.5 ? 2.0 : 0.0;
+            if (abs(mask - 5.0 - want) > 0.5) transformed -= normalize(objectNormal) * 0.03;
+          } }`);
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vTintC; varying float vM;')
-      .replace('#include <map_fragment>', '#include <map_fragment>\nif (vM > 0.5) { float l = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114)); diffuseColor.rgb = vTintC * (0.3 + l * 1.45); }');
+      .replace('#include <map_fragment>', '#include <map_fragment>\nif (vM > 0.5 && vM < 4.5) { float l = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114)); diffuseColor.rgb = vTintC * (0.3 + l * 1.45); }');
   };
-  m.customProgramCacheKey = () => (inst ? 'crowd' : 'hero') + THREE.Material.prototype.customProgramCacheKey.call(m);
+  m.customProgramCacheKey = () => (inst ? 'crowd3' : 'hero3') + THREE.Material.prototype.customProgramCacheKey.call(m);
   return m;
 }
-
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(0, 0, 0, 'YXZ'), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _c = new THREE.Color();
 const lin = new Map();   // colour (hex) → linear rgb, worked out once
@@ -93,6 +107,7 @@ export class Crowd {
     if (b.mesh) { this.scene.remove(b.mesh); b.mesh.dispose(); }
     const g = this.p.geometry(b.f);
     for (const k of ['iTint', 'iSkin', 'iHair']) g.setAttribute(k, new THREE.InstancedBufferAttribute(new Float32Array(cap * 3).fill(1), 3));
+    g.setAttribute('iExpr', new THREE.InstancedBufferAttribute(new Float32Array(cap), 1));
     b.mesh = new THREE.InstancedMesh(g, this.mat, cap); b.mesh.frustumCulled = false; b.mesh.castShadow = !!this.o.shadow; b.mesh.count = 0;
     this.scene.add(b.mesh); b.cap = cap;
   }
@@ -106,19 +121,19 @@ export class Crowd {
     for (const q of list) {
       if (q.s !== undefined && q.s <= 0.01) continue;
       const [f] = this.p.frame(q.clip || 'run', q.t || 0), b = this.bucket(f);
-      if (!b.mesh || b.n >= b.cap) { const old = b.mesh, n = b.n; const keep = old ? { m: old.instanceMatrix.array.slice(0, n * 16), a: ['iTint', 'iSkin', 'iHair'].map(k => old.geometry.attributes[k].array.slice(0, n * 3)) } : null; this.grow(b, n + 1); if (keep) { b.mesh.instanceMatrix.array.set(keep.m); ['iTint', 'iSkin', 'iHair'].forEach((k, i) => b.mesh.geometry.attributes[k].array.set(keep.a[i])); } }
+      if (!b.mesh || b.n >= b.cap) { const old = b.mesh, n = b.n; const keep = old ? { m: old.instanceMatrix.array.slice(0, n * 16), a: ['iTint', 'iSkin', 'iHair'].map(k => old.geometry.attributes[k].array.slice(0, n * 3)), e: old.geometry.attributes.iExpr.array.slice(0, n) } : null; this.grow(b, n + 1); if (keep) { b.mesh.instanceMatrix.array.set(keep.m); ['iTint', 'iSkin', 'iHair'].forEach((k, i) => b.mesh.geometry.attributes[k].array.set(keep.a[i])); b.mesh.geometry.attributes.iExpr.array.set(keep.e); } }
       const i = b.n++; used.add(b);
       _e.set(q.rx || 0, q.ry || 0, q.rz || 0); _q.setFromEuler(_e); _p.set(q.x, q.y || 0, q.z); _s.setScalar(q.s ?? 1);
       b.mesh.setMatrixAt(i, _m.compose(_p, _q, _s));
       const A = b.mesh.geometry.attributes;
       let c = rgb(q.tint ?? 0xffffff); A.iTint.setXYZ(i, c[0], c[1], c[2]);
       c = rgb(q.skin ?? 0xffffff); A.iSkin.setXYZ(i, c[0], c[1], c[2]);
-      c = rgb(q.hair ?? 0xffffff); A.iHair.setXYZ(i, c[0], c[1], c[2]);
+      c = rgb(q.hair ?? 0xffffff); A.iHair.setXYZ(i, c[0], c[1], c[2]); A.iExpr.setX(i, q.expr || 0);
     }
     for (const b of this.buckets.values()) {
       if (!b.mesh) continue;
       b.mesh.count = b.n; b.mesh.visible = b.n > 0;
-      if (b.n) { b.mesh.instanceMatrix.needsUpdate = true; for (const k of ['iTint', 'iSkin', 'iHair']) b.mesh.geometry.attributes[k].needsUpdate = true; }
+      if (b.n) { b.mesh.instanceMatrix.needsUpdate = true; for (const k of ['iTint', 'iSkin', 'iHair', 'iExpr']) b.mesh.geometry.attributes[k].needsUpdate = true; }
     }
     this.used = [...used];
   }
@@ -130,7 +145,7 @@ export class Actor extends THREE.Mesh {
   constructor(person, cols = {}) {
     const g = new THREE.BufferGeometry(); g.setIndex(person.indexAttr);
     const N = person.N, pos = new Float32Array(N * 3);
-    g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(N * 3), 3)); g.setAttribute('color', person.colorAttr); g.setAttribute('mask', person.maskAttr); if (person.uvAttr) g.setAttribute('uv', person.uvAttr);
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(N * 3), 3)); g.setAttribute('color', person.colorAttr); g.setAttribute('mask', person.maskAttr); g.setAttribute('aux', person.auxAttr); if (person.uvAttr) g.setAttribute('uv', person.uvAttr);
     g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 1, 0), 3);
     super(g, personMaterial(person, false, cols));
     this.person = person; this.frustumCulled = false; this.castShadow = true; this.clip = 'idle'; this.ct = 0; this.prev = null; this.mixT = 1;
@@ -148,6 +163,9 @@ export class Actor extends THREE.Mesh {
     this.geometry.attributes.position.needsUpdate = true; this.geometry.attributes.normal.needsUpdate = true;
   }
   done() { const c = this.person.clips[this.clip]; return !c.loop && this.ct >= c.dur; }
+  setLook(cols) { const U = this.material.userData.U; for (const k of ['tint', 'skin', 'hair']) if (cols[k] !== undefined) U['u' + k[0].toUpperCase() + k.slice(1)].value.set(cols[k]); if (cols.expr !== undefined) U.uExpr.value = cols.expr; }
+  set expr(e) { this.material.userData.U.uExpr.value = e; }
+  get expr() { return this.material.userData.U.uExpr.value; }
 }
 
 // soft round shadows under a crowd (much cheaper than real shadows for hundreds of people)
