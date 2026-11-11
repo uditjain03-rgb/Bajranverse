@@ -14,3 +14,4 @@ drive-src/tools/*.bundle.js
 splashapp/src/main/assets/
 taxiapp/src/main/assets/
 drive-src/node_modules
+taxiapp/src/main/java/com/bajrangverse/madtaxi/K.java

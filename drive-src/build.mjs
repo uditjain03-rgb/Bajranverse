@@ -4,10 +4,11 @@ import fs from 'fs';
 import path from 'path';
 import esbuild from 'esbuild';
 import { protect } from './tools/protect.mjs';
+import { seal, writeK } from './tools/seal.mjs';
 const here = path.dirname(new URL(import.meta.url).pathname);
 const GAMES = {
   splash: { people: 'people-splash.bin', extra: [], music: ['bv_title', 'bv_win', 'duck', 'gameshow', 'wallpaper', 'snitch', 'carefree', 'hyperfun'], app: '../splashapp' },
-  taxi: { people: 'people-taxi.bin', extra: ['cow.glb', 'pug.glb', 'horse.glb'], music: ['bv_title', 'bv_win', 'riley', 'polka', 'monkeys', 'fuzzball', 'merry_go'], app: '../taxiapp' },
+  taxi: { people: 'people-taxi.bin', extra: ['cow.glb', 'pug.glb', 'horse.glb'], music: ['bv_title', 'bv_win', 'riley', 'polka', 'monkeys', 'fuzzball', 'merry_go'], app: '../taxiapp', pkg: 'com.bajrangverse.madtaxi' },
 };
 for (const id of (process.argv[2] ? [process.argv[2]] : Object.keys(GAMES))) {
   const C = GAMES[id], www = path.join(here, 'www-' + id);
@@ -24,4 +25,8 @@ for (const id of (process.argv[2] ? [process.argv[2]] : Object.keys(GAMES))) {
   console.log('built', 'www-' + id, (fs.statSync(path.join(www, 'game.js')).size / 1e6).toFixed(2) + ' MB game.js', pb);
   const assets = path.join(here, C.app, 'src/main/assets');
   if (fs.existsSync(path.dirname(assets))) { fs.rmSync(assets, { recursive: true, force: true }); fs.cpSync(www, assets, { recursive: true }); console.log('copied to', assets); }
+  if (C.pkg && fs.existsSync(path.dirname(assets))) {   // the app gets the sealed (encrypted) game in release builds
+    const jd = path.join(here, C.app, 'src/main/java', ...C.pkg.split('.'));
+    if (process.env.PROTECT) seal(assets, jd, C.pkg); else writeK(jd, C.pkg, null);
+  }
 }

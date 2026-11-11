@@ -169,3 +169,9 @@ export function buildStreet(T, scene) {
 }
 export { cart, ferris, fanStand, marigoldArch, billboard };
 export { oneMesh } from './gfx.js';
+// one small mesh with every material the streets use: drawn once while the game loads, so no stage ever stops to
+// prepare a new shader in the middle of play
+export function warmMeshes() {
+  const g = new THREE.BoxGeometry(1, 1, 1); g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 3).fill(1), 3)); g.setAttribute('gloss', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count).fill(1), 1));
+  return [facadeMat, glassMat, waterMat, bulbMat, new THREE.MeshStandardMaterial({ map: tiles }), new THREE.MeshStandardMaterial({ map: roadTex(4, false) }), new THREE.MeshPhysicalMaterial({ color: 0x3a6a9a, roughness: 0.1 }), new THREE.MeshPhysicalMaterial({ color: 0x4a5a6a, roughness: 0.05 }), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4, depthWrite: false }), new THREE.MeshBasicMaterial({ map: tiles, transparent: true, depthTest: false })].map(m => { const x = new THREE.Mesh(g, m); x.position.set(0, -50, 0); x.frustumCulled = false; return x; });
+}

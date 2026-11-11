@@ -48,6 +48,29 @@ html, body { background: #3a0a4a; }
 .mcard { display: flex; gap: 10px; align-items: center; text-align: left; background: #fff6e0; color: var(--dark); border: 3px solid var(--dark); border-radius: 16px; padding: 8px; margin: 8px 0; }
 .mcard canvas { width: 72px; height: 72px; border-radius: 50%; background: #cfe6f5; border: 3px solid var(--dark); flex: none; }
 .mcard b { font-size: 19px; color: #c8302a; display: block; } .mcard span { font-size: 15px; }
+#tasks { background: rgba(58,10,74,.62); border: 3px solid var(--dark); border-radius: 12px; padding: 3px 7px; color: #fff; font-size: 12px; line-height: 1.35; }
+#tasks div b { color: #ffe04a; float: right; margin-left: 6px; } #tasks div.ok { color: #7aff9a; }
+#carName { color: #fff; font-size: 15px; -webkit-text-stroke: 3px var(--dark); paint-order: stroke fill; margin-bottom: 2px; }
+#playRow { display: flex; gap: 10px; align-items: center; justify-content: center; }
+#mayhemB { padding: 8px 12px; font-size: 26px; line-height: 1; background: linear-gradient(#ffb03a, #ff6a1a 55%, #c83a0a); } #mayhemB small { display: block; font-size: 12px; }
+#speedB { margin: 10px auto 0; display: block; }
+.modal.sheet { background: transparent; justify-content: flex-end; align-items: center; pointer-events: none; padding: 0; }
+.modal.sheet .panel { pointer-events: auto; width: min(100vw, 520px); max-height: 54vh; border-radius: 26px 26px 0 0; border-bottom: 0; padding: 10px 10px calc(10px + var(--sab)); animation: up .25s; }
+@keyframes up { from { transform: translateY(60%); } }
+.gtop { display: flex; justify-content: space-between; align-items: center; font-size: 18px; margin-bottom: 6px; } .gtop .pill { font-size: 16px; }
+.adfree { width: 100%; margin-bottom: 6px; }
+.tabs { display: flex; gap: 4px; overflow-x: auto; margin-bottom: 6px; } .tab { flex: none; border: 3px solid var(--dark); border-radius: 12px; padding: 5px 9px; background: #fff; color: var(--dark); font: inherit; font-size: 13px; }
+.tab.on { background: var(--wood); color: #fff; }
+.gbody { text-align: left; } .item.sel { outline: 3px solid #1ad8b0; } .item .st { font-size: 10px; line-height: 1.6; display: block; color: #6a3a7a; }
+i.bar { display: inline-block; width: 46px; height: 7px; border-radius: 4px; background: #e8d0e8; margin: 0 6px 0 2px; vertical-align: middle; overflow: hidden; } i.bar u { display: block; height: 100%; background: linear-gradient(90deg, #1ad8b0, #ff4fa8); }
+.btn.try { background: linear-gradient(#7ac8ff, #2f8cf0 55%, #1a5ab0); margin-left: 4px; }
+.swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; } .sw { position: relative; border: 3px solid var(--dark); border-radius: 12px; padding: 4px; text-align: center; background: #fff; font-size: 11px; }
+.sw i { display: block; height: 30px; border-radius: 8px; background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.7), transparent 40%), var(--c); border: 2px solid rgba(0,0,0,.25); } .sw b { display: block; font-size: 10px; line-height: 1.1; margin-top: 2px; } .sw span { color: #c8302a; }
+.sw.on { outline: 3px solid #1ad8b0; } .sw em { position: absolute; top: -6px; right: -6px; font-style: normal; background: #2f8cf0; border-radius: 8px; border: 2px solid var(--dark); padding: 0 3px; }
+.stages { display: flex; flex-direction: column; gap: 8px; text-align: left; } .stage { display: flex; gap: 8px; align-items: center; border: 3px solid var(--dark); border-radius: 16px; padding: 6px; background: linear-gradient(135deg, var(--g1), var(--g2)); }
+.stage .si { font-size: 34px; } .stage .sn { flex: 1; color: #fff; -webkit-text-stroke: 3px var(--dark); paint-order: stroke fill; } .stage .sn b { font-size: 18px; display: block; } .stage .sn span { display: block; font-size: 11px; -webkit-text-stroke: 2px var(--dark); }
+.stage .sb { display: flex; flex-direction: column; gap: 6px; } .stage .sb .btn { font-size: 12px; padding: 6px 8px; }
+.stat.no { opacity: .6; }
 </style>
 </head>
 <body>
@@ -58,6 +81,7 @@ html, body { background: #3a0a4a; }
     <div id="moodBox"><div class="l"><span id="moodName">MOOD</span><span id="moodE">😀</span></div><div id="moodBar"><div id="moodFill"></div></div></div>
     <div id="goal">⏱ 0:00</div>
     <div id="dist">🏁 0 m</div>
+    <div id="tasks"></div>
   </div>
   <div id="cabFrame"><div class="live"><i></i>BACK SEAT</div><div class="fx" id="cabFx"></div><div class="nm" id="cabName"></div></div>
   <div id="bubble" class="hidden"><canvas id="bubbleFace" width="64" height="64"></canvas><div><b id="bubbleName"></b><span id="bubbleText"></span></div></div>
@@ -76,9 +100,11 @@ html, body { background: #3a0a4a; }
   <div id="homeTop"><div class="pill out">₹ <span id="homeCoins">0</span></div><button class="btn small" id="setB">⚙️</button></div>
   <div id="logo"><div class="s">🚕💥🐄🚓</div><div class="a">MAD TAXI<br>MASTI</div><div class="b">CRAZY PASSENGERS!</div></div>
   <div id="homeBottom">
+    <div id="carName"></div>
     <div id="homeLevel">RIDE 1</div>
-    <button class="btn big green" id="playB">DRIVE!</button>
-    <div id="homeRow"><button class="btn" id="garageB">🔧 GARAGE</button><button class="btn" id="giftB">🎁 GIFT</button></div>
+    <div id="playRow"><button class="btn big green" id="playB">DRIVE!</button><button class="btn" id="mayhemB">💥<small>MAYHEM</small></button></div>
+    <button class="btn small" id="speedB">🚕 NORMAL</button>
+    <div id="homeRow"><button class="btn" id="garageB">🔧 GARAGE</button><button class="btn" id="stagesB">🗺️ STAGES</button><button class="btn" id="giftB">🎁</button></div>
     <div id="credit">BajrangVerse Studios</div>
   </div>
 </div>

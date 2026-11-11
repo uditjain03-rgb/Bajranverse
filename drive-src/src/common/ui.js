@@ -2,23 +2,28 @@
 import { $ } from './engine.js';
 import { Audio } from './audio.js';
 import { Music } from './music.js';
+// In the Android app saved progress is signed by the app (GameNative.sign / check): if someone edits it, it is reset
+// (only the settings are kept).
 export function makePrefs(key, def) {
-  let P; try { P = JSON.parse(localStorage.getItem(key)) || {}; } catch (e) { P = {}; }
+  const N = window.GameNative, signed = !!(N && N.sign && N.check); let raw = null, P;
+  try { raw = localStorage.getItem(key); P = JSON.parse(raw) || {}; } catch (e) { P = {}; }
+  if (raw && signed) { let sig = ''; try { sig = localStorage.getItem(key + '#') || ''; } catch (e) { /* none */ } try { if (N.check(key, raw, sig) === 'bad') P = { set: P.set }; } catch (e) { /* old app */ } }
   const out = { ...def, ...P }; for (const k in def) if (def[k] && typeof def[k] === 'object' && !Array.isArray(def[k])) out[k] = { ...def[k], ...(P[k] || {}) };
-  out.save = () => { try { const { save, ...rest } = out; localStorage.setItem(key, JSON.stringify(rest)); } catch (e) { /* private mode */ } };
+  out.save = () => { try { const { save, ...rest } = out, j = JSON.stringify(rest); localStorage.setItem(key, j); if (signed) localStorage.setItem(key + '#', N.sign(key, j)); } catch (e) { /* private mode */ } };
+  if (signed) out.save();
   return out;
 }
-export function openModal(h) { $('modalBody').innerHTML = h; $('modal').classList.remove('hidden'); $('modalBody').scrollTop = 0; }
+export function openModal(h) { $('modalBody').innerHTML = h; $('modal').classList.remove('hidden', 'sheet'); $('modalBody').scrollTop = 0; }
 export function closeModal() { $('modal').classList.add('hidden'); }
 export const modalOpen = () => !$('modal').classList.contains('hidden');
-// ---------------- ads (AdMob through the app: rewarded ads the player chooses, and a short ad every few levels) ----------------
+// ---------------- ads (AdMob through the app: only rewarded ads the player chooses) ----------------
 export const NATIVE = window.GameNative;
 const adCbs = {};
 export function onAdDone(f) { window.onAdDone = (tag, ok) => { const c = adCbs[tag]; delete adCbs[tag]; f(); if (c) c(ok); }; }
 export const adReady = () => { try { return !!(NATIVE && NATIVE.adReady && NATIVE.adReady()); } catch (e) { return false; } };
 export function rewardAd(tag, cb) { if (!adReady()) { cb(false); return; } adCbs[tag] = cb; Music.stop(); NATIVE.showRewarded(tag); }
-let sinceAd = 0;
-export function betweenLevels(level, next) { sinceAd++; if (NATIVE && NATIVE.showInterstitial && sinceAd >= 3 && level > 3) { sinceAd = 0; adCbs.inter = () => next(); Music.stop(); NATIVE.showInterstitial(); } else next(); }
+// no ads between or during levels: the only ads are rewarded ones the player chooses (a free add-on, coins, double reward)
+export function betweenLevels(level, next) { void level; next(); }
 export const vibrate = (PF, ms) => { if (!PF.set.vib) return; try { if (NATIVE && NATIVE.vibrate) NATIVE.vibrate(ms); else if (navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* none */ } };
 // ---------------- settings ----------------
 export function settingsPanel(PF, title, credits, onChange, onClose) {

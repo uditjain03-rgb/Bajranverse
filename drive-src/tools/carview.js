@@ -10,7 +10,7 @@ scene.background = new THREE.Color(0xbfe0ff);
 const cam = new THREE.PerspectiveCamera(32, 1, 0.1, 200);
 list.forEach((it, i) => {
   const [t, c] = it.split(':'); const boat = ['speed', 'cigarette', 'airboat', 'jetski', 'catamaran'].includes(t);
-  const V = boat ? makeBoat(t, +c || 0xe8302a) : makeCar(t, +c || 0xc8302a, { livery: c === 'k' ? 'kaalipeeli' : c === 'p' ? 'police' : c === 'c' ? 'coolcab' : c === 'e' ? 'ecab' : null, taxi: c === 'k' || c === 'c' || c === 'e' });
+  const V = boat ? makeBoat(t, +c || 0xe8302a) : makeCar(t, +c || 0xc8302a, { spin: 1, rims: Q.get('rims') || undefined, taxi: Q.get('taxi') === '1', neon: Q.get('neon') ? +Q.get('neon') : undefined, wing: Q.get('wing') === '1',  livery: c === 'k' ? 'kaalipeeli' : c === 'p' ? 'police' : c === 'c' ? 'coolcab' : c === 'e' ? 'ecab' : null, taxi: c === 'k' || c === 'c' || c === 'e' });
   scene.add(V.obj); if (boat) V.obj.position.y = 0.35;
   const L = Math.max(V.size.z, 3); const ang = +(Q.get('ang') || 0.75);
   cam.position.set(Math.sin(ang) * L * 1.25, L * 0.55, -Math.cos(ang) * L * 1.25); cam.lookAt(0, V.size.y * 0.35, 0);
