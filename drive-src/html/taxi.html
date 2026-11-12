@@ -95,6 +95,7 @@ i.bar { display: inline-block; width: 46px; height: 7px; border-radius: 4px; bac
 .gbody h4 { margin: 10px 2px 4px; font-size: 15px; color: #a0186a; }
 #studio .kids { position: absolute; bottom: calc(18px + var(--sab)); left: 0; right: 0; text-align: center; font-family: 'Fredoka'; font-weight: 600; font-size: 13px; color: #9a8a7a; letter-spacing: 2px; animation: fadeIn 1s 1.2s both; }
 #homeRow { gap: 6px; } #homeRow .btn { padding: 10px 12px; font-size: 18px; } #homeRow #shopB, #homeRow #giftB { padding: 10px 10px; font-size: 20px; }
+button, .sw, .item, .tab { touch-action: manipulation; }
 .pedal { pointer-events: auto; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 #throwB { left: 12px; right: auto; bottom: calc(146px + var(--sab)); width: 84px; height: 84px; display: none; background: radial-gradient(#ffb0e0, #ff4fa8); }
 #hud.throwjob #throwB { display: flex; }
@@ -103,6 +104,7 @@ i.bar { display: inline-block; width: 46px; height: 7px; border-radius: 4px; bac
 #tasks .tip { color: #fff; font-size: 13px; }
 #wanted { top: calc(232px + var(--sat)); right: 10px; background: var(--pill); border: 3px solid var(--dark); border-radius: 12px; padding: 0 6px; font-size: 18px; } #wanted:empty { display: none; }
 #homeLevel small { display: block; }
+.panel { position: relative; } .xB { position: sticky; top: 0; float: right; z-index: 3; margin: -6px -4px 0 0; }
 </style>
 </head>
 <body>

@@ -150,14 +150,14 @@ const PASS = [
     hurt: ['Whee!', 'Bumpy!'], cow: ['Colour the cow!'], win: 'The whole city is colourful! Best Holi!', lose: 'Not enough colours… boring Holi!', reviews: ['Best Holi of my life!', 'So colourful!', 'A bit colourful.', 'Where are the colours?'] },
 ];
 const JOBS = {
-  laddoo: { title: 'LADDOO TOSS', ico: '🎁', unit: 'guests fed', need: lp => 10 + lp * 2, throw: 'laddoo', tip: 'Tap 🎁 THROW when you pass a waving guest' },
+  laddoo: { title: 'LADDOO TOSS', ico: '🎁', unit: 'guests fed', need: lp => 14 + lp * 2, throw: 'laddoo', tip: 'Tap 🎁 THROW when you pass a waving guest' },
   thief: { title: 'SAMOSA THIEF', ico: '💥', unit: 'bumps', need: () => 5, tip: 'Hold GAS, catch the green auto and BUMP it' },
   fly: { title: 'FLYING TAXI', ico: '🚀', unit: 'jumps', need: lp => 12 + lp * 2, tip: 'Drive over the ramps · swipe UP in the air to spin' },
   selfie: { title: 'SPEED SELFIES', ico: '📸', unit: 'speed selfies', need: lp => 6 + lp, tip: 'Pass each 📸 camera FASTER than its sign (GAS + TURBO)' },
-  splash: { title: 'SPLASH ATTACK', ico: '💦', unit: 'uncles soaked', need: lp => 7 + lp, tip: 'Drive through the puddle next to each ☂️ uncle' },
-  catch: { title: 'CATCH IT!', ico: '🏏', unit: 'catches', need: lp => 7 + lp, tip: 'Drive under the falling ball (the red circle)' },
-  bowling: { title: 'TRAFFIC BOWLING', ico: '🎳', unit: 'pins', need: lp => 40 + lp * 10, tip: 'Drive through the 🎳 pins · all 10 = STRIKE' },
-  holi: { title: 'HOLI HAI!', ico: '🎈', unit: 'colour hits', need: lp => 18 + lp * 3, throw: 'balloon', tip: 'Tap 🎈 THROW at people and cars' },
+  splash: { title: 'SPLASH ATTACK', ico: '💦', unit: 'uncles soaked', need: lp => 10 + lp, tip: 'Drive through the puddle next to each ☂️ uncle' },
+  catch: { title: 'CATCH IT!', ico: '🏏', unit: 'catches', need: lp => 12 + lp * 2, tip: 'Drive under the falling ball (the red circle)' },
+  bowling: { title: 'TRAFFIC BOWLING', ico: '🎳', unit: 'pins', need: lp => 80 + lp * 10, tip: 'Drive through the 🎳 pins · all 10 = STRIKE' },
+  holi: { title: 'HOLI HAI!', ico: '🎈', unit: 'colour hits', need: lp => 30 + lp * 4, throw: 'balloon', tip: 'Tap 🎈 THROW at people and cars' },
 };
 const RW = 14, HALF = RW / 2 - 1.2, LANES = [-5.25, -1.75, 1.75, 5.25];   // India drives on the LEFT: our lanes are x < 0
 const STAGE_OF = { groom: 'shaadi', granny: 'bazaar', uncle: 'ghat', influencer: 'marine', detective: 'monsoon', fan: 'stadium', boss: 'cyber', kid: 'holi' };
@@ -225,7 +225,8 @@ function updateCab() { }
 function renderCab() { }
 function placeCabFrame() { }
 function say(text, e, quiet, who, look) {
-  if (!G.lv) return; const P = G.lv.P, b = $('bubble'); G.bLook = look || P.look; $('bubbleName').textContent = who || P.name; $('bubbleText').textContent = text;
+  if (!G.lv || (G.lv.race && !who)) return;   // in the MAD RACE only the rivals talk
+  const P = G.lv.P, b = $('bubble'); G.bLook = look || P.look; $('bubbleName').textContent = who || P.name; $('bubbleText').textContent = text;
   b.classList.remove('hidden'); b.classList.remove('in'); void b.offsetWidth; b.classList.add('in'); bubbleT = 2.8; if (e) setExpr(e, 2.2);
   if (!quiet) sfx('talk', 0, { w: pick(['hey', 'wow', 'haha', 'hurry', 'faster', 'nice', 'yes']), f0: look ? 150 : P.f0, fk: look ? 0.95 : P.fk });
 }
@@ -619,8 +620,8 @@ function updateMe(dt) {
   if (!driving) top = 0;
   const brake = driving && R.brake, gas = driving && R.gas && !(G.M && G.M.out);
   if (brake) R.speed = Math.max(0, R.speed - 22 * dt);
-  else if (gas || R.turbo > 0) R.speed = damp(R.speed, top, R.turbo > 0 ? 2.6 : R.speed < top ? 1.0 * cs.acc : 2.2, dt);
-  else { const cruise = driving && !(G.M && G.M.out) ? CRUISE : 0; R.speed = R.speed < cruise ? damp(R.speed, cruise, 0.9 * cs.acc, dt) : Math.max(cruise, R.speed - (2.2 + R.speed * 0.05) * dt); }   // it drives itself at 60 km/h
+  else if (gas || R.turbo > 0) R.speed = damp(R.speed, top, R.turbo > 0 ? 2.6 : R.speed < top ? 1.6 * cs.acc : 2.2, dt);
+  else { const cruise = driving && !(G.M && G.M.out) ? CRUISE : 0; R.speed = R.speed < cruise ? damp(R.speed, cruise, 1.4 * cs.acc, dt) : Math.max(cruise, R.speed - (2.2 + R.speed * 0.05) * dt); }   // it drives itself at 60 km/h
   if (G.state === 'arrive' || G.state === 'fail') R.speed = Math.max(0, R.speed - 14 * dt);
   const pz = R.z; R.z -= R.speed * dt;
   const px = R.x; G.tx = clamp(G.tx, -HALF, HALF); R.x = damp(R.x, G.tx, R.speed > 2 ? 7 * cs.grip : 2, dt); R.x = clamp(R.x, -HALF, HALF);
@@ -937,9 +938,8 @@ function garage(tab) {
   else if (gTab === 'eng') body = ENG.map((q, i) => { const have = engLv(id), own = i <= have; return row(q.ico, q.n + ' engine', i ? `+${Math.round(q.sp * 100)}% top speed · +${Math.round(q.acc * 100)}% acceleration` : 'Factory engine', own ? `<button class="btn small" disabled>${i === have ? '✔ ON' : '✔'}</button>` : i === have + 1 ? `<button class="btn small green" data-eng="${i}" ${PF.coins < q.p ? 'disabled' : ''}>${coins(q.p)}</button>` : '<button class="btn small" disabled>🔒</button>'); }).join('') + '<p class="tip">Engines are fitted to <b>this car</b>. Control your speed with the GAS and BRAKE pedals while driving.</p>';
   else if (gTab === 'horn') body = HORNS.map(h => { const own = PF.horns.includes(h.k), on = PF.horn === h.k; return row(`<span data-listen="${h.k}">${h.ico}</span>`, h.n, `<a data-listen="${h.k}">▶ listen</a>${h.k === 'own' ? ' · ' + C.name : ''}`, on ? '<button class="btn small" disabled>✔ ON</button>' : own ? `<button class="btn small blue" data-horn="${h.k}">USE</button>` : `<button class="btn small green" data-horn="${h.k}" ${PF.coins < h.p ? 'disabled' : ''}>${coins(h.p)}</button>`); }).join('');
   const adOk = canAd && Date.now() > (PF.adT || 0);
-  openModal(`<div class="gtop"><b>${C.ico} ${C.name}</b><span class="pill out">${coins(PF.coins)}</span></div><div class="grow">${adOk ? '<button class="btn small blue" id="adCoins">📺 FREE 500 🪙</button>' : ''}<button class="btn small gold" id="shopB2">🛒 GET COINS</button></div><div class="tabs">${tabs.map(([k, n]) => `<button class="tab ${k === gTab ? 'on' : ''}" data-tab="${k}">${n}</button>`).join('')}</div><div class="gbody">${body}</div><div class="row"><button class="btn green" id="closeB">DONE ✔</button></div>`);
-  $('modal').classList.add('sheet');
-  const redo = () => { showCar(gCar); garage(); };
+  sheet(`<div class="gtop"><b>${C.ico} ${C.name}</b><span class="pill out">${coins(PF.coins)}</span></div><div class="grow">${adOk ? '<button class="btn small blue" id="adCoins">📺 FREE 500 🪙</button>' : ''}<button class="btn small gold" id="shopB2">🛒 GET COINS</button></div><div class="tabs">${tabs.map(([k, n]) => `<button class="tab ${k === gTab ? 'on' : ''}" data-tab="${k}">${n}</button>`).join('')}</div><div class="gbody">${body}</div><div class="row"><button class="btn green" id="closeB">DONE ✔</button></div>`);
+  const redo = () => { G.keepScroll = true; showCar(gCar); garage(); };
   const setC = (key, val) => { const c = PF.cust[id] = { ...(PF.cust[id] || {}) }; c[key] = val; PF.save(); };
   const apply = k => { if (k[0] === 'x') setC(k[1], 1); else setC(k[0], +k.slice(1)); };
   document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { sfx('pop'); garage(b.dataset.tab); });
@@ -958,6 +958,8 @@ function garage(tab) {
   $('shopB2').onclick = () => { sfx('pop'); shop(() => garage()); };
   $('closeB').onclick = () => { sfx('pop'); closeGarage(); };
 }
+// the garage sheet slides up once; changing tabs only changes what is inside (no jumping panel under the finger)
+function sheet(h) { const m = $('modal'); if (!m.classList.contains('hidden') && m.classList.contains('sheet')) { const gb = document.querySelector('.gbody'), y = gb ? gb.scrollTop : 0; $('modalBody').innerHTML = h; const nb = document.querySelector('.gbody'); if (nb && G.keepScroll) nb.scrollTop = y; } else { openModal(h); m.classList.add('sheet'); } G.keepScroll = false; }
 function listenHorn(k) { Audio.resume(); const ctx = Audio.H.ctx; if (!ctx || !PF.set.sound) return; const kind = k === 'own' ? (CARS.find(c => c.id === gCar) || carSpec()).horn : k; hornVoice(kind, ctx.currentTime + 0.02, 0.8); }
 // ---------------- the shop: coin packs (and cars) for real money, through Google Play ----------------
 const PACKS = [{ id: 'coins_25k', n: 25000, ico: '💰', name: 'Bag of coins' }, { id: 'coins_80k', n: 80000, ico: '💰💰', name: 'Big bag of coins' }, { id: 'coins_200k', n: 200000, ico: '🏦', name: 'Coin bank' }, { id: 'vip_allcars', n: 0, ico: '👑', name: 'VIP: ALL 7 cars, forever' }];
@@ -991,10 +993,10 @@ const rideFor = i => PF.level < i + 1 ? 0 : i + 1 + 8 * Math.floor((PF.level - 1
 function stages() {
   const cards = PASS.map((P, i) => { const st = STAGE_OF[P.id], S = STAGES[st], J = JOBS[P.job], n = rideFor(i), b = PF.may[st] || 0, js = (PF.jobStars || {})[n] || 0;
     return `<div class="stage" style="--g1:${S.sky[0]};--g2:${S.sky[1]}"><div class="si">${STAGE_ICO[st]}</div><div class="sn"><b>${S.name}</b><span>${J.ico} ${J.title} · ${P.name}</span><span class="ms">${'⭐'.repeat(js) || '☆'} · 🏁 best: ${b ? ['', '🥇', '🥈', '🥉', '4th'][b] || '—' : '—'}</span></div><div class="sb">${n ? `<button class="btn small green" data-ride="${n}">${J.ico} JOB ${n}</button>` : `<button class="btn small" disabled>🔒 JOB ${i + 1}</button>`}<button class="btn small" data-may="${i + 1}">🏁 MAD RACE</button></div></div>`; }).join('');
-  openModal(`<h2>🗺️ STAGES</h2><p class="tip">Every place has a crazy <b>JOB</b>, and a <b>MAD RACE</b> against 3 rivals (watch your fuel!)</p><div class="stages">${cards}</div><div class="row"><button class="btn" id="closeB">BACK</button></div>`);
+  openModal(`<button class="btn small xB" id="xB">✕</button><h2>🗺️ STAGES</h2><p class="tip">Every place has a crazy <b>JOB</b>, and a <b>MAD RACE</b> against 3 rivals (watch your fuel!)</p><div class="stages">${cards}</div><div class="row"><button class="btn" id="closeB">BACK</button></div>`);
   document.querySelectorAll('[data-ride]').forEach(b => b.onclick = () => { sfx('pop'); play(+b.dataset.ride); });
   document.querySelectorAll('[data-may]').forEach(b => b.onclick = () => { sfx('pop'); play(+b.dataset.may, true); });
-  $('closeB').onclick = () => { sfx('pop'); closeModal(); };
+  $('closeB').onclick = $('xB').onclick = () => { sfx('pop'); closeModal(); };
 }
 // ---------------- screens ----------------
 function setScreen(s) { $('home').classList.toggle('hidden', s !== 'home'); $('hud').classList.toggle('hidden', s !== 'hud'); }
