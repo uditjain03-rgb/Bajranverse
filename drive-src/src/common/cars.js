@@ -90,7 +90,7 @@ export function makeCar(type, col = 0xc8302a, o = {}) {
   return { ...T, obj, model: obj.children[0], wheels: [], front: [], size: T.size.clone() };
 }
 function buildCar(type, col = 0xc8302a, o = {}) {
-  if (type === 'auto') return makeAuto(col, o); if (type === 'bus') return makeBus(col, o); if (type === 'truck') return makeTruck(col, o); if (type === 'tractor') return makeTractor(col, o);
+  if (type === 'auto') return makeAuto(col, o); if (type === 'bus') return makeBus(col, o); if (type === 'truck') return makeTruck(col, o); if (type === 'tractor') return makeTractor(col, o); if (type === 'erick') return makeERick(col, o); if (type === 'tempo') return makeTempo(col, o); if (type === 'scooter' || type === 'cycle') return makeTwoWheeler(type, col, o); if (type === 'bullcart') return makeBullCart(col, o); if (type === 'handcart') return makeHandCart(col, o);
   const C = CARS[type] || CARS.sedan, L = C.L, W = C.W, L2 = L / 2, body = [], lamps = [];
   const liv = o.livery ? LIVERY[o.livery] : null, paint = liv ? liv.body : col, roofC = liv ? liv.roof : o.roofCol ?? C.roof ?? col, glass = o.tint ?? 0x0e1620;
   const sR = -C.wb / 2 + (C.L / 2 - C.wb / 2 - 0.85 > 0 ? -0.05 : 0), sF = C.wb / 2 - 0.02, aR = C.R + 0.07, y0 = C.clr + 0.05;
@@ -373,4 +373,88 @@ let NEON = null;
 function neonPlane(col, W, L) {
   NEON = NEON || canvasTex(64, 128, (c, w, h) => { const g = c.createRadialGradient(w / 2, h / 2, 4, w / 2, h / 2, w / 2); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.6, 'rgba(255,255,255,.35)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.save(); c.scale(1, 2); c.fillStyle = g; c.fillRect(0, 0, w, h); c.restore(); });
   const m = new THREE.Mesh(new THREE.PlaneGeometry(W * 1.5, L * 1.15), new THREE.MeshBasicMaterial({ map: NEON, color: col, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); m.rotation.x = -PI / 2; m.position.y = 0.04; return m;
+}
+
+// ---------------- more Indian traffic: e-rickshaw, loading tempo, scooter, cycle, bullock cart, vendor's cart ----------------
+// a simple person (riders, the cart man, the vendor) made of a few rounded parts; sitting or standing
+function figure(body, o) {
+  const { x = 0, y = 0, z = 0, shirt = 0x2a8ad8, pants = 0x2a2a3a, skin = 0xc68642, hat = null, sit = false, lean = 0 } = o;
+  const hy = sit ? 0.55 : 0.85;
+  if (sit) { for (const s of [-1, 1]) { body.push(part(box(0.13, 0.13, 0.45, x + s * 0.1, y + 0.08, z - 0.2), pants, 0.2)); body.push(part(box(0.12, 0.42, 0.13, x + s * 0.1, y - 0.15, z - 0.42), pants, 0.2)); } }
+  else for (const s of [-1, 1]) body.push(part(box(0.13, 0.85, 0.14, x + s * 0.1, y + 0.42, z), pants, 0.2));
+  body.push(part(rbox(0.4, 0.55, 0.24, 0.08, x, y + hy + 0.27, z + lean * 0.1), shirt, 0.25, true));
+  for (const s of [-1, 1]) body.push(part(beam(V(x + s * 0.22, y + hy + 0.48, z + lean * 0.1), V(x + s * 0.2, y + hy + 0.22, z - 0.32), 0.09), shirt, 0.25));
+  const head = new THREE.SphereGeometry(0.13, 12, 10); head.translate(x, y + hy + 0.7, z + lean * 0.12); body.push(part(head, skin, 0.2, true));
+  if (hat === 'helmet') { const h = new THREE.SphereGeometry(0.155, 12, 8, 0, PI * 2, 0, PI * 0.55); h.translate(x, y + hy + 0.73, z + lean * 0.12); body.push(part(h, o.hatCol ?? 0xe8202a, 0.7, true)); }
+  else if (hat === 'turban') { const t = new THREE.TorusGeometry(0.11, 0.06, 6, 14); t.rotateX(PI / 2); t.translate(x, y + hy + 0.79, z + lean * 0.12); body.push(part(t, o.hatCol ?? 0xff8a1a, 0.2, true)); }
+  else if (hat === 'cap') body.push(part(box(0.26, 0.08, 0.3, x, y + hy + 0.81, z + lean * 0.12 - 0.04), o.hatCol ?? 0x1a4ab0, 0.2));
+  else { const h = new THREE.SphereGeometry(0.135, 10, 6, 0, PI * 2, 0, PI * 0.45); h.translate(x, y + hy + 0.72, z + lean * 0.12); body.push(part(h, 0x1a1210, 0.2, true)); }
+}
+const SHIRTS = [0xe8402a, 0x2a8ad8, 0xffc21a, 0x3fcf6e, 0xf4f4f4, 0x8a5ad8, 0xff8ab8, 0x1a1a1a];
+const rpick = a => a[Math.floor(Math.random() * a.length)];
+function makeERick(col = 0x2aa84a, o = {}) {   // the battery e-rickshaw: open sides, a roof, four seats
+  const body = [], lamps = [], W = 1.0, L = 2.75;
+  const s = new THREE.Shape(); s.moveTo(-1.35, 0.28); s.lineTo(1.0, 0.28); s.quadraticCurveTo(1.36, 0.3, 1.32, 0.7); s.lineTo(1.22, 1.0); s.lineTo(0.95, 1.0); s.lineTo(0.8, 0.55); s.lineTo(-1.35, 0.55); s.lineTo(-1.35, 0.28);
+  body.push(part(extrudeSide(s, W, { L, bevel: 0.05, round: [0.4, 0.25] }), col, 0.6, true));
+  body.push(part(box(W * 0.8, 0.5, 0.03, 0, 1.3, -0.98, -0.15), o.tint ?? 0x0e1620, 1));
+  body.push(part(rbox(W + 0.16, 0.08, 2.4, 0.03, 0, 1.95, 0.05), o.top ?? 0xf4f4f4, 0.5));
+  for (const [x, z] of [[-0.48, -0.85], [0.48, -0.85], [-0.48, 1.2], [0.48, 1.2]]) body.push(part(cyl(0.025, 0.025, 1.4, 6, x, 1.25, z), 0xc8ced6, 0.8));
+  for (const z of [-0.2, 0.75]) { body.push(part(rbox(W - 0.1, 0.12, 0.45, 0.04, 0, 0.72, z), 0x1a1a1a, 0.2)); body.push(part(rbox(W - 0.1, 0.4, 0.08, 0.03, 0, 0.98, z + 0.22), 0x1a1a1a, 0.2)); }
+  figure(body, { z: -0.35, y: 0.62, sit: true, shirt: rpick(SHIRTS), hat: 'cap' });
+  lamps.push(part(cyl(0.07, 0.07, 0.04, 12, 0, 0.82, -1.36, PI / 2), 0xfff6d8)); lamps.push(part(box(0.12, 0.08, 0.02, -0.38, 0.5, 1.36), 0xff2a1a), part(box(0.12, 0.08, 0.02, 0.38, 0.5, 1.36), 0xff2a1a));
+  body.push(part(box(W - 0.2, 0.06, L - 0.5, 0, 0.25, 0.1), 0x101012, 0));
+  return assemble(body, lamps, [[-0.95, 0.24, 0, 1], [0.85, 0.24, W / 2 - 0.06, 0]], 0.24, 0.12, 'black', o, { x: W, y: 2.0, z: L });
+}
+function makeTempo(col = 0x2a6ab0, o = {}) {   // the three-wheeler loader: a small cabin and a cargo bed piled high
+  const body = [], lamps = [], W = 1.5, L = 3.4;
+  const s = new THREE.Shape(); s.moveTo(0.35, 0.35); s.lineTo(1.35, 0.35); s.quadraticCurveTo(1.72, 0.38, 1.68, 0.85); s.lineTo(1.58, 1.75); s.lineTo(0.5, 1.8); s.lineTo(0.35, 0.35);
+  body.push(part(extrudeSide(s, W - 0.1, { L, bevel: 0.06, round: [0.4, 0.2] }), col, 0.6, true));
+  body.push(part(box(W - 0.4, 0.55, 0.03, 0, 1.35, -1.68, -0.08), 0x0e1620, 1));
+  for (const sd of [-1, 1]) body.push(part(box(0.03, 0.45, 0.6, sd * (W / 2 - 0.04), 1.35, -1.05), 0x0e1620, 1));
+  body.push(part(box(W, 0.1, 2.0, 0, 0.62, 0.65), 0x3a2a1a, 0.2));
+  for (const sd of [-1, 1]) body.push(part(box(0.05, 0.45, 2.0, sd * W / 2, 0.88, 0.65), col, 0.5)); body.push(part(box(W, 0.45, 0.05, 0, 0.88, 1.63), col, 0.5));
+  const load = o.load ?? rpick(['sacks', 'gas', 'veg']);
+  if (load === 'sacks') for (let i = 0; i < 6; i++) body.push(part(rbox(0.6, 0.32, 0.55, 0.12, (i % 2 ? 0.33 : -0.33), 0.86 + (i >= 4 ? 0.32 : 0), 0.05 + (i % 3) * 0.6 - (i >= 4 ? 0.2 : 0)), 0xd8c8a0, 0.05, true));
+  else if (load === 'gas') for (let i = 0; i < 8; i++) body.push(part(cyl(0.15, 0.15, 0.6, 10, -0.5 + (i % 4) * 0.33, 0.98, 0.2 + Math.floor(i / 4) * 0.8), 0xe8202a, 0.6));
+  else for (let i = 0; i < 9; i++) body.push(part(new THREE.SphereGeometry(0.2, 8, 6).translate(-0.45 + (i % 3) * 0.45, 0.9 + (i % 2) * 0.15, 0.1 + Math.floor(i / 3) * 0.55), rpick([0x3fcf3e, 0xe8302a, 0xff9a1a]), 0.3));
+  figure(body, { z: -0.95, y: 0.65, sit: true, shirt: rpick(SHIRTS), hat: rpick(['cap', null]) });
+  lamps.push(part(cyl(0.08, 0.08, 0.04, 12, 0, 1.05, -1.71, PI / 2), 0xfff6d8)); lamps.push(part(box(0.15, 0.08, 0.02, -0.6, 0.75, 1.67), 0xff2a1a), part(box(0.15, 0.08, 0.02, 0.6, 0.75, 1.67), 0xff2a1a));
+  body.push(part(box(0.5, 0.12, 0.02, 0, 0.62, 1.67), 0xffd21a, 0.3));
+  return assemble(body, lamps, [[-1.25, 0.28, 0, 1], [0.95, 0.28, W / 2 - 0.08, 0]], 0.28, 0.16, 'black', o, { x: W, y: 2.0, z: L });
+}
+function makeTwoWheeler(kind, col = 0xe8202a, o = {}) {   // a scooter or a bicycle, with its rider
+  const body = [], lamps = [], cyc = kind === 'cycle', R = cyc ? 0.34 : 0.26, L = cyc ? 1.75 : 1.8;
+  if (cyc) {
+    const c = col; body.push(part(beam(V(0, 0.34, 0.58), V(0, 0.8, -0.05), 0.04), c, 0.7), part(beam(V(0, 0.8, -0.05), V(0, 0.82, 0.45), 0.04), c, 0.7), part(beam(V(0, 0.34, 0.58), V(0, 0.34, 0.08), 0.035), c, 0.7), part(beam(V(0, 0.34, 0.08), V(0, 0.82, -0.05), 0.04), c, 0.7), part(beam(V(0, 0.34, -0.58), V(0, 0.95, -0.42), 0.04), c, 0.7));
+    body.push(part(box(0.5, 0.03, 0.03, 0, 0.98, -0.45), 0x1a1a1a, 0.4), part(rbox(0.16, 0.06, 0.26, 0.03, 0, 0.92, 0.42), 0x1a1a1a, 0.2));
+  } else {
+    body.push(part(rbox(0.42, 0.55, 0.9, 0.18, 0, 0.6, 0.3), col, 0.65, true), part(rbox(0.36, 0.8, 0.22, 0.1, 0, 0.75, -0.5), col, 0.65, true), part(box(0.34, 0.06, 0.6, 0, 0.32, -0.12), 0x2a2a2e, 0.3));
+    body.push(part(rbox(0.32, 0.1, 0.6, 0.05, 0, 0.92, 0.32), 0x1a1a1a, 0.2), part(box(0.6, 0.04, 0.04, 0, 1.18, -0.55), 0x1a1a1a, 0.4), part(rbox(0.3, 0.12, 0.12, 0.04, 0, 1.15, -0.58), col, 0.6));
+    lamps.push(part(cyl(0.07, 0.07, 0.04, 10, 0, 1.12, -0.66, PI / 2), 0xfff6d8), part(box(0.12, 0.05, 0.02, 0, 0.75, 0.76), 0xff2a1a));
+  }
+  figure(body, { z: cyc ? 0.32 : 0.28, y: cyc ? 0.38 : 0.42, sit: true, lean: 1, shirt: rpick(SHIRTS), hat: cyc ? rpick(['cap', 'turban', null]) : 'helmet', hatCol: rpick([0xe8202a, 0xf4f4f4, 0x1a1a1a, 0xffc21a]) });
+  return assemble(body, lamps, [[-0.58, R, 0, 1, cyc ? 0.04 : 0.1], [0.58, R, 0, 0, cyc ? 0.04 : 0.1]], R, cyc ? 0.04 : 0.1, cyc ? 'steel' : 'black', o, { x: 0.7, y: 1.7, z: L });
+}
+function makeBullCart(col = 0x8a5a2a, o = {}) {   // the bullock cart (the bulls are added by the game: they walk)
+  const body = [], lamps = [], W = 1.6;
+  body.push(part(box(1.5, 0.1, 2.2, 0, 0.95, 0.9), col, 0.15));
+  for (const sd of [-1, 1]) { body.push(part(box(0.06, 0.4, 2.2, sd * 0.75, 1.2, 0.9), col, 0.15)); body.push(part(beam(V(sd * 0.3, 0.95, -0.2), V(sd * 0.15, 0.95, -2.4), 0.08), 0x6a4018, 0.1)); }
+  body.push(part(box(1.2, 0.1, 0.1, 0, 1.05, -2.3), 0x6a4018, 0.1));
+  const hay = o.load ?? true; if (hay) for (let i = 0; i < 4; i++) body.push(part(rbox(0.7, 0.45, 0.95, 0.12, (i % 2 ? 0.35 : -0.35), 1.3 + (i >= 2 ? 0.4 : 0), 0.5 + (i % 2) * 0.8), 0xe8c86a, 0.05, true));
+  figure(body, { z: -0.1, y: 1.0, sit: true, shirt: 0xf4f4f4, hat: 'turban', hatCol: rpick([0xff8a1a, 0xe8202a, 0xf4f4f4]) });
+  const wheels = [];
+  for (const sd of [-1, 1]) { const t = new THREE.TorusGeometry(0.62, 0.05, 6, 20); t.rotateY(PI / 2); t.translate(sd * 0.82, 0.66, 1.0); wheels.push(part(t, 0x5a3a1a, 0.1)); for (let i = 0; i < 6; i++) { const a = i / 6 * PI; wheels.push(part(box(0.04, 1.22, 0.05, sd * 0.82, 0.66, 1.0, a, 0, 0), 0x6a4a2a, 0.1)); } wheels.push(part(cyl(0.1, 0.1, 0.12, 8, sd * 0.82, 0.66, 1.0, 0, PI / 2), 0x3a2a1a, 0.1)); }
+  body.push(...wheels);
+  lamps.push(part(box(0.2, 0.06, 0.02, 0, 0.9, 2.02), 0xff2a1a));
+  const car = assemble(body, lamps, [], 0.62, 0.1, 'black', o, { x: W, y: 2.1, z: 5.2 }); car.model.position.z = 0.7; car.bulls = [[-0.45, -3.1], [0.45, -3.1]]; return car;
+}
+function makeHandCart(col = 0x2a8a3a, o = {}) {   // the vendor's cart (thela): fruit piled high, an umbrella, pushed by the vendor
+  const body = [], lamps = [], W = 1.1;
+  body.push(part(box(1.05, 0.12, 1.8, 0, 0.8, 0), col, 0.3), part(box(1.0, 0.25, 1.75, 0, 0.95, 0), 0x6a4018, 0.1));
+  const C = rpick([[0xff4a2a, 0xffc21a, 0x7ad83a], [0x3fcf3e, 0xe8302a, 0x8a3ab0], [0xffd21a, 0xff9a1a]]);
+  for (let i = 0; i < 14; i++) body.push(part(new THREE.SphereGeometry(0.12, 8, 6).translate(-0.4 + (i % 5) * 0.2, 1.15 + Math.floor(i / 10) * 0.18, -0.7 + (i % 7) * 0.22), C[i % C.length], 0.3));
+  body.push(part(cyl(0.025, 0.025, 1.4, 6, 0, 1.75, 0), 0x6a4018, 0.2)); { const u = new THREE.ConeGeometry(0.95, 0.35, 10, 1, true); u.translate(0, 2.55, 0); body.push(part(u, rpick([0xe8202a, 0x2a8ad8, 0xffc21a]), 0.3)); }
+  for (const sd of [-1, 1]) body.push(part(beam(V(sd * 0.4, 0.95, 0.9), V(sd * 0.3, 1.05, 1.35), 0.04), 0x6a4018, 0.1));
+  figure(body, { z: 1.55, shirt: rpick(SHIRTS), hat: rpick(['cap', 'turban', null]) });
+  return assemble(body, lamps, [[-0.55, 0.3, 0.55, 1, 0.06], [0.55, 0.3, 0.55, 0, 0.06]], 0.3, 0.06, 'steel', o, { x: W, y: 2.7, z: 2.6 });
 }

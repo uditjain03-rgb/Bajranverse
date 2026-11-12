@@ -82,8 +82,7 @@ i.bar { display: inline-block; width: 46px; height: 7px; border-radius: 4px; bac
 #speedo { bottom: calc(22px + var(--sab)); }
 #powerP { bottom: calc(150px + var(--sab)); }
 #bubble { bottom: calc(236px + var(--sab)); }
-/* MAYHEM: no passenger camera; the mood bar is the fuel gauge */
-#hud.mayhem #cabFrame { display: none; } #hud.mayhem #mission { width: calc(100% - 20px); }
+/* MAD RACE: the job bar is the fuel gauge in the MAD RACE */
 #hud.mayhem #moodFill { background: linear-gradient(90deg, #ff3a2a, #ffb03a 30%, #ffe04a 60%, #3fcf6e); }
 #moodBox.low { animation: blink .4s infinite; }
 #tasks .th { color: #ffb03a; font-size: 11px; letter-spacing: 1px; }
@@ -96,6 +95,14 @@ i.bar { display: inline-block; width: 46px; height: 7px; border-radius: 4px; bac
 .gbody h4 { margin: 10px 2px 4px; font-size: 15px; color: #a0186a; }
 #studio .kids { position: absolute; bottom: calc(18px + var(--sab)); left: 0; right: 0; text-align: center; font-family: 'Fredoka'; font-weight: 600; font-size: 13px; color: #9a8a7a; letter-spacing: 2px; animation: fadeIn 1s 1.2s both; }
 #homeRow { gap: 6px; } #homeRow .btn { padding: 10px 12px; font-size: 18px; } #homeRow #shopB, #homeRow #giftB { padding: 10px 10px; font-size: 20px; }
+.pedal { pointer-events: auto; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+#throwB { left: 12px; right: auto; bottom: calc(146px + var(--sab)); width: 84px; height: 84px; display: none; background: radial-gradient(#ffb0e0, #ff4fa8); }
+#hud.throwjob #throwB { display: flex; }
+#throwB span:first-child { font-size: 32px; line-height: 1; }
+#hud #cabFrame { display: none; } #mission { width: calc(100% - 20px); }
+#tasks .tip { color: #fff; font-size: 13px; }
+#wanted { top: calc(232px + var(--sat)); right: 10px; background: var(--pill); border: 3px solid var(--dark); border-radius: 12px; padding: 0 6px; font-size: 18px; } #wanted:empty { display: none; }
+#homeLevel small { display: block; }
 </style>
 </head>
 <body>
@@ -119,6 +126,7 @@ i.bar { display: inline-block; width: 46px; height: 7px; border-radius: 4px; bac
   <div id="speedo"><span id="kmh">0</span><small>KM/H</small></div>
   <button class="pedal gas" id="gasB"><i></i><b>GAS</b></button>
   <button class="roundB" id="hornB"><span>📯</span><b>HORN</b></button>
+  <button class="roundB" id="throwB"><span>🎁</span><b>THROW</b></button>
   <button class="roundB" id="turboB"><span>⚡</span><b>TURBO</b><span class="n" id="turboN">1</span></button>
   <div id="hint" class="hidden"></div>
 </div>
@@ -128,7 +136,7 @@ i.bar { display: inline-block; width: 46px; height: 7px; border-radius: 4px; bac
   <div id="homeBottom">
     <div id="carName"></div>
     <div id="homeLevel">RIDE 1</div>
-    <div id="playRow"><button class="btn big green" id="playB">DRIVE!</button><button class="btn" id="mayhemB">💥<small>MAYHEM</small></button></div>
+    <div id="playRow"><button class="btn big green" id="playB">DRIVE!</button><button class="btn" id="mayhemB">🏁<small>MAD RACE</small></button></div>
     <div id="homeRow"><button class="btn" id="garageB">🔧 GARAGE</button><button class="btn" id="stagesB">🗺️ STAGES</button><button class="btn" id="shopB">🛒</button><button class="btn" id="giftB">🎁</button></div>
     <div id="credit">BajrangVerse Studios</div>
   </div>

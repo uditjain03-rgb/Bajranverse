@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import esbuild from 'esbuild';
 import zlib from 'zlib';
+const KEEP_PEOPLE = ['pedM', 'pedF'];   // the only people files the taxi game uses (street people)
 import { protect } from './tools/protect.mjs';
 import { seal, writeK } from './tools/seal.mjs';
 const here = path.dirname(new URL(import.meta.url).pathname);
@@ -36,7 +37,7 @@ for (const id of (process.argv[2] ? [process.argv[2]] : Object.keys(GAMES))) {
   }
 }
 
-// people.bin → people/<id>.bin, each a complete people file holding one person
+// people.bin → people/<id>.bin, each a complete people file holding one person (only the ones the game uses)
 function splitPeople(file, dir) {
   const b = fs.readFileSync(file), hl = b.readUInt32LE(4), head = JSON.parse(b.subarray(8, 8 + hl).toString()), base = (8 + hl + 3) & ~3, chars = head.chars;
   fs.mkdirSync(dir, { recursive: true });
@@ -45,7 +46,7 @@ function splitPeople(file, dir) {
     if (start % 4) throw new Error('people data not aligned: ' + h.id);
     const hj = Buffer.from(JSON.stringify({ chars: [{ ...h, o: h.o.map(o => o - start) }] })), nb = (8 + hj.length + 3) & ~3, out = Buffer.alloc(nb + end - start);
     b.copy(out, 0, 0, 4); out.writeUInt32LE(hj.length, 4); hj.copy(out, 8); b.copy(out, nb, base + start, base + end);
-    fs.writeFileSync(path.join(dir, h.id + '.bin'), out);
+    if (!KEEP_PEOPLE || KEEP_PEOPLE.includes(h.id)) fs.writeFileSync(path.join(dir, h.id + '.bin'), out);
   });
   fs.rmSync(file);
 }
