@@ -128,7 +128,7 @@ const PASS = [
     intro: 'Bhaiya! My guests are HUNGRY! Throw laddoos to everyone waving!', happy: ['Wah! Bullseye!', 'Guest fed! Next!', 'You are the laddoo king!', 'Shaadi mubarak!'], miss: ['Arre, that went in the drain!', 'Aim, bhaiya, AIM!', 'Missed! Mummy is watching!'],
     hurt: ['My sherwani!', 'Careful!'], cow: ['Cow ji, have a laddoo too!'], win: 'Every guest is happy! Best wedding EVER!', lose: 'Hungry guests… they are eating the decorations!', reviews: ['10/10 laddoo sniper. Invited to every wedding!', 'Great aim. Some laddoos hit the band.', 'Half the guests are still hungry.', 'The guests ate the flowers. Zero stars.'] },
   { id: 'granny', job: 'thief', name: 'Dadi Ji', look: { skin: 0xd8a070, hair: 0xd8d8d8, style: 'buns', glasses: 1, bindi: 1 }, f0: 250, fk: 1.12,
-    intro: 'Beta! That rascal in the green auto stole my SAMOSAS! BUMP him 5 times!', happy: ['Shabash! Hit him again!', 'That\'s for my samosas!', 'Jeete raho beta!', 'Again! AGAIN!'], miss: ['He is getting away!', 'Faster beta! Press the GAS!'],
+    intro: 'Beta! That rascal in the green auto stole my SAMOSAS! BUMP him 6 times!', happy: ['Shabash! Hit him again!', 'That\'s for my samosas!', 'Jeete raho beta!', 'Again! AGAIN!'], miss: ['He is getting away!', 'Faster beta! Press the GAS!'],
     hurt: ['Hai Ram!', 'Arre baba!'], cow: ['Gau mata, move please!'], win: 'Samosas saved! Come, eat with me!', lose: 'My samosas… gone forever!', reviews: ['Caught him in no time! Best grandson ever!', 'Good bumping, beta!', 'Caught him… just in time.', 'He got away. I am calling your mother.'] },
   { id: 'uncle', job: 'fly', name: 'Adventure Sharma', look: { skin: 0xc68642, hair: 0x2a2018, style: 'short', tache: 1 }, f0: 110, fk: 0.86,
     intro: 'I retired today! I want to FLY! Hit every ramp on the ghat road!', happy: ['WHEEEE!', 'I am a bird!', 'Higher! HIGHER!', 'Best retirement ever!'], miss: ['You missed a ramp! Boring!', 'Hit the ramps, beta!'],
@@ -150,14 +150,14 @@ const PASS = [
     hurt: ['Whee!', 'Bumpy!'], cow: ['Colour the cow!'], win: 'The whole city is colourful! Best Holi!', lose: 'Not enough colours… boring Holi!', reviews: ['Best Holi of my life!', 'So colourful!', 'A bit colourful.', 'Where are the colours?'] },
 ];
 const JOBS = {
-  laddoo: { title: 'LADDOO TOSS', ico: '🎁', unit: 'guests fed', need: lp => 14 + lp * 2, throw: 'laddoo', tip: 'Tap 🎁 THROW when you pass a waving guest' },
-  thief: { title: 'SAMOSA THIEF', ico: '💥', unit: 'bumps', need: () => 5, tip: 'Hold GAS, catch the green auto and BUMP it' },
-  fly: { title: 'FLYING TAXI', ico: '🚀', unit: 'jumps', need: lp => 12 + lp * 2, tip: 'Drive over the ramps · swipe UP in the air to spin' },
-  selfie: { title: 'SPEED SELFIES', ico: '📸', unit: 'speed selfies', need: lp => 6 + lp, tip: 'Pass each 📸 camera FASTER than its sign (GAS + TURBO)' },
-  splash: { title: 'SPLASH ATTACK', ico: '💦', unit: 'uncles soaked', need: lp => 10 + lp, tip: 'Drive through the puddle next to each ☂️ uncle' },
-  catch: { title: 'CATCH IT!', ico: '🏏', unit: 'catches', need: lp => 12 + lp * 2, tip: 'Drive under the falling ball (the red circle)' },
-  bowling: { title: 'TRAFFIC BOWLING', ico: '🎳', unit: 'pins', need: lp => 80 + lp * 10, tip: 'Drive through the 🎳 pins · all 10 = STRIKE' },
-  holi: { title: 'HOLI HAI!', ico: '🎈', unit: 'colour hits', need: lp => 30 + lp * 4, throw: 'balloon', tip: 'Tap 🎈 THROW at people and cars' },
+  laddoo: { title: 'LADDOO TOSS', ico: '🎁', unit: 'guests fed', need: lp => 20 + lp * 3, throw: 'laddoo', tip: 'Tap 🎁 THROW when you pass a waving guest' },
+  thief: { title: 'SAMOSA THIEF', ico: '💥', unit: 'bumps', need: () => 6, tip: 'Hold GAS, catch the green auto and BUMP it' },
+  fly: { title: 'FLYING TAXI', ico: '🚀', unit: 'jumps', need: lp => 20 + lp * 3, tip: 'Drive over the ramps · swipe UP in the air to spin' },
+  selfie: { title: 'SPEED SELFIES', ico: '📸', unit: 'speed selfies', need: lp => 7 + lp, tip: 'Pass each 📸 camera FASTER than its sign (GAS + TURBO)' },
+  splash: { title: 'SPLASH ATTACK', ico: '💦', unit: 'uncles soaked', need: lp => 14 + lp * 2, tip: 'Drive through the puddle next to each ☂️ uncle' },
+  catch: { title: 'CATCH IT!', ico: '🏏', unit: 'catches', need: lp => 18 + lp * 3, tip: 'Drive under the falling ball (the red circle)' },
+  bowling: { title: 'TRAFFIC BOWLING', ico: '🎳', unit: 'pins', need: lp => 120 + lp * 15, tip: 'Drive through the 🎳 pins · all 10 = STRIKE' },
+  holi: { title: 'HOLI HAI!', ico: '🎈', unit: 'colour hits', need: lp => 45 + lp * 6, throw: 'balloon', tip: 'Tap 🎈 THROW at people and cars' },
 };
 const RW = 14, HALF = RW / 2 - 1.2, LANES = [-5.25, -1.75, 1.75, 5.25];   // India drives on the LEFT: our lanes are x < 0
 const STAGE_OF = { groom: 'shaadi', granny: 'bazaar', uncle: 'ghat', influencer: 'marine', detective: 'monsoon', fan: 'stadium', boss: 'cyber', kid: 'holi' };
@@ -357,7 +357,7 @@ function spawnThief() {
   const d = new Actor(PEOPLE.pedM, { tint: 0x1a1a1a, skin: 0xa86b3c, hair: 0x1a1a1a, expr: EXPR.laugh }); d.play('idle'); d.scale.setScalar(0.85); d.position.set(0.4, 0.4, 0.1); V.obj.add(d);
   const tag = canvasTex(256, 96, (c, w, h) => { c.fillStyle = '#e8202a'; c.beginPath(); c.roundRect(4, 4, w - 8, h - 30, 18); c.fill(); c.beginPath(); c.moveTo(w / 2 - 18, h - 27); c.lineTo(w / 2 + 18, h - 27); c.lineTo(w / 2, h - 2); c.fill(); c.fillStyle = '#fff'; c.font = 'bold 46px Fredoka, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('🦹 THIEF', w / 2, 37); });
   const tm = new THREE.Mesh(new THREE.PlaneGeometry(3, 1.12), new THREE.MeshBasicMaterial({ map: tag, transparent: true, depthTest: false })); tm.renderOrder = 5; tm.position.set(0, V.size.y + 1.6, 0); V.obj.add(tm);
-  G.thief = { V, d, tm, x: LANES[1], z: -55, lane: LANES[1], cur: 18, len: V.size.z, wide: V.size.x, laneT: 2, dropT: 6, caught: false, sp: 21.5 + G.lv.d * 4 };
+  G.thief = { V, d, tm, x: LANES[1], z: -55, lane: LANES[1], cur: 18, len: V.size.z, wide: V.size.x, laneT: 2, dropT: 6, caught: false, sp: 24 + G.lv.d * 4 };
 }
 function updateThief(dt) {
   const T = G.thief; if (!T) return;
