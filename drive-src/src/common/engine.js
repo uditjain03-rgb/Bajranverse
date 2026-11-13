@@ -21,7 +21,7 @@ export const sun = new THREE.DirectionalLight(0xffeccc, 2.9); sun.position.set(-
 export const rim = new THREE.DirectionalLight(0x9ac8ff, 0.7); rim.position.set(6, 6, -10); scene.add(rim);
 export const E = { shake: 0, slow: 1, fov: 58, onSfx: null, quality: 2, fovBase: 58 };
 // render resolution (pixels per screen point): never below 1.5, so the picture stays sharp on a phone
-const DPR = [1.5, 1.75, 2];
+const DPR = [1.5, 2, 2.75];   // 'Sharp graphics' renders at (nearly) the phone's full screen resolution
 export function setQuality(q) { E.quality = q; resize(); }
 export function resize() { const w = innerWidth, h = innerHeight; renderer.setPixelRatio(Math.min(devicePixelRatio || 1, DPR[E.quality])); renderer.setSize(w, h, false); cam.aspect = w / h; E.fovBase = w / h < 0.6 ? 62 : 54; cam.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
@@ -101,7 +101,8 @@ export function startLoop(L) {   // L: { update(dt), camera(dt), active() → fr
   function frame(now) {
     requestAnimationFrame(frame);
     const raw = now - last; let dt = Math.max(0, Math.min(0.067, raw / 1000)); last = now;   // the game keeps its real speed down to 15 frames a second
-    if (L.active() && raw < 500) { t += raw; if (t > 4000) { ft += raw; fn++; } if (ft > 2500) { slow = ft / fn > 30 ? slow + 1 : 0; ft = fn = 0; if (slow >= 2 && E.quality > 0) { slow = 0; setQuality(E.quality - 1); } } }
+    if (L.active() && raw < 500) { t += raw; if (t > 4000) { ft += raw; fn++; } if (ft > 2500) { slow = ft / fn > 50 ? slow + 1 : 0; ft = fn = 0; if (slow >= 3 && E.quality > 1) {   // only a phone that really struggles (under 20 fps) drops one step, never below 2x
+      slow = 0; setQuality(E.quality - 1); } } }
     if (L.frozen()) { renderer.render(scene, cam); if (L.post) L.post(); return; }
     dt *= E.slow;
     const t0 = performance.now();

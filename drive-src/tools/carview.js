@@ -10,7 +10,7 @@ scene.background = new THREE.Color(0xbfe0ff);
 const cam = new THREE.PerspectiveCamera(32, 1, 0.1, 200);
 list.forEach((it, i) => {
   const [t, c] = it.split(':'); const boat = ['speed', 'cigarette', 'airboat', 'jetski', 'catamaran'].includes(t);
-  const V = boat ? makeBoat(t, +c || 0xe8302a) : makeCar(t, +c || 0xc8302a, { spin: 1, rims: Q.get('rims') || undefined, neon: Q.get('neon') ? +Q.get('neon') : undefined, wing: Q.get('wing') === '1', stripe: Q.get('stripe') ? +Q.get('stripe') : undefined, decal: Q.get('decal') || undefined, roofItem: Q.get('roof') || undefined, tint: Q.get('tint') ? +Q.get('tint') : undefined, livery: c === 'k' ? 'kaalipeeli' : c === 'p' ? 'police' : c === 'c' ? 'coolcab' : c === 'e' ? 'ecab' : null, taxi: Q.get('taxi') === '1' || c === 'k' || c === 'c' || c === 'e' });
+  const V = boat ? makeBoat(t, +c || 0xe8302a) : makeCar(t, +c || 0xc8302a, { spin: 1, rims: Q.get('rims') || undefined, neon: Q.get('neon') ? +Q.get('neon') : undefined, wing: Q.get('wing') === '1', stripe: Q.get('stripe') ? +Q.get('stripe') : undefined, decal: Q.get('decal') || undefined, roofItem: Q.get('roof') || undefined, tint: Q.get('tint') ? +Q.get('tint') : undefined, tanker: Q.get('tanker') || undefined, school: Q.get('school') === '1', livery: c === 'a' ? 'ambulance' : c === 'k' ? 'kaalipeeli' : c === 'p' ? 'police' : c === 'c' ? 'coolcab' : c === 'e' ? 'ecab' : null, taxi: Q.get('taxi') === '1' || c === 'k' || c === 'c' || c === 'e' });
   scene.add(V.obj); if (boat) V.obj.position.y = 0.35;
   const L = Math.max(V.size.z, 3); const ang = +(Q.get('ang') || 0.75);
   cam.position.set(Math.sin(ang) * L * 1.25, L * (+(Q.get('h') || 0.55)), -Math.cos(ang) * L * 1.25); cam.lookAt(0, V.size.y * 0.35, 0);

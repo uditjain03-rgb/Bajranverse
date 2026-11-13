@@ -50,7 +50,7 @@ const atlas = canvasTex(1024, 1024, (c) => {
     c.restore();
   }
 });
-atlas.anisotropy = 4;
+atlas.anisotropy = 8;
 const facadeMat = new THREE.MeshStandardMaterial({ map: atlas, vertexColors: true, roughness: 0.85 });
 const glassMat = new THREE.MeshPhysicalMaterial({ map: atlas, vertexColors: true, roughness: 0.15 });
 // a building: a box whose road-facing side shows a facade tile (the other sides show the plain wall tile), tinted

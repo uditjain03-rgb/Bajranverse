@@ -105,6 +105,12 @@ button, .sw, .item, .tab { touch-action: manipulation; }
 #wanted { top: calc(232px + var(--sat)); right: 10px; background: var(--pill); border: 3px solid var(--dark); border-radius: 12px; padding: 0 6px; font-size: 18px; } #wanted:empty { display: none; }
 #homeLevel small { display: block; }
 .panel { position: relative; } .xB { position: sticky; top: 0; float: right; z-index: 3; margin: -6px -4px 0 0; }
+.ico.car { width: 96px; height: 60px; flex: none; display: flex; align-items: center; justify-content: center; background: radial-gradient(#ffffff, #e8d8f0); border-radius: 12px; border: 2px solid rgba(58,10,74,.25); }
+.ico.car img { width: 96px; height: 60px; object-fit: contain; }
+#tasks .tip.rush { color: #ffe04a; font-size: 16px; animation: blink .5s infinite; }
+#snap { position: absolute; right: 14px; top: 38%; width: 120px; padding: 8px 8px 10px; background: #fff; border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,.4); transform: translateX(160%) rotate(8deg); text-align: center; color: #3a0a4a; pointer-events: none; }
+#snap.show { animation: snap 2.2s ease both; } #snap i { display: block; font-style: normal; font-size: 30px; background: linear-gradient(#7ac8ff, #ffd8a0); border-radius: 4px; padding: 10px 0; } #snap b { display: block; font-size: 20px; } #snap span { font-size: 10px; color: #ff4fa8; }
+@keyframes snap { 0% { transform: translateX(160%) rotate(8deg); } 15%, 80% { transform: translateX(0) rotate(-4deg); } 100% { transform: translateX(160%) rotate(8deg); } }
 </style>
 </head>
 <body>
@@ -131,6 +137,7 @@ button, .sw, .item, .tab { touch-action: manipulation; }
   <button class="roundB" id="throwB"><span>🎁</span><b>THROW</b></button>
   <button class="roundB" id="turboB"><span>⚡</span><b>TURBO</b><span class="n" id="turboN">1</span></button>
   <div id="hint" class="hidden"></div>
+  <div id="snap"></div>
 </div>
 <div id="home" class="screen hidden">
   <div id="homeTop"><div class="pill out">🪙 <span id="homeCoins">0</span></div><button class="btn small" id="setB">⚙️</button></div>

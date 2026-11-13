@@ -85,7 +85,7 @@ export function bendPoint(v, out = new THREE.Vector3()) {
 export function slopeAt(z) { if (!B) return 0; const e = 0.5, a = bendPoint(new THREE.Vector3(0, 0, z)).y, b = bendPoint(new THREE.Vector3(0, 0, z - e)).y; return (b - a) / e; }
 
 // ---------------- helpers ----------------
-export function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; }
+export function canvasTex(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; }
 const matCache = {};
 export const flat = (c, o = {}) => { const k = c + JSON.stringify(o); return matCache[k] || (matCache[k] = new THREE.MeshStandardMaterial({ color: c, flatShading: true, roughness: 0.85, ...o })); };
 export function mesh(geo, mat, x = 0, y = 0, z = 0, parent) { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; if (parent) parent.add(m); return m; }
