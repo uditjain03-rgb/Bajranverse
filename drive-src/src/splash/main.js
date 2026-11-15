@@ -546,7 +546,7 @@ function deliver(o) {
 function dropPet(why) {
   if (!G.aboard.length || G.me.shield > 0) return;
   const A = G.aboard.pop(), a = A.ani, from = a.getWorldPosition(new THREE.Vector3()); G.me.root.remove(a); scene.add(a); a.position.copy(from); a.scale.setScalar(1);
-  const z = G.me.z - rnd(24, 34), x = clamp(G.me.x + rnd(-6, 6), -HW + 3, HW - 3), to = new THREE.Vector3(x, G.course.level(z) + 0.3, z);
+  const z = G.me.z - rnd(50, 62), x = clamp(G.me.x + rnd(-6, 6), -HW + 3, HW - 3), to = new THREE.Vector3(x, G.course.level(z) + 0.3, z);
   G.flyers.push({ m: a, from, t: 0, dur: 0.9, arc: 6, to: () => to, done: () => { scene.remove(a); spawn({ t: 'pet', z, x, pet: A.kind, swim: 1 }); splash(_p.set(x, G.course.level(z) + 0.3, z), 0.8); } });
   popText(why + ' ' + ANI[A.kind].ico + ' fell in! Catch it!', _p.set(G.me.x, 4, G.me.z - 2), '#ffb0a0', 26, 1.2); petVoice(A.kind, 0.1);
 }
