@@ -106,7 +106,7 @@ export function startLoop(L) {   // L: { update(dt), camera(dt), active() → fr
     if (L.frozen()) { renderer.render(scene, cam); if (L.post) L.post(); return; }
     dt *= E.slow;
     const t0 = performance.now();
-    for (let i = 0; i < WARP; i++) L.update(WARP > 1 ? 0.05 * E.slow : dt);
+    try { for (let i = 0; i < WARP; i++) L.update(WARP > 1 ? 0.05 * E.slow : dt); } catch (err) { if (!E.errN) console.error(err); E.errN = (E.errN || 0) + 1; }   // one bad frame never freezes the game
     updateFx(dt); updateRings(dt); updatePops(dt); if (bannerT > 0) { bannerT -= dt; if (bannerT <= 0) $('banner').classList.remove('show'); }
     L.camera(WARP > 1 ? 0.05 : dt);
     if (E.shake > 0) { E.shake = Math.max(0, E.shake - dt); cam.position.x += rnd(-1, 1) * E.shake * 0.4; cam.position.y += rnd(-1, 1) * E.shake * 0.4; }

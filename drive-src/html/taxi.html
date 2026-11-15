@@ -111,6 +111,10 @@ button, .sw, .item, .tab { touch-action: manipulation; }
 #snap { position: absolute; right: 14px; top: 38%; width: 120px; padding: 8px 8px 10px; background: #fff; border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,.4); transform: translateX(160%) rotate(8deg); text-align: center; color: #3a0a4a; pointer-events: none; }
 #snap.show { animation: snap 2.2s ease both; } #snap i { display: block; font-style: normal; font-size: 30px; background: linear-gradient(#7ac8ff, #ffd8a0); border-radius: 4px; padding: 10px 0; } #snap b { display: block; font-size: 20px; } #snap span { font-size: 10px; color: #ff4fa8; }
 @keyframes snap { 0% { transform: translateX(160%) rotate(8deg); } 15%, 80% { transform: translateX(0) rotate(-4deg); } 100% { transform: translateX(160%) rotate(8deg); } }
+#raceB { padding: 8px 12px; font-size: 26px; line-height: 1; background: linear-gradient(#7ad8ff, #2a8ae8 55%, #1a5ab0); } #raceB small { display: block; font-size: 12px; }
+#playRow { gap: 8px; } #playRow #playB { padding-left: 18px; padding-right: 18px; }
+.sb .btn.mad { background: linear-gradient(#ffb03a, #ff6a1a 55%, #c83a0a); color: #fff; }
+#hud.madmax #moodFill { background: linear-gradient(90deg, #ff4fa8, #ffb03a, #ffe04a); }
 </style>
 </head>
 <body>
@@ -145,7 +149,7 @@ button, .sw, .item, .tab { touch-action: manipulation; }
   <div id="homeBottom">
     <div id="carName"></div>
     <div id="homeLevel">RIDE 1</div>
-    <div id="playRow"><button class="btn big green" id="playB">DRIVE!</button><button class="btn" id="mayhemB">🏁<small>MAD RACE</small></button></div>
+    <div id="playRow"><button class="btn big green" id="playB">🚕 JOB</button><button class="btn" id="mayhemB">💥<small>MAD MAX</small></button><button class="btn" id="raceB">🏁<small>RACE</small></button></div>
     <div id="homeRow"><button class="btn" id="garageB">🔧 GARAGE</button><button class="btn" id="stagesB">🗺️ STAGES</button><button class="btn" id="shopB">🛒</button><button class="btn" id="giftB">🎁</button></div>
     <div id="credit">BajrangVerse Studios</div>
   </div>
