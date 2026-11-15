@@ -287,8 +287,14 @@ function hull(L, W, H, o = {}) {
 }
 export const BOATS = {
   speed: { L: 5.2, W: 2.0, H: 0.9 }, cigarette: { L: 6.6, W: 1.9, H: 0.8, dead: 0.45 }, airboat: { L: 4.6, W: 2.3, H: 0.6, dead: 0.05 }, jetski: { L: 3.0, W: 1.1, H: 0.7 }, catamaran: { L: 5.4, W: 2.6, H: 0.8 },
+  duck: { L: 4.2, W: 2.5, H: 0.95, dead: 0.08 }, rib: { L: 5.2, W: 2.3, H: 0.7, dead: 0.42 }, hover: { L: 4.8, W: 2.7, H: 0.55, dead: 0.04 }, pirate: { L: 6.2, W: 2.5, H: 1.2, dead: 0.22 }, dragon: { L: 7.4, W: 1.7, H: 0.7, dead: 0.3 },
 };
 export function makeBoat(type = 'speed', col = 0xe8302a, o = {}) {
+  const paint = col; if (type === 'pirate') col = 0x7a4a26;
+  if (type === 'pirate') o = { ...o, bottom: 0x5a3418, stripe: 0xd8a83a, deck: 0xb07a40 };
+  if (type === 'duck') o = { ...o, bottom: col, stripe: col };
+  if (type === 'dragon') o = { ...o, bottom: col, stripe: 0xffc21a, deck: 0xb07a40 };
+  if (type === 'rib') o = { ...o, bottom: 0x3a3a40, stripe: 0x3a3a40, deck: 0x9aa0a8 };
   const B = BOATS[type] || BOATS.speed, body = [], lamps = [], deckC = o.deck ?? 0xf4f2ee, trim = o.trim ?? 0x1a1a1a;
   if (type === 'catamaran') { for (const sd of [-1, 1]) { const h = hull(B.L, 0.8, B.H, { dead: 0.4 }); const hg = h.hull.clone(); hg.translate(sd * 0.95, 0, 0); body.push(part(hg, col, 0.7, true)); } body.push(part(rbox(2.4, 0.18, B.L * 0.7, 0.06, 0, B.H * 0.45, 0.4), deckC, 0.5)); body.push(part(rbox(1.6, 0.5, 1.4, 0.15, 0, B.H * 0.8, 0.6), col, 0.6)); }
   else {
@@ -315,10 +321,73 @@ export function makeBoat(type = 'speed', col = 0xe8302a, o = {}) {
       body.push(part(box(0.06, 1.7, 0.06, -0.7, sh + 0.85, 1.1), 0x8a9098, 0.9), part(box(0.06, 1.7, 0.06, 0.7, sh + 0.85, 1.1), 0x8a9098, 0.9)); body.push(part(rbox(0.6, 0.45, 0.5, 0.1, 0, sh + 1.6, 0.85), 0x1a1a1e, 0.7));
       const ring = new THREE.TorusGeometry(0.95, 0.04, 6, 24); ring.translate(0, sh + 1.6, 1.25); body.push(part(ring, 0xc0c6ce, 0.9)); body.push(part(box(0.08, 1.9, 0.04, 0, sh + 1.6, 1.25), 0xc0c6ce, 0.9), part(box(1.9, 0.08, 0.04, 0, sh + 1.6, 1.25), 0xc0c6ce, 0.9));
     }
+    const sph = (r, x, y, z, sx = 1, sy = 1, sz = 1) => { const g = new THREE.SphereGeometry(r, 16, 12); g.scale(sx, sy, sz); g.translate(x, y, z); return g; };
+    if (type === 'duck') {
+      // a giant rubber-duck pedal boat: a round body, the neck and head at the bow with an orange beak, a perky tail, wings
+      const L = B.L; body.push(part(sph(0.62, 0, sh + 1.25, -L * 0.36, 1, 1, 1.05), col, 0.75, true), part(cyl(0.42, 0.55, 1.0, 14, 0, sh + 0.55, -L * 0.33), col, 0.75, true));
+      body.push(part(sph(0.3, 0, sh + 1.12, -L * 0.36 - 0.62, 1.15, 0.45, 1.2), 0xff8a1a, 0.6, true));
+      for (const sd of [-1, 1]) { body.push(part(sph(0.15, sd * 0.36, sh + 1.42, -L * 0.36 - 0.42), 0xffffff, 0.9), part(sph(0.08, sd * 0.42, sh + 1.45, -L * 0.36 - 0.52), 0x111111, 0.9)); body.push(part(sph(0.5, sd * (B.W / 2 - 0.05), sh + 0.05, 0.2, 0.35, 0.55, 1.4), col, 0.7, true)); }
+      body.push(part(cyl(0.02, 0.45, 0.9, 10, 0, sh + 0.45, L * 0.45, -0.7), col, 0.75, true));
+      body.push(part(rbox(1.5, 0.3, 0.9, 0.1, 0, sh + 0.1, 0.35), o.seat ?? 0xffffff, 0.3), part(rbox(1.5, 0.5, 0.18, 0.08, 0, sh + 0.4, 0.85), o.seat ?? 0xffffff, 0.3));
+      // the sun canopy on four poles
+      for (const [x, z] of [[-0.7, -0.15], [0.7, -0.15], [-0.7, 1.0], [0.7, 1.0]]) body.push(part(cyl(0.03, 0.03, 1.4, 6, x, sh + 0.75, z), 0xf0f0f0, 0.8));
+      body.push(part(rbox(1.7, 0.08, 1.5, 0.04, 0, sh + 1.47, 0.42), o.stripe === 0xffffff ? 0x2ab8ff : (o.stripe ?? 0x2ab8ff), 0.4));
+    }
+    if (type === 'rib') {
+      // an orange rescue inflatable: fat tubes around the hull, a console with a windscreen, a light bar, an outboard
+      const L = B.L, W = B.W, y = sh + 0.05, pts = [[-W / 2 + 0.2, y, L / 2 - 0.05], [-W / 2 + 0.1, y, -L * 0.05], [-W * 0.3, y + 0.1, -L * 0.36], [0, y + 0.2, -L / 2 + 0.05], [W * 0.3, y + 0.1, -L * 0.36], [W / 2 - 0.1, y, -L * 0.05], [W / 2 - 0.2, y, L / 2 - 0.05]].map(([a, b, c]) => new THREE.Vector3(a, b, c));
+      body.push(part(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, 0.34, 10), 0xff6a1a, 0.55, true));
+      for (const sd of [-1, 1]) { body.push(part(sph(0.34, sd * (W / 2 - 0.2), y, L / 2 - 0.05), 0xff6a1a, 0.55)); body.push(part(box(0.04, 0.16, L * 0.55, sd * (W / 2 + 0.11), y + 0.02, 0.1), 0xffffff, 0.5)); }
+      body.push(part(rbox(0.9, 0.75, 0.8, 0.1, 0, sh + 0.4, -0.2), 0xf4f4f4, 0.5), part(box(0.9, 0.42, 0.04, 0, sh + 0.98, -0.55, -0.4), 0x9ad0f0, 1));
+      body.push(part(rbox(1.0, 0.32, 0.9, 0.08, 0, sh + 0.16, 0.9), 0x2a2a30, 0.3));
+      body.push(part(beam(V(-0.7, sh, 1.6), V(-0.7, sh + 1.5, 1.6), 0.06), 0xd0d4d8, 0.9), part(beam(V(0.7, sh, 1.6), V(0.7, sh + 1.5, 1.6), 0.06), 0xd0d4d8, 0.9), part(box(1.5, 0.08, 0.08, 0, sh + 1.5, 1.6), 0xd0d4d8, 0.9));
+      lamps.push(part(box(0.3, 0.14, 0.14, -0.35, sh + 1.6, 1.6), 0x2a6aff), part(box(0.3, 0.14, 0.14, 0.35, sh + 1.6, 1.6), 0xff2a2a));
+      body.push(part(rbox(0.45, 0.7, 0.5, 0.12, 0, sh + 0.2, L / 2 + 0.2), 0x1a1a1e, 0.8));
+      // a lifebuoy hung on the console
+      const lb = new THREE.TorusGeometry(0.28, 0.08, 8, 18); lb.translate(0, sh + 0.45, 0.22); body.push(part(lb, 0xff3a2a, 0.5));
+    }
+    if (type === 'hover') {
+      // a hovercraft: a black rubber skirt all round, a cabin with windows, a big ducted fan and two rudders at the back
+      const sk = new THREE.TorusGeometry(1, 0.32, 10, 30); sk.rotateX(PI / 2); sk.scale(B.W / 2 * 0.95, 1, B.L / 2 * 0.92); sk.translate(0, -0.08, 0); body.push(part(sk, 0x1a1a1e, 0.25, true));
+      body.push(part(rbox(1.7, 0.8, 1.8, 0.2, 0, sh + 0.4, -0.5), col, 0.7), part(box(1.6, 0.4, 0.05, 0, sh + 0.6, -1.42, -0.5), 0x9ad0f0, 1));
+      for (const sd of [-1, 1]) body.push(part(box(0.04, 0.32, 1.1, sd * 0.86, sh + 0.55, -0.45), 0x9ad0f0, 1));
+      body.push(part(rbox(1.5, 0.3, 0.8, 0.1, 0, sh + 0.12, 0.65), o.seat ?? 0x2a2a30, 0.3));
+      const duct = new THREE.TorusGeometry(0.85, 0.12, 8, 28); duct.translate(0, sh + 1.0, B.L / 2 - 0.35); body.push(part(duct, 0xf4f4f4, 0.7));
+      body.push(part(box(0.1, 1.0, 0.1, -0.75, sh + 0.5, B.L / 2 - 0.35), 0xf4f4f4, 0.7), part(box(0.1, 1.0, 0.1, 0.75, sh + 0.5, B.L / 2 - 0.35), 0xf4f4f4, 0.7));
+      for (const x of [-0.35, 0.35]) body.push(part(box(0.05, 1.3, 0.45, x, sh + 1.0, B.L / 2 - 0.05), col, 0.6));
+    }
+    if (type === 'pirate') {
+      // a little pirate ship: wooden planks, a mast with a big sail and a skull flag, a raised stern castle, two cannons
+      const L = B.L, wood = 0x6a4022;
+      for (let i = 0; i < 4; i++) body.push(part(box(B.W * 0.86, 0.02, 0.06, 0, sh + 0.01, -1.6 + i * 1.0), 0x4a2a14, 0.2));
+      body.push(part(cyl(0.11, 0.13, 4.6, 10, 0, sh + 2.3, -0.4), wood, 0.3), part(box(2.6, 0.1, 0.1, 0, sh + 3.6, -0.4), wood, 0.3), part(box(2.0, 0.1, 0.1, 0, sh + 1.4, -0.4), wood, 0.3));
+      const sail = new THREE.PlaneGeometry(2.4, 2.1, 8, 6), sp = sail.attributes.position; for (let i = 0; i < sp.count; i++) { const x = sp.getX(i), y = sp.getY(i); sp.setZ(i, -0.35 * (1 - (x / 1.2) ** 2) * (1 - (y / 1.05) ** 2 * 0.4)); } sail.translate(0, sh + 2.5, -0.3); body.push(part(sail, o.stripe === 0xffffff ? 0xf4ead0 : 0xf4ead0, 0.2));
+      body.push(part(box(2.3, 0.35, 0.02, 0, sh + 2.9, -0.62), paint, 0.3));   // a painted band across the sail
+      body.push(part(cyl(0.32, 0.28, 0.35, 10, 0, sh + 4.0, -0.4), wood, 0.3));
+      body.push(part(box(0.75, 0.48, 0.02, 0.38, sh + 4.5, -0.4), 0x111111, 0.2), part(sph(0.1, 0.38, sh + 4.53, -0.38), 0xffffff, 0.3));
+      body.push(part(rbox(B.W * 0.9, 0.7, 1.5, 0.08, 0, sh + 0.35, L * 0.36), wood, 0.3), part(box(B.W * 0.92, 0.12, 1.55, 0, sh + 0.74, L * 0.36), 0xd8a83a, 0.6));
+      for (const sd of [-1, 1]) { body.push(part(box(0.08, 0.35, L * 0.6, sd * (h.widthAt(0.5) - 0.02), sh + 0.17, -0.3), wood, 0.3)); body.push(part(cyl(0.12, 0.15, 0.8, 10, sd * (h.widthAt(0.5) + 0.25), sh + 0.15, -0.6, 0, PI / 2), 0x1a1a1a, 0.6)); }
+      body.push(part(beam(V(0, h.sheerAt(1), -L / 2), V(0, h.sheerAt(1) + 0.6, -L / 2 - 1.4), 0.1), wood, 0.3));
+      body.push(part(cyl(0.45, 0.45, 0.08, 14, 0, sh + 1.15, L * 0.27, PI / 2), 0x8a5a2a, 0.3));   // the ship's wheel
+      lamps.push(part(box(0.18, 0.25, 0.18, 0, sh + 1.0, L / 2 - 0.05), 0xffc23a));
+    }
+    if (type === 'dragon') {
+      // a dragon boat: a long thin hull, a dragon head with horns and an open mouth at the bow, a curled tail, scales and a drum
+      const L = B.L, gold = 0xffc21a;
+      body.push(part(beam(V(0, h.sheerAt(1) - 0.1, -L / 2 + 0.2), V(0, h.sheerAt(1) + 1.0, -L / 2 - 0.4), 0.42, 0.5), col, 0.6));
+      body.push(part(rbox(0.6, 0.5, 0.9, 0.12, 0, h.sheerAt(1) + 1.2, -L / 2 - 0.7), col, 0.6), part(box(0.5, 0.12, 0.7, 0, h.sheerAt(1) + 0.9, -L / 2 - 0.75, 0.25), gold, 0.6));
+      for (const sd of [-1, 1]) { body.push(part(cyl(0.01, 0.08, 0.6, 6, sd * 0.2, h.sheerAt(1) + 1.6, -L / 2 - 0.45, -0.6), gold, 0.7)); body.push(part(sph(0.09, sd * 0.28, h.sheerAt(1) + 1.32, -L / 2 - 0.95), 0xffffff, 0.9), part(sph(0.05, sd * 0.31, h.sheerAt(1) + 1.33, -L / 2 - 1.0), 0x111111, 0.9)); }
+      for (let i = 0; i < 7; i++) body.push(part(cyl(0.01, 0.14, 0.3, 4, 0, sh + 0.14, -L * 0.3 + i * 0.75), gold, 0.7));
+      body.push(part(beam(V(0, sh, L / 2 - 0.2), V(0, sh + 0.9, L / 2 + 0.3), 0.2, 0.25), col, 0.6), part(cyl(0.01, 0.25, 0.5, 6, 0, sh + 1.0, L / 2 + 0.25, -0.8), gold, 0.7));
+      for (const sd of [-1, 1]) body.push(part(box(0.03, 0.12, L * 0.8, sd * (h.widthAt(0.5) + 0.01), sh - 0.04, 0), gold, 0.7));
+      body.push(part(cyl(0.35, 0.35, 0.4, 14, 0, sh + 0.2, -L * 0.25), 0xc8202a, 0.5), part(cyl(0.36, 0.36, 0.04, 14, 0, sh + 0.41, -L * 0.25), 0xf4ead0, 0.3));
+      for (let i = 0; i < 3; i++) body.push(part(box(B.W * 0.8, 0.08, 0.3, 0, sh + 0.12, -0.6 + i * 1.1), 0x6a4022, 0.3));
+    }
     if (type === 'jetski') { body.push(part(rbox(0.5, 0.3, 1.3, 0.12, 0, sh + 0.12, 0.3), o.seat ?? 0x1a1a1e, 0.4)); body.push(part(rbox(0.9, 0.35, 0.7, 0.15, 0, sh + 0.12, -0.55), col, 0.7)); body.push(part(box(0.75, 0.04, 0.04, 0, sh + 0.42, -0.6), 0x1a1a1e, 0.5)); }
   }
-  const prop = new THREE.Group(); if (type === 'airboat') { const pr = new THREE.Mesh(mergeGeometries([part(box(1.8, 0.16, 0.04, 0, 0, 0), 0x3a2a1a, 0.3)]), BODY); prop.add(pr); prop.position.set(0, (BOATS.airboat.H * 0.45 + 0.25) + 1.35, 1.2); }
-  const V2 = assemble(body, lamps, [], 0.3, 0.2, 'black', { ...o, mat: BOATM, extra: [prop] }, { x: B.W, y: B.H + 1, z: B.L }); V2.prop = type === 'airboat' ? prop : null; V2.deckY = hull(B.L, B.W, B.H, { dead: B.dead }).sheerAt(0.5); return V2;
+  const prop = new THREE.Group(); if (type === 'hover') { const pr = new THREE.Mesh(mergeGeometries([part(box(1.5, 0.14, 0.04, 0, 0, 0), 0x2a2a2e, 0.3), part(box(0.14, 1.5, 0.04, 0, 0, 0), 0x2a2a2e, 0.3)]), BODY); prop.add(pr); prop.position.set(0, BOATS.hover.H * 0.45 + 1.0, BOATS.hover.L / 2 - 0.35); }
+  if (type === 'airboat') { const pr = new THREE.Mesh(mergeGeometries([part(box(1.8, 0.16, 0.04, 0, 0, 0), 0x3a2a1a, 0.3)]), BODY); prop.add(pr); prop.position.set(0, (BOATS.airboat.H * 0.45 + 0.25) + 1.35, 1.2); }
+  const V2 = assemble(body, lamps, [], 0.3, 0.2, 'black', { ...o, mat: BOATM, extra: [prop] }, { x: B.W, y: B.H + 1, z: B.L }); V2.prop = type === 'airboat' || type === 'hover' ? prop : null; V2.deckY = hull(B.L, B.W, B.H, { dead: B.dead }).sheerAt(0.5); return V2;
 }
 
 // ---------------- the tractor with its trolley (full of hay) ----------------

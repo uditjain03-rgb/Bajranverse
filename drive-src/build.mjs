@@ -9,7 +9,7 @@ import { protect } from './tools/protect.mjs';
 import { seal, writeK } from './tools/seal.mjs';
 const here = path.dirname(new URL(import.meta.url).pathname);
 const GAMES = {
-  splash: { people: 'people-splash.bin', extra: [], music: ['bv_title', 'bv_win', 'duck', 'gameshow', 'wallpaper', 'snitch', 'carefree', 'hyperfun'], app: '../splashapp' },
+  splash: { people: 'people-splash.bin', extra: [], music: ['bv_title', 'bv_win', 'duck', 'gameshow', 'wallpaper', 'snitch', 'carefree', 'hyperfun'], app: '../splashapp', pkg: 'com.bajrangverse.splashracer' },
   taxi: { people: 'people-taxi.bin', extra: ['cow.glb', 'pug.glb', 'horse.glb'], music: ['bv_title', 'bv_win', 'riley', 'polka', 'monkeys', 'fuzzball', 'merry_go'], app: '../taxiapp', pkg: 'com.bajrangverse.madtaxi', lean: 1 },
 };
 for (const id of (process.argv[2] ? [process.argv[2]] : Object.keys(GAMES))) {
