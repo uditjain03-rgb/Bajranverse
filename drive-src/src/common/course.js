@@ -4,18 +4,20 @@
 // ghats of an Indian river city at sunset, a harbour at night, a stormy sea and a volcano island.
 import * as THREE from 'three';
 import { canvasTex, flat, mesh, lumpy, mergeStatic, mergeGeometries, CHUNK } from './gfx.js';
-import { kit, nat, palm, NT, PINE, BUSH, ROCK, FLOW } from './track.js';
+import { kit, nat, NT, PINE, BUSH, ROCK, FLOW } from './track.js';
+import { palmTree, hillMesh, reeds, lilyPads, shoreRocks, cloudTex, sunTex, floeMesh, cliffMesh, rockMesh } from './sea.js';
+const palm = () => palmTree(rnd(5.5, 8));
 const PI = Math.PI;
 let seed = 1; const R = () => ((seed = (seed * 16807) % 2147483647) / 2147483647), rnd = (a, b) => a + R() * (b - a), pick = a => a[Math.floor(R() * a.length)];
 export const HW = 17;          // half the width of the race water
 export const DROP = 7;         // how far a waterfall drops
 export const WORLDS = {
-  lagoon: { name: 'Tropical Lagoon', sky: ['#1aa8ff', '#c8f4ff'], fog: 0xc8f0ff, deep: 0x0a8ab8, shallow: 0x3ae0d0, bank: 0xf2dca0, bank2: 0xe2c47e, amp: 0.28, sun: 1, hemi: 2.6, light: 3.0 },
+  lagoon: { name: 'Tropical Lagoon', sky: ['#1aa8ff', '#c8f4ff'], fog: 0xc8f0ff, deep: 0x0a8ab8, shallow: 0x3ae0d0, bank: 0xf2dca0, bank2: 0xe2c47e, grass: 0x6aa83a, amp: 0.28, sun: 1, hemi: 2.6, light: 3.0 },
   jungle: { name: 'Jungle River', sky: ['#3ab8a0', '#e4fff0'], fog: 0xcfeedd, deep: 0x1a6a4a, shallow: 0x4aa878, bank: 0x4a9a32, bank2: 0x3a7a2a, amp: 0.22, hemi: 2.4, light: 2.7, falls: 2 },
   canyon: { name: 'Red Canyon Rapids', sky: ['#3a8ae8', '#ffe8c8'], fog: 0xf0d8b8, deep: 0x1a6a8a, shallow: 0x4ab0c0, bank: 0xc8643a, bank2: 0xa84a2a, amp: 0.4, hemi: 2.5, light: 3.1, falls: 2 },
   arctic: { name: 'Frozen Fjord', sky: ['#5a9ae8', '#f0f8ff'], fog: 0xe8f2ff, deep: 0x1a5a8a, shallow: 0x6ab8d8, bank: 0xf4f8ff, bank2: 0xd0e0f0, amp: 0.25, hemi: 2.6, light: 2.6, falls: 1 },
-  ghats: { name: 'Ghats at Sunset', sky: ['#ff6a4a', '#ffd89a'], fog: 0xffc898, deep: 0x2a6a7a, shallow: 0x5a9a9a, bank: 0xd8b07a, bank2: 0xc89a62, amp: 0.2, hemi: 2.2, light: 2.4, warm: 1 },
-  harbour: { name: 'Neon Harbour', sky: ['#0a0a2a', '#3a2a6a'], fog: 0x2a2050, deep: 0x061a3a, shallow: 0x1a3a6a, bank: 0x5a5a68, bank2: 0x4a4a58, amp: 0.25, hemi: 1.1, light: 0.9, night: 1 },
+  ghats: { name: 'Ghats at Sunset', sky: ['#ff6a4a', '#ffd89a'], fog: 0xffc898, deep: 0x2a6a7a, shallow: 0x5a9a9a, bank: 0xd8b07a, bank2: 0xc89a62, sunset: 1, amp: 0.2, hemi: 2.2, light: 2.4, warm: 1 },
+  harbour: { name: 'Neon Harbour', sky: ['#0a0a2a', '#3a2a6a'], fog: 0x2a2050, deep: 0x0a2450, shallow: 0x24508a, bank: 0x5a5a68, bank2: 0x4a4a58, amp: 0.25, hemi: 1.4, light: 1.0, night: 1 },
   storm: { name: 'Stormy Sea', sky: ['#3a4250', '#8a96a4'], fog: 0x7a8694, deep: 0x1a3a4a, shallow: 0x3a6a7a, bank: 0x6a6a64, bank2: 0x55554f, amp: 0.85, hemi: 1.9, light: 1.6 },
   volcano: { name: 'Volcano Island', sky: ['#4a1a1a', '#ff8a4a'], fog: 0x8a4a3a, deep: 0x1a2a3a, shallow: 0x3a5060, bank: 0x2a2624, bank2: 0x1e1a18, amp: 0.3, hemi: 1.7, light: 2.0, lava: 1 },
 };
@@ -100,7 +102,8 @@ export function buildCourse(T, scene) {
     const m = new THREE.Mesh(geo, waterMat); m.position.set(0, level((a + b) / 2), (a + b) / 2); m.frustumCulled = false; m.userData.z0 = a; m.userData.z1 = b; g.add(m); waters.push(m);
   }
   // the banks: a sloping strip each side, per piece, at that piece's level
-  const bankMat = new THREE.MeshStandardMaterial({ color: W.bank, map: sandTex, roughness: 1 }); sandTex.repeat.set(4, 20);
+  const bankMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: sandTex, roughness: 1, vertexColors: true }); sandTex.repeat.set(4, 20);
+  const cWet = new THREE.Color(W.bank).multiplyScalar(0.62), cBank = new THREE.Color(W.bank), cBank2 = new THREE.Color(W.bank2), cGrass = new THREE.Color(W.grass ?? W.bank2), _bc = new THREE.Color();
   const banks = [];
   for (let i = 0; i < cuts.length - 1; i++) {
     const a = cuts[i], b = cuts[i + 1]; if (a - b < 0.5) continue; const y = level((a + b) / 2);
@@ -108,6 +111,7 @@ export function buildCourse(T, scene) {
       const geo = new THREE.PlaneGeometry(70, a - b, 10, Math.ceil((a - b) / 6)); geo.rotateX(-PI / 2); const p = geo.attributes.position;
       for (let k = 0; k < p.count; k++) { const x = p.getX(k) + 35, h = x < 3 ? -1.2 + x * 0.6 : 0.6 + Math.min(1, (x - 3) / 25) * (W.lava ? 4 : 2.5) + Math.sin(p.getZ(k) * 0.07 + x) * 0.5; p.setXYZ(k, s * (HW - 2 + x), y + h, p.getZ(k)); }
       if (s < 0) geo.index.array.reverse(); geo.computeVertexNormals();
+      { const col = new Float32Array(p.count * 3); for (let k = 0; k < p.count; k++) { const x = Math.abs(p.getX(k)) - HW + 2, z = p.getZ(k), n = 0.5 + 0.5 * Math.sin(z * 0.11 + x * 0.3) * Math.sin(z * 0.05 - x * 0.17); _bc.copy(cWet).lerp(cBank, Math.min(1, Math.max(0, (x - 1.5) / 3))).lerp(cBank2, Math.min(1, Math.max(0, (x - 8) / 20)) * n); if (W.grass) _bc.lerp(cGrass, Math.min(1, Math.max(0, (x - 12) / 8)) * (0.6 + 0.4 * n)); col.set([_bc.r, _bc.g, _bc.b], k * 3); } geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); }
       const m = new THREE.Mesh(geo, bankMat); m.position.z = (a + b) / 2; m.userData.z0 = a; m.userData.z1 = b; m.frustumCulled = false; g.add(m); banks.push(m);
     }
   }
@@ -123,12 +127,21 @@ export function buildCourse(T, scene) {
     rb.position.set(0, bot, f - 12); rb.userData.dynamic = true; if (!W.night) g.add(rb);
   }
   // ---------------- scenery along the banks (per world) ----------------
-  const side = HW + 2, free = z => !falls.some(f => Math.abs(z - f) < 9);
+  const side = HW + 2, clear = T.clear || [], free = z => !falls.some(f => Math.abs(z - f) < 9) && !clear.some(c => Math.abs(z - c) < 16);   // nothing on the banks at the docks
   const P = SCENE[T.world];
   for (let z = 20; z > zEnd + 20; z -= P.step()) for (const s of [-1, 1]) { if (!free(z)) continue; const o = P.near(s, W); if (!o) continue; o.position.x += s * (side + (o.userData.gap ?? rnd(1, 6))); o.position.y += level(z) + (o.userData.dy ?? 0.4); o.position.z += z; g.add(o); }
   for (let z = 20; z > zEnd + 20; z -= rnd(9, 16)) for (const s of [-1, 1]) { if (!free(z) || R() < 0.35) continue; const o = P.far(s, W); if (!o) continue; o.position.x += s * rnd(side + 22, side + 60); o.position.y += level(z) + 1.5; o.position.z += z; g.add(o); }
+  // at the water's edge: lily pads and reeds in the jungle, rocks on the other shores, small ice in the fjord
+  for (let z = 10; z > zEnd + 20; z -= rnd(12, 22)) for (const s of [-1, 1]) {
+    if (!free(z) || R() < 0.3 || T.world === 'harbour') continue; const w = T.world; let o = null, x = 0, dy = 0;
+    if (w === 'jungle') { if (R() < 0.55) { o = lilyPads(4 + Math.floor(R() * 4)); x = HW - rnd(1.5, 3.5); dy = 0.06; } else { o = reeds(); x = HW + rnd(-0.5, 1.5); dy = -0.4; } }
+    else if (w === 'arctic') { o = floeMesh(rnd(0.6, 1.3)); x = HW - rnd(0, 2.5); dy = -0.05; }
+    else { o = shoreRocks(w); x = HW + rnd(-0.5, 2); dy = -0.35; }
+    o.position.set(s * x, level(z) + dy, z + rnd(-4, 4)); o.rotation.y = rnd(0, 6); g.add(o);
+  }
   // mountains / cliffs far away
-  for (let i = 0; i < 24; i++) { const s = i % 2 ? 1 : -1, m = new THREE.Group(), c = W.night ? 0x1a1a3a : W.lava ? 0x2a2020 : T.world === 'arctic' ? 0xdce8f4 : T.world === 'canyon' ? 0xb85a32 : 0x4a8a5a; mesh(lumpy(new THREE.ConeGeometry(22, 40, 7, 3), 2), flat(c), 0, 16, 0, m); if (T.world === 'arctic' || T.world === 'storm') mesh(new THREE.ConeGeometry(8, 12, 7), flat(0xffffff), 0, 31, 0, m); m.position.set(s * rnd(120, 200), level(-i * L / 24) - 4, 20 - i * (L + 160) / 24); m.scale.setScalar(rnd(0.8, 1.6)); g.add(m); }
+  // hills and mountains far away: rounded, coloured by height (snow where it is cold), two rows each side
+  if (T.world !== 'harbour') for (let i = 0; i < 30; i++) { const s = i % 2 ? 1 : -1, far = i % 4 > 1, m = hillMesh(T.world, rnd(26, 44) * (far ? 1.4 : 1), (T.world === 'lagoon' || T.world === 'ghats' ? rnd(14, 26) : T.world === 'canyon' ? rnd(30, 48) : rnd(26, 46)) * (far ? 1.5 : 1)); m.position.set(s * (far ? rnd(190, 250) : rnd(105, 150)), level(-i * L / 30) - 5, 20 - i * (L + 160) / 30 + rnd(-20, 20)); m.rotation.y = rnd(0, 6); g.add(m); }
   if (W.lava) { const v = new THREE.Group(); mesh(lumpy(new THREE.ConeGeometry(70, 80, 9, 3), 3), flat(0x2a2220), 0, 36, 0, v); const crater = new THREE.Mesh(new THREE.CylinderGeometry(14, 20, 6, 9), glow(0xff6a1a)); crater.position.y = 75; v.add(crater); v.position.set(-60, -6, -L * 0.6); g.add(v); }
   // the sky
   const skyG = new THREE.SphereGeometry(400, 24, 12), top = new THREE.Color(W.sky[0]), low = new THREE.Color(W.sky[1]), sp = skyG.attributes.position, sc = new Float32Array(sp.count * 3), _sc = new THREE.Color();
@@ -137,7 +150,9 @@ export function buildCourse(T, scene) {
   const skyM = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false }); skyM.userData.flat = true;
   const sky = new THREE.Mesh(skyG, skyM); sky.renderOrder = -1; sky.userData.dynamic = true; g.add(sky);
   { const parts = []; const n = T.world === 'storm' ? 30 : W.night ? 0 : 12; for (let i = 0; i < n; i++) { const cx = rnd(-250, 250), cy = rnd(60, 130), cz = rnd(-300, 60); for (let j = 0; j < 5; j++) { const q = new THREE.IcosahedronGeometry(rnd(7, 13), 1); q.translate(cx + j * 8 - 16, cy + rnd(-2, 2), cz + rnd(-3, 3)); parts.push(q); } }
-    if (parts.length) { const cm = new THREE.MeshBasicMaterial({ color: T.world === 'storm' ? 0x5a6470 : W.warm ? 0xffd0b0 : W.lava ? 0x5a3a3a : 0xffffff, fog: false }); cm.userData.flat = true; sky.add(new THREE.Mesh(mergeGeometries(parts), cm)); } }
+    void parts; const cn = T.world === 'storm' ? 26 : W.night ? 0 : 16, cc = T.world === 'storm' ? 0x6a7480 : W.warm ? 0xffc8a8 : W.lava ? 0x6a4a44 : 0xffffff;
+    for (let i = 0; i < cn; i++) { const sm = new THREE.SpriteMaterial({ map: cloudTex, color: cc, fog: false, depthWrite: false, transparent: true, opacity: rnd(0.75, 1) }); sm.userData.flat = true; const sp = new THREE.Sprite(sm), a = rnd(-PI * 0.75, PI * 0.75), d = rnd(250, 330); sp.position.set(Math.sin(a) * d, rnd(40, 110), -Math.cos(a) * d); const w = rnd(110, 200); sp.scale.set(w, w * rnd(0.4, 0.55), 1); sp.renderOrder = -1; sky.add(sp); }
+    if (W.sunset || W.lava) { const sm = new THREE.SpriteMaterial({ map: sunTex, color: W.lava ? 0xff8a5a : 0xffe0b0, fog: false, depthWrite: false, transparent: true, blending: THREE.AdditiveBlending }); sm.userData.flat = true; const sun = new THREE.Sprite(sm); sun.position.set(40, 38, -330); sun.scale.setScalar(150); sun.renderOrder = -1; sky.add(sun); } }
   if (W.night) { const n = 260, pos = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const a = rnd(0, PI * 2), e = rnd(0.15, 1.3); pos[i * 3] = Math.cos(a) * Math.cos(e) * 380; pos[i * 3 + 1] = Math.sin(e) * 380; pos[i * 3 + 2] = Math.sin(a) * Math.cos(e) * 380; } const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); const pm = new THREE.PointsMaterial({ color: 0xffffff, size: 2, sizeAttenuation: false, fog: false }); pm.userData.flat = true; sky.add(new THREE.Points(sg, pm)); }
   scene.fog = new THREE.Fog(W.fog, W.night ? 60 : 80, T.world === 'storm' ? 190 : 260);
   // the water colours of this world
@@ -159,8 +174,8 @@ const grp = () => new THREE.Group();
 const glowC = {}; const glow = c => glowC[c] || (glowC[c] = new THREE.MeshBasicMaterial({ color: c }));
 function hut() { const o = grp(); mesh(new THREE.BoxGeometry(3, 2.2, 3), flat(0xc89a5a), 0, 1.5, 0, o); mesh(new THREE.ConeGeometry(2.8, 1.8, 4), flat(0xe8c87a), 0, 3.5, 0, o).rotation.y = PI / 4; for (const x of [-1.2, 1.2]) for (const z of [-1.2, 1.2]) mesh(new THREE.CylinderGeometry(0.1, 0.1, 1, 5), flat(0x8a6a3a), x, 0.2, z, o); return o; }
 function umbrella() { const o = grp(), c = pick([0xff4a6a, 0x2ab8ff, 0xffd23f, 0x3fcf6e, 0xff8a1a]); mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.6, 5), flat(0xffffff), 0, 1.3, 0, o); mesh(new THREE.ConeGeometry(1.6, 0.6, 8), flat(c), 0, 2.6, 0, o); mesh(new THREE.BoxGeometry(1.6, 0.15, 0.7), flat(0xffffff), 0.9, 0.3, 0.6, o); return o; }
-function rockArch() { const o = grp(), c = flat(pick([0xc8643a, 0xb85432, 0xd8784a])); mesh(lumpy(new THREE.BoxGeometry(rnd(6, 12), rnd(10, 26), rnd(6, 12), 3, 4, 3), 0.9), c, 0, 6, 0, o); if (R() < 0.5) mesh(lumpy(new THREE.BoxGeometry(5, rnd(6, 12), 5, 2, 3, 2), 0.6), flat(0xa84a2a), rnd(-4, 4), 4, rnd(-4, 4), o); o.userData.gap = rnd(0, 3); o.userData.dy = -1; return o; }
-function iceCliff() { const o = grp(); mesh(lumpy(new THREE.BoxGeometry(rnd(6, 10), rnd(5, 14), rnd(6, 10), 3, 3, 3), 0.8), flat(pick([0xe8f4ff, 0xcfe8ff, 0xb8dcf8])), 0, 3, 0, o); o.userData.gap = rnd(0, 4); o.userData.dy = -0.8; return o; }
+function rockArch() { const o = grp(), h = rnd(10, 26), a = cliffMesh('canyon', rnd(6, 12), h, rnd(6, 12)); a.position.y = h / 2 - 1; o.add(a); if (R() < 0.5) { const h2 = rnd(6, 12), b = cliffMesh('canyon', 5, h2, 5); b.position.set(rnd(-4, 4), h2 / 2 - 1, rnd(-4, 4)); o.add(b); } o.userData.gap = rnd(0, 3); o.userData.dy = -1; return o; }
+function iceCliff() { const o = grp(), h = rnd(5, 14), m = cliffMesh('arctic', rnd(6, 10), h, rnd(6, 10)); m.position.y = h / 2 - 1; o.add(m); o.userData.gap = rnd(0, 4); o.userData.dy = -0.8; return o; }
 function snowPine() { const o = grp(), h = rnd(5, 9); mesh(new THREE.CylinderGeometry(0.2, 0.3, 1.5, 6), flat(0x5a3a2a), 0, 0.75, 0, o); for (let i = 0; i < 3; i++) { mesh(new THREE.ConeGeometry(2.2 - i * 0.6, h / 3 + 0.6, 7), flat(0x2a5a3a), 0, 1.5 + i * h / 4, 0, o); mesh(new THREE.ConeGeometry(1.6 - i * 0.5, 0.5, 7), flat(0xffffff), 0, 1.5 + i * h / 4 + h / 7, 0, o); } return o; }
 function steps(s) { const o = grp(), c = flat(pick([0xd8b07a, 0xe8c48a, 0xc89a62])); for (let i = 0; i < 6; i++) mesh(new THREE.BoxGeometry(2.4 + i * 1.6, 0.6, 12), c, s * (1.2 + i * 0.8), -0.6 + i * 0.6, 0, o); o.userData.gap = -2; o.userData.dy = -0.3; return o; }
 function temple(s) { const o = grp(), base = flat(0xe8c88a), saf = flat(0xff8a1a); mesh(new THREE.BoxGeometry(6, 5, 6), base, 0, 2.5, 0, o); for (let i = 0; i < 4; i++) mesh(new THREE.CylinderGeometry(2.6 - i * 0.6, 3 - i * 0.6, 1.8, 8), base, 0, 5.9 + i * 1.7, 0, o); mesh(new THREE.ConeGeometry(0.6, 1.4, 8), flat(0xffc21a), 0, 13, 0, o); mesh(new THREE.CylinderGeometry(0.05, 0.05, 3, 4), flat(0x5a3a1a), 0.8, 14, 0, o); const fl = mesh(new THREE.BoxGeometry(0.05, 0.8, 1.2), saf, 0.8, 15, 0.6, o); void fl; mesh(new THREE.BoxGeometry(2, 3, 0.2), flat(0x5a2a1a), s * -3.05, 1.5, 0, o).rotation.y = PI / 2; o.userData.gap = rnd(10, 14); o.userData.dy = 3; return o; }
@@ -170,11 +185,11 @@ function tower() { const o = grp(), h = rnd(25, 70), w = rnd(8, 14); const bg = 
 function crane() { const o = grp(), c = flat(0xff8a1a); mesh(new THREE.BoxGeometry(1.2, 22, 1.2), c, 0, 11, 0, o); mesh(new THREE.BoxGeometry(1, 1, 20), c, 0, 22, -6, o); mesh(new THREE.BoxGeometry(2, 2, 3), flat(0x2a2a2a), 0, 21, 4, o); o.userData.gap = rnd(4, 8); return o; }
 function lamp() { const o = grp(); mesh(new THREE.CylinderGeometry(0.08, 0.1, 5, 6), flat(0x2a2a30), 0, 2.5, 0, o); const b = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 6), glow(pick([0xffe08a, 0xff6ad8, 0x6ae8ff]))); b.position.y = 5.1; o.add(b); o.userData.gap = 0.5; return o; }
 function lighthouse() { const o = grp(); for (let i = 0; i < 6; i++) mesh(new THREE.CylinderGeometry(2 - i * 0.18, 2.1 - i * 0.18, 3, 12), flat(i % 2 ? 0xd83a2a : 0xf4f4f4), 0, 1.5 + i * 3, 0, o); const l = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 1.6, 10), glow(0xfff2a0)); l.position.y = 19; o.add(l); mesh(new THREE.ConeGeometry(1.5, 1.6, 10), flat(0x2a2a2a), 0, 20.6, 0, o); o.userData.gap = rnd(6, 12); return o; }
-function blackRock() { const o = grp(); mesh(lumpy(new THREE.DodecahedronGeometry(rnd(2, 5), 1), 0.6), flat(pick([0x2a2624, 0x342e2a, 0x1e1a18])), 0, 1, 0, o); if (R() < 0.35) { const l = new THREE.Mesh(new THREE.BoxGeometry(rnd(1, 2), 0.2, rnd(6, 14)), glow(0xff5a1a)); l.position.set(rnd(-2, 2), 0.2, 0); o.add(l); } o.userData.gap = rnd(0, 6); o.userData.dy = -0.2; return o; }
+function blackRock() { const o = grp(), r = rockMesh(rnd(2, 5), 'volcano'); r.position.y = 0.6; o.add(r); if (R() < 0.35) { const l = new THREE.Mesh(new THREE.BoxGeometry(rnd(1, 2), 0.2, rnd(6, 14)), glow(0xff5a1a)); l.position.set(rnd(-2, 2), 0.2, 0); o.add(l); } o.userData.gap = rnd(0, 6); o.userData.dy = -0.2; return o; }
 function ruin() { const o = grp(), c = flat(0x8a8a6a); for (let i = 0; i < 3; i++) mesh(lumpy(new THREE.BoxGeometry(rnd(2, 4), rnd(1.5, 3), rnd(2, 4)), 0.2), c, rnd(-2, 2), 1 + i * 2, rnd(-2, 2), o); const t = nat(NT, 1.2, 1.8); if (t) { t.position.x = 3; o.add(t); } o.userData.gap = rnd(3, 8); return o; }
 const SCENE = {
-  lagoon: { step: () => rnd(6, 11), near: () => { const r = R(); const o = r < 0.45 ? palm() : r < 0.62 ? umbrella() : r < 0.75 ? hut() : nat(BUSH, 1.2, 1.8); if (o) o.userData.gap = o.userData.gap ?? rnd(1, 12); return o; }, far: () => R() < 0.7 ? palm() : nat(ROCK, 2, 3) },
-  jungle: { step: () => rnd(3.5, 6), near: () => { const r = R(); const o = r < 0.55 ? nat(NT, 1.3, 2.2) : r < 0.85 ? nat([...BUSH, ...FLOW], 1.4, 2.4) : ruin(); if (o && o.userData.gap === undefined) o.userData.gap = rnd(0, 9); return o; }, far: () => nat(NT, 1.6, 2.6) },
+  lagoon: { step: () => rnd(6, 11), near: () => { const r = R(); const o = r < 0.45 ? palm() : r < 0.62 ? umbrella() : r < 0.75 ? hut() : nat(['Plant_1_Big', 'Plant_7_Big', 'Fern_1', 'Bush_Common_Flowers'], 1.4, 2.2); if (o) o.userData.gap = o.userData.gap ?? rnd(1, 12); return o; }, far: () => R() < 0.7 ? palm() : nat(ROCK, 2, 3) },
+  jungle: { step: () => rnd(3.5, 6), near: () => { const r = R(); const o = r < 0.55 ? nat(NT, 1.3, 2.2) : r < 0.85 ? nat(['Bush_Common_Flowers', 'Plant_1_Big', 'Plant_7_Big', ...FLOW], 1.4, 2.4) : ruin(); if (o && o.userData.gap === undefined) o.userData.gap = rnd(0, 9); return o; }, far: () => nat(NT, 1.6, 2.6) },
   canyon: { step: () => rnd(6, 10), near: () => rockArch(), far: () => rockArch() },
   arctic: { step: () => rnd(6, 10), near: () => R() < 0.5 ? iceCliff() : snowPine(), far: () => R() < 0.6 ? snowPine() : iceCliff() },
   ghats: { step: () => rnd(11, 15), near: s => { const r = R(); return r < 0.4 ? steps(s) : r < 0.65 ? temple(s) : ghatHouse(s); }, far: s => ghatHouse(s) },

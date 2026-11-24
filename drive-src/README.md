@@ -10,6 +10,17 @@ race to a lower level, wave ramps with tricks (swipe up = backflip, left/right =
 crocodiles, icebergs with penguins, ferries, and mystery bubbles: water balloon, duck mines, bubble shield, rocket, octopus
 ink, mega wave. Five funny rivals who use items too, a boss every 4th race, a floating podium, a boatyard (5 boats,
 colours). Races are 3–4.6 km. Ocean-blue look; music: Fluffing a Duck, Happy Happy Game Show, Wallpaper, Sneaky Snitch.
+**v4 (Splash Rescue rework):** the Hero Rescue Boat (default): an open passenger well with padded benches, so the rescued
+animals sit inside it (facing you, in orange life jackets), a fender tube in your boat colour, a T-top with flashing
+blue/red beacons. 3 ANIMAL HOME docks per rescue and bigger boats (6 seats on the hero boat, +1 on the others).
+Signs no longer grow with distance: they fade in from about 70 m, keep their real size, and stand on a pole over what
+they mark; a pointer at the top shows the nearest animal (metres, left/right) or the next dock when the boat is full.
+All living things and obstacles are smooth, shaded models (`src/common/sea.js`): animals with glossy eyes and fur
+gradients, dolphins, whale, shark, crocodiles, knobbly rocks, bark logs, barrels, icebergs, a ghats river boat with
+passengers, a harbour ferry with lit windows. New fun: a golden ⭐ star animal per rescue, rescue streaks, geysers that
+blast you up, treasure chests, slalom hoops, seagulls and jumping fish. Worlds: rounded hills instead of cone mountains,
+soft clouds, a sunset sun, wet-sand shorelines, layered canyon cliffs, smooth ice cliffs, coconut palms, lily pads and
+reeds, shore rocks.
 
 **Mad Taxi Masti** (`src/taxi`, app `../taxiapp`, `com.bajrangverse.madtaxi`): drive a real kaali-peeli taxi through eight
 Indian places (`src/common/street.js`), each matched to its passenger: Shaadi Street at night (groom late for his
@@ -42,6 +53,8 @@ Vehicles, boats and the city (Kenney, CC0) and the animals (Quaternius, CC0): `n
 ## Code
 - `src/common/engine.js` renderer, lights, particles, pop-up texts, banners, the game loop (adaptive sharpness),
   anti-rehosting guard; `gfx.js` road bend shader, per-vertex lighting (fast on phones), merging of scenery
+- `src/common/sea.js` Splash Racer's animals, sea creatures, obstacles, ferries, fun things and bank nature (smooth
+  merged models with vertex colours); `course.js` its water courses
 - `src/common/track.js` the road (lanes, pavements, rivers with ramps) and the themed scenery; `vehicles.js` cars/boats
 - `src/common/people.js` animated people with facial expressions (instanced crowds + heroes); `portrait.js` the
   cartoon faces in the HUD

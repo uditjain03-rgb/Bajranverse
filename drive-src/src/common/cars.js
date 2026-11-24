@@ -286,7 +286,7 @@ function hull(L, W, H, o = {}) {
   return { hull: g, deck: dg, sheerAt: t => sec(t)[m][1], widthAt: t => sec(t)[m][0] };
 }
 export const BOATS = {
-  speed: { L: 5.2, W: 2.0, H: 0.9 }, cigarette: { L: 6.6, W: 1.9, H: 0.8, dead: 0.45 }, airboat: { L: 4.6, W: 2.3, H: 0.6, dead: 0.05 }, jetski: { L: 3.0, W: 1.1, H: 0.7 }, catamaran: { L: 5.4, W: 2.6, H: 0.8 },
+  rescue: { L: 6.0, W: 2.5, H: 1.0, dead: 0.3 }, speed: { L: 5.2, W: 2.0, H: 0.9 }, cigarette: { L: 6.6, W: 1.9, H: 0.8, dead: 0.45 }, airboat: { L: 4.6, W: 2.3, H: 0.6, dead: 0.05 }, jetski: { L: 3.0, W: 1.1, H: 0.7 }, catamaran: { L: 5.4, W: 2.6, H: 0.8 },
   duck: { L: 4.2, W: 2.5, H: 0.95, dead: 0.08 }, rib: { L: 5.2, W: 2.3, H: 0.7, dead: 0.42 }, hover: { L: 4.8, W: 2.7, H: 0.55, dead: 0.04 }, pirate: { L: 6.2, W: 2.5, H: 1.2, dead: 0.22 }, dragon: { L: 7.4, W: 1.7, H: 0.7, dead: 0.3 },
 };
 export function makeBoat(type = 'speed', col = 0xe8302a, o = {}) {
@@ -295,6 +295,7 @@ export function makeBoat(type = 'speed', col = 0xe8302a, o = {}) {
   if (type === 'duck') o = { ...o, bottom: col, stripe: col };
   if (type === 'dragon') o = { ...o, bottom: col, stripe: 0xffc21a, deck: 0xb07a40 };
   if (type === 'rib') o = { ...o, bottom: 0x3a3a40, stripe: 0x3a3a40, deck: 0x9aa0a8 };
+  if (type === 'rescue') o = { ...o, bottom: 0x16263e, stripe: 0xffffff };
   const B = BOATS[type] || BOATS.speed, body = [], lamps = [], deckC = o.deck ?? 0xf4f2ee, trim = o.trim ?? 0x1a1a1a;
   if (type === 'catamaran') { for (const sd of [-1, 1]) { const h = hull(B.L, 0.8, B.H, { dead: 0.4 }); const hg = h.hull.clone(); hg.translate(sd * 0.95, 0, 0); body.push(part(hg, col, 0.7, true)); } body.push(part(rbox(2.4, 0.18, B.L * 0.7, 0.06, 0, B.H * 0.45, 0.4), deckC, 0.5)); body.push(part(rbox(1.6, 0.5, 1.4, 0.15, 0, B.H * 0.8, 0.6), col, 0.6)); }
   else {
@@ -304,8 +305,9 @@ export function makeBoat(type = 'speed', col = 0xe8302a, o = {}) {
     let g2 = hg.toNonIndexed(); const c2 = new THREE.Float32BufferAttribute(new Float32Array(g2.attributes.position.count * 3), 3);
     { const ip = hg.index.array; for (let i = 0; i < ip.length; i++) c2.setXYZ(i, cols[ip[i] * 3], cols[ip[i] * 3 + 1], cols[ip[i] * 3 + 2]); }
     g2.setAttribute('color', c2); g2.setAttribute('gloss', new THREE.Float32BufferAttribute(new Float32Array(g2.attributes.position.count).fill(0.7), 1)); body.push(g2);
-    body.push(part(h.deck, deckC, 0.35));
+    if (type !== 'rescue') body.push(part(h.deck, deckC, 0.35));
     const sh = h.sheerAt(0.5);
+    if (type === 'rescue') rescueBoat(body, lamps, h, B, col, sh, o);
     if (type === 'speed' || type === 'cigarette') {
       // windscreen, seats, dashboard, the outboard engine(s), rails
       const wz = type === 'cigarette' ? -0.3 : -0.4, ww = h.widthAt(0.55) * 1.7;
@@ -387,7 +389,65 @@ export function makeBoat(type = 'speed', col = 0xe8302a, o = {}) {
   }
   const prop = new THREE.Group(); if (type === 'hover') { const pr = new THREE.Mesh(mergeGeometries([part(box(1.5, 0.14, 0.04, 0, 0, 0), 0x2a2a2e, 0.3), part(box(0.14, 1.5, 0.04, 0, 0, 0), 0x2a2a2e, 0.3)]), BODY); prop.add(pr); prop.position.set(0, BOATS.hover.H * 0.45 + 1.0, BOATS.hover.L / 2 - 0.35); }
   if (type === 'airboat') { const pr = new THREE.Mesh(mergeGeometries([part(box(1.8, 0.16, 0.04, 0, 0, 0), 0x3a2a1a, 0.3)]), BODY); prop.add(pr); prop.position.set(0, (BOATS.airboat.H * 0.45 + 0.25) + 1.35, 1.2); }
-  const V2 = assemble(body, lamps, [], 0.3, 0.2, 'black', { ...o, mat: BOATM, extra: [prop] }, { x: B.W, y: B.H + 1, z: B.L }); V2.prop = type === 'airboat' || type === 'hover' ? prop : null; V2.deckY = hull(B.L, B.W, B.H, { dead: B.dead }).sheerAt(0.5); return V2;
+  const extra = [prop]; let beacons = null;
+  if (type === 'rescue') { const r = rescueExtras(B, hull(B.L, B.W, B.H, { dead: B.dead })); extra.push(...r.meshes); beacons = r.beacons; }
+  const V2 = assemble(body, lamps, [], 0.3, 0.2, 'black', { ...o, mat: BOATM, extra }, { x: B.W, y: B.H + 1, z: B.L }); V2.beacons = beacons; V2.prop = type === 'airboat' || type === 'hover' ? prop : null; V2.deckY = hull(B.L, B.W, B.H, { dead: B.dead }).sheerAt(0.5); return V2;
+}
+
+// ---------------- the hero rescue boat ----------------
+// a lifeboat-style rescue boat: an orange fender tube all round, a foredeck with a hatch and a bow rail, a centre console
+// under a T-top roof with a light bar and a searchlight, and an open passenger well sunk half a metre below the gunwale,
+// with two padded benches where the rescued animals sit (they are inside the boat, only their heads and shoulders show
+// above the side), twin outboards at the stern
+function bands(g, c2, f) { const p = g.attributes.position, c = g.attributes.color, k = new THREE.Color(c2); for (let i = 0; i < p.count; i++) if (f(p.getX(i), p.getY(i), p.getZ(i))) c.setXYZ(i, k.r, k.g, k.b); return g; }
+export const RESCUE_WELL = { tw: 0.65, drop: 0.4 };
+function rescueBoat(body, lamps, h, B, col, sh, o) {
+  const L = B.L, fl = sh - RESCUE_WELL.drop, tw = RESCUE_WELL.tw, zw = L / 2 - tw * L, zs = L / 2 - 0.12, wt = h.widthAt(0.3) * 0.97, wb = wt * 0.64;
+  // the foredeck, at the gunwale, from the bow back to the well
+  const fd = new THREE.Shape(), N = 14, tt = i => tw + (1 - tw) * i / N;
+  fd.moveTo(L / 2 - tt(0) * L, h.widthAt(tt(0))); for (let i = 1; i <= N; i++) fd.lineTo(L / 2 - tt(i) * L, h.widthAt(tt(i))); for (let i = N; i >= 0; i--) fd.lineTo(L / 2 - tt(i) * L, -h.widthAt(tt(i)));
+  const fg = new THREE.ShapeGeometry(fd); fg.rotateX(PI / 2);
+  { const p = fg.attributes.position, n = fg.attributes.normal; for (let i = 0; i < p.count; i++) { const z = p.getX(i), x = p.getZ(i), t = (L / 2 - z) / L; p.setXYZ(i, x, h.sheerAt(Math.min(1, Math.max(0, t))) + 0.005, z); n.setXYZ(i, 0, 1, 0); } }
+  body.push(part(fg, 0xf2f4f6, 0.35));
+  // the well: floor, a sloping liner each side, the front and back walls
+  const trap = (z, flip) => { const s = new THREE.Shape(); s.moveTo(-wb, fl); s.lineTo(wb, fl); s.lineTo(wt, sh); s.lineTo(-wt, sh); s.lineTo(-wb, fl); const g = new THREE.ShapeGeometry(s); if (flip) g.rotateY(PI); g.translate(0, 0, z); return g; };
+  body.push(part(trap(zw + 0.01), 0xe4e8ec, 0.3), part(trap(zs, true), 0xe4e8ec, 0.3));
+  body.push(part(box(wb * 2 + 0.06, 0.05, zs - zw, 0, fl - 0.02, (zw + zs) / 2), 0xb8c0c8, 0.2));
+  for (const sd of [-1, 1]) {
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([sd * wb, fl, zw, sd * wt, sh, zw, sd * wb, fl, zs, sd * wt, sh, zs], 3)); g.setIndex(sd > 0 ? [0, 2, 1, 1, 2, 3] : [0, 1, 2, 1, 3, 2]); g.computeVertexNormals(); body.push(part(g, 0xe4e8ec, 0.3));
+    body.push(part(box(0.26, 0.06, zs - zw + 0.1, sd * (wt - 0.08), sh + 0.03, (zw + zs) / 2), 0xf6f6f6, 0.5));   // gunwale cap
+    body.push(part(rbox(0.66, 0.2, 2.3, 0.06, sd * 0.5, fl + 0.1, 1.72), 0x1e5aa8, 0.35));   // the animals' padded bench
+    body.push(part(box(0.68, 0.03, 2.32, sd * 0.5, fl + 0.2, 1.72), 0xffffff, 0.3));   // white piping on the bench
+  }
+  // the fender tube all round at the gunwale, in the boat's colour with white bands
+  const pts = []; for (let i = 0; i <= 12; i++) { const t = 0.02 + i / 12 * 0.96; pts.push(new THREE.Vector3(-(h.widthAt(t) + 0.1), h.sheerAt(t) - 0.04, L / 2 - t * L)); } for (let i = 12; i >= 0; i--) { const t = 0.02 + i / 12 * 0.96; pts.push(new THREE.Vector3(h.widthAt(t) + 0.1, h.sheerAt(t) - 0.04, L / 2 - t * L)); }
+  body.push(bands(part(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 90, 0.17, 10), col, 0.55, true), 0xffffff, (x, y, z) => Math.abs((z + 10) % 1.4 - 0.7) < 0.07));
+  // the console, windscreen, steering wheel, lifebuoys
+  body.push(part(rbox(1.0, 1.0, 0.7, 0.1, 0, fl + 0.5, zw + 0.45), 0xf6f6f6, 0.6), part(box(0.86, 0.04, 0.42, 0, fl + 1.02, zw + 0.5, -0.3), 0x1a1a1e, 0.6));
+  body.push(part(box(1.06, 0.46, 0.04, 0, fl + 1.25, zw + 0.12, -0.45), 0x8ac8ec, 1));
+  const sw = new THREE.TorusGeometry(0.15, 0.025, 6, 16); sw.rotateX(-0.9); sw.translate(0, fl + 1.12, zw + 0.78); body.push(part(sw, 0x1a1a1e, 0.6));
+  for (const sd of [-1, 1]) { const lb = new THREE.TorusGeometry(0.22, 0.07, 8, 18); lb.rotateY(PI / 2); lb.translate(sd * 0.54, fl + 0.55, zw + 0.45); body.push(bands(part(lb, 0xff4a1a, 0.5), 0xffffff, (x, y, z) => Math.abs(Math.atan2(y - fl - 0.55, z - zw - 0.45)) % (PI / 2) < 0.35)); }
+  // the T-top: four poles and a white roof
+  for (const sd of [-1, 1]) for (const z of [zw + 0.05, zw + 0.95]) body.push(part(beam(V(sd * 0.55, fl + 0.95, z), V(sd * 0.55, fl + 2.05, z), 0.05), 0xd0d6dc, 1));
+  body.push(part(rbox(1.42, 0.1, 1.15, 0.04, 0, fl + 2.08, zw + 0.5), 0xf8f8f8, 0.6), part(box(1.12, 0.12, 0.24, 0, fl + 2.2, zw + 0.3), 0x2a2a30, 0.6));
+  body.push(part(cyl(0.13, 0.13, 0.26, 12, 0.5, fl + 2.3, zw + 0.25, PI / 2), 0xd0d6dc, 1), part(cyl(0.02, 0.02, 0.8, 5, -0.5, fl + 2.5, zw + 0.85), 0xd0d6dc, 1));
+  lamps.push(part(cyl(0.11, 0.11, 0.02, 12, 0.5, fl + 2.3, zw + 0.11, PI / 2), 0xfff6c8));
+  // the foredeck: a hatch, cleats, the bow rail; side rails at the well
+  body.push(part(rbox(0.7, 0.06, 0.6, 0.05, 0, h.sheerAt(0.8) + 0.03, L / 2 - 0.8 * L), 0xd8dde2, 0.5));
+  for (const sd of [-1, 1]) { body.push(part(beam(V(sd * h.widthAt(0.72) * 0.9, h.sheerAt(0.72) + 0.02, L / 2 - 0.72 * L), V(sd * h.widthAt(0.72) * 0.9, h.sheerAt(0.72) + 0.4, L / 2 - 0.72 * L), 0.035), 0xd0d6dc, 1)); body.push(part(beam(V(sd * h.widthAt(0.72) * 0.9, h.sheerAt(0.72) + 0.4, L / 2 - 0.72 * L), V(sd * 0.05, h.sheerAt(0.97) + 0.4, L / 2 - 0.97 * L), 0.035), 0xd0d6dc, 1)); }
+  // twin outboards
+  for (const x of [-0.42, 0.42]) { body.push(part(rbox(0.44, 0.68, 0.52, 0.13, x, sh + 0.2, L / 2 + 0.24), 0x1a1a1e, 0.8), part(box(0.1, 0.72, 0.12, x, sh - 0.36, L / 2 + 0.32), 0x2a2a2e, 0.5), part(box(0.46, 0.08, 0.54, x, sh + 0.3, L / 2 + 0.24), col, 0.7)); }
+  // nav lights
+  lamps.push(part(box(0.07, 0.07, 0.07, h.widthAt(0.85) + 0.05, h.sheerAt(0.85) + 0.06, L / 2 - 0.85 * L), 0x2aff4a), part(box(0.07, 0.07, 0.07, -h.widthAt(0.85) - 0.05, h.sheerAt(0.85) + 0.06, L / 2 - 0.85 * L), 0xff2a2a));
+}
+const rescueDecal = canvasTex(512, 64, (c, w, h) => { c.clearRect(0, 0, w, h); c.font = 'bold 50px Fredoka, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 8; c.strokeStyle = '#0a2a4a'; c.strokeText('ANIMAL RESCUE', w / 2 + 24, h / 2 + 2); c.fillStyle = '#ffffff'; c.fillText('ANIMAL RESCUE', w / 2 + 24, h / 2 + 2); c.fillStyle = '#ffffff'; c.strokeStyle = '#0a2a4a'; c.lineWidth = 4; const px = 34, py = 34; for (const [dx, dy, r] of [[0, 6, 13], [-14, -9, 6], [-5, -16, 6], [6, -16, 6], [15, -9, 6]]) { c.beginPath(); c.arc(px + dx, py + dy, r, 0, 7); c.stroke(); c.fill(); } });
+function rescueExtras(B, h) {
+  const meshes = [], dm = new THREE.MeshStandardMaterial({ map: rescueDecal, transparent: true, roughness: 0.4, depthWrite: false });
+  for (const sd of [-1, 1]) { const g = new THREE.PlaneGeometry(2.7, 0.34); g.rotateY(sd * PI / 2); g.rotateZ(-sd * 0.62); if (sd < 0) { const u = g.attributes.uv; for (let i = 0; i < u.count; i++) u.setX(i, 1 - u.getX(i)); } g.translate(sd * (h.widthAt(0.45) - 0.08), h.sheerAt(0.45) - 0.17, 0.35); const m = new THREE.Mesh(g, dm); m.renderOrder = 1; meshes.push(m); }
+  // the light bar: blue and red beacons that flash (the game switches them)
+  const fl = h.sheerAt(0.5) - RESCUE_WELL.drop, zw = B.L / 2 - RESCUE_WELL.tw * B.L, beacons = [];
+  for (const [x, c] of [[-0.38, 0x2a6aff], [0.38, 0xff2a3a]]) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.14, 0.26), new THREE.MeshBasicMaterial({ color: c })); m.position.set(x, fl + 2.27, zw + 0.3); meshes.push(m); beacons.push(m); }
+  return { meshes, beacons };
 }
 
 // ---------------- the tractor with its trolley (full of hay) ----------------

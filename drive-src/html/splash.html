@@ -39,6 +39,11 @@ html, body { background: #0a6ab0; }
 .ico.boat { width: 84px; background: none; } .ico.boat img { width: 84px; height: 52px; object-fit: contain; }
 .item.sel { outline: 3px solid #ffd23f; }
 .saved { font-size: 18px; text-align: center; letter-spacing: 2px; margin: 4px 0; }
+#nextP { position: absolute; right: 12px; top: calc(112px + var(--sat)); font-size: 18px; padding: 4px 12px; pointer-events: none; visibility: hidden; }
+#nextP b { font-size: 20px; } #nextP i { font-style: normal; font-size: 22px; color: #5ae8ff; }
+@keyframes nearP { to { transform: scale(1.1); } }
+#nextP.near { background: #1a8aff; animation: nearP .4s infinite alternate; transform-origin: right center; } #nextP.home { background: #18b84a; } #nextP.home i { color: #fff; }
+#hud:not(.rescue) #nextP { display: none; }
 .legend { display: flex; flex-direction: column; gap: 8px; text-align: left; margin: 6px 0 10px; }
 .lg { display: flex; gap: 10px; align-items: center; } .lg span { display: block; font-size: 13px; opacity: .9; }
 .lg i { font-style: normal; flex: 0 0 46px; height: 46px; border-radius: 50%; background: var(--c); border: 3px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 22px; color: #fff; box-shadow: 0 0 10px var(--c); }
@@ -49,7 +54,7 @@ html, body { background: #0a6ab0; }
 <div id="splashO"></div><div id="inkO"></div>
 <div id="hud" class="hidden">
   <div id="top"><button class="btn" id="pauseB">❚❚</button><div class="pill out" id="placeN">6<small>th</small></div><div class="pill out" id="savedP">❤️ <span id="savedN">0/0</span></div><div class="pill out">🪙 <span id="coinN">0</span></div></div>
-  <div id="powC"></div><div id="sharkW">🦈</div>
+  <div id="powC"></div><div class="pill out" id="nextP"></div><div id="sharkW">🦈</div>
   <div id="strip"></div>
   <div id="bubble" class="hidden"><canvas id="bubbleFace" width="64" height="64"></canvas><div><b id="bubbleName"></b><span id="bubbleText"></span></div></div>
   <div class="pill out" id="lvl" style="position:absolute;left:12px;top:calc(112px + var(--sat));font-size:13px">LAGOON</div>
