@@ -5,7 +5,7 @@
 | Rocky's Pirate Army | `pirate-src/` (game, web build) · `pirateapp/` (Android) | Runner with an army, castle finale, treasure map |
 | Splash Racer | `drive-src/` (shared drive engine) · `splashapp/` (Android) | Boat racing, Splash Rescue mode |
 | Mad Taxi Masti | `drive-src/` (shared drive engine) · `taxiapp/` (Android) | City taxi: jobs, MAD MAX and RACE modes |
-| Monster Mayhem, Monster Roll | — | Being moved here from other sessions |
+| Monster Mayhem Run, Monster Roll | — | Not in this repository yet: add their source here |
 
 Apps (non-games) live in `uditjain03-rgb/Bajranverse-MobileApss`.
 
